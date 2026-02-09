@@ -1,0 +1,112 @@
+rules_version='2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isOwnerByEmail(userEmail) {
+      return isAuthenticated() && request.auth.token.email == userEmail;
+    }
+    
+    // Forum Topics - Sujets du forum
+    match /forum_topics/{topicId} {
+      allow read: if true; // Lecture publique
+      allow create: if isAuthenticated(); // Création si connecté
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.user_id == request.auth.uid || 
+         request.auth.token.admin == true); // Modification par le propriétaire ou admin
+    }
+    
+    // Forum Replies - Réponses du forum
+    match /forum_replies/{replyId} {
+      allow read: if true; // Lecture publique
+      allow create: if isAuthenticated(); // Création si connecté
+      allow update, delete: if isAuthenticated() && 
+        (resource.data.user_id == request.auth.uid || 
+         request.auth.token.admin == true); // Modification par le propriétaire ou admin
+    }
+    
+    // Messages - Messages globaux et privés
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && 
+        (resource.data.recipient_email == null || // Message global
+         resource.data.recipient_email == request.auth.token.email || // Message pour l'utilisateur
+         resource.data.created_by == request.auth.token.email); // Message créé par l'utilisateur
+      allow create: if isAuthenticated(); // Création si connecté
+      allow update: if isAuthenticated() && 
+        resource.data.recipient_email == request.auth.token.email; // Mise à jour par le destinataire
+      allow delete: if isAuthenticated() && 
+        (resource.data.created_by == request.auth.token.email || 
+         request.auth.token.admin == true); // Suppression par le créateur ou admin
+    }
+    
+    // User Content Notes - Notes utilisateur (étoiles, genres, etc.)
+    match /user_content_notes/{noteId} {
+      allow read: if true; // Lecture publique - tous peuvent voir les notes des autres
+      allow create, update, delete: if isAuthenticated() && 
+        (request.resource.data.user_email == request.auth.token.email || 
+         resource.data.user_email == request.auth.token.email); // Modification uniquement par le propriétaire
+    }
+    
+    // User Top 10 - Top 10 utilisateur
+    match /user_top10/{itemId} {
+      allow read: if true; // Lecture publique - tous peuvent voir le top 10 des autres
+      allow create, update, delete: if isAuthenticated() && 
+        (request.resource.data.user_email == request.auth.token.email || 
+         resource.data.user_email == request.auth.token.email); // Modification uniquement par le propriétaire
+    }
+    
+    // User Profiles - Profils utilisateur (optionnel)
+    match /user_profiles/{userId} {
+      allow read: if true; // Lecture publique des profils
+      // Création : le userId (qui est l'email) doit correspondre à l'email de l'utilisateur authentifié
+      // OU l'email dans les données doit correspondre
+      allow create: if isAuthenticated() && 
+        (userId == request.auth.token.email || 
+         request.resource.data.email == request.auth.token.email);
+      // Mise à jour : le userId (qui est l'email) doit correspondre à l'email de l'utilisateur authentifié
+      // OU l'utilisateur est admin (pour permettre la modification du champ verified)
+      // OU l'utilisateur est authentifié et modifie uniquement le champ verified (pour permettre la certification par l'admin)
+      allow update: if isAuthenticated() && 
+        (userId == request.auth.token.email ||
+         request.auth.token.admin == true ||
+         // Permettre la modification du champ verified même si ce n'est pas le propriétaire
+         // (pour permettre à l'admin de certifier des utilisateurs)
+         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['verified', 'updated_at'])));
+      // Suppression : uniquement par le propriétaire
+      allow delete: if isAuthenticated() && 
+        (userId == request.auth.token.email ||
+         (resource != null && resource.data.email == request.auth.token.email));
+    }
+    
+    // User List - Collection utilisateur (liste de mangas/animes)
+    match /user_list/{itemId} {
+      allow read: if true; // Lecture publique - tous peuvent voir les collections des autres
+      allow create, update, delete: if isAuthenticated() && 
+        (request.resource.data.user_email == request.auth.token.email || 
+         resource.data.user_email == request.auth.token.email); // Modification uniquement par le propriétaire
+    }
+    
+    // Support Tickets - Tickets d'aide (conversation user + admin, fermeture par l'un ou l'autre)
+    match /support_tickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        request.auth.token.admin == true ||
+        resource.data.user_email == request.auth.token.email
+      );
+      allow create: if true; // Tout le monde peut envoyer un ticket
+      allow update: if isAuthenticated() && (
+        request.auth.token.admin == true ||
+        resource.data.user_email == request.auth.token.email
+      );
+      allow delete: if isAuthenticated() && request.auth.token.admin == true;
+    }
+  }
+}

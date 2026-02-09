@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr" class="forum-page">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Détail du sujet - Forum Manga</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/images/favicon.ico">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Feuilles de style -->
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/hybrid-forum.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="/js/localization.js"></script>
+</head>
+<body class="forum-page">
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <form class="search-bar" id="searchForm">
+            <input type="text" placeholder="Rechercher un anime ou un manga..." id="searchInput">
+            <button type="submit" aria-label="Rechercher">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+        
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+            <button id="logout-btn" class="action-button" style="display: none;" data-i18n="auth.logout">Déconnexion</button>
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" class="user-avatar" src="" alt="Avatar utilisateur">
+            </a>
+        </nav>
+        
+        <button class="menu-toggle" id="menuToggle">
+            <i class="fas fa-bars"></i>
+        </button>
+    </header>
+
+    <!-- Interface hybride Reddit/Forum -->
+    <div class="forum-container">
+        <!-- Colonne principale -->
+        <main class="main-content">
+            <!-- En-tête du sujet -->
+            <div class="topic-header">
+                <h1 id="topicTitle" data-i18n="topic.title">Titre du sujet de discussion</h1>
+                <div class="topic-meta">
+                    <span class="author" id="topicAuthor" data-i18n="topic.author">Auteur</span>
+                    <span class="separator">•</span>
+                    <span class="date" id="topicDate" data-i18n="topic.date">il y a 2 heures</span>
+                    <span class="separator">•</span>
+                    <span class="category" id="topicCategory" data-i18n="topic.category">Général</span>
+                </div>
+                
+                <div class="topic-content">
+                    <p data-i18n="topic.content">Ceci est le contenu initial du sujet de discussion. Les utilisateurs peuvent y répondre et voter pour les meilleures réponses.</p>
+                    <p data-i18n="topic.formatting">Le formatage de base est pris en charge, comme le <strong>gras</strong>, l'<em>italique</em>, les <a href="#">liens</a>, etc.</p>
+                </div>
+                
+                <div class="quick-actions">
+                    <a href="#" class="quick-action">
+                        <i class="fas fa-comment-alt"></i> <span data-i18n="topic.action.reply">Répondre</span>
+                    </a>
+                    <a href="#" class="quick-action">
+                        <i class="fas fa-share"></i> <span data-i18n="topic.action.share">Partager</span>
+                    </a>
+                    <a href="#" class="quick-action">
+                        <i class="fas fa-bookmark"></i> <span data-i18n="topic.action.save">Enregistrer</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Section des commentaires -->
+            <div class="comments-section">
+                <!-- En-tête des commentaires -->
+                <div class="tabs">
+                    <div class="tab active" data-i18n="topic.tabs.best">Meilleurs commentaires</div>
+                    <div class="tab" data-i18n="topic.tabs.recent">Plus récents</div>
+                    <div class="tab" data-i18n="topic.tabs.top">Les plus votés</div>
+                </div>
+                
+                <!-- Formulaire de réponse -->
+                <form id="replyForm" class="reply-form" data-topic-id="">
+                    <h3 data-i18n="topic.reply.title">Votre réponse</h3>
+                    <textarea name="content" class="reply-textarea" data-i18n-placeholder="topic.reply.placeholder" required></textarea>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary cancel-reply" data-i18n="topic.reply.cancel">Annuler</button>
+                        <button type="submit" class="btn btn-primary" data-i18n="topic.reply.publish">Publier</button>
+                    </div>
+                </form>
+                
+                <!-- Liste des commentaires -->
+                <div class="comments-list" id="commentsList">
+                    <!-- Commentaire exemple -->
+                    <div class="comment">
+                        <div class="vote-container">
+                            <button class="vote-button upvote" aria-label="Upvote">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <span class="vote-count">42</span>
+                            <button class="vote-button downvote" aria-label="Downvote">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-author">Utilisateur1</span>
+                                <span class="comment-time" data-i18n="topic.comment.time">il y a 1 heure</span>
+                                <span class="badge badge-primary" data-i18n="topic.comment.op">OP</span>
+                            </div>
+                            <div class="comment-text">
+                                <p data-i18n="topic.comment.example">Ceci est un exemple de commentaire bien noté. Les utilisateurs peuvent voter pour ou contre les commentaires, et les meilleurs remontent en haut.</p>
+                                <p data-i18n="topic.comment.formatting">Le formatage est également pris en charge ici.</p>
+                            </div>
+                            <div class="comment-actions">
+                                <button class="comment-action">
+                                    <i class="far fa-comment"></i> <span data-i18n="topic.comment.action.reply">Répondre</span>
+                                </button>
+                                <button class="comment-action">
+                                    <i class="fas fa-flag"></i> <span data-i18n="topic.comment.action.report">Signaler</span>
+                                </button>
+                                <button class="comment-action">
+                                    <i class="fas fa-share"></i> <span data-i18n="topic.comment.action.share">Partager</span>
+                                </button>
+                                <button class="comment-action">
+                                    <i class="fas fa-ellipsis-h"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Réponse au commentaire -->
+                            <div class="comment-replies">
+                                <div class="comment">
+                                    <div class="vote-container">
+                                        <button class="vote-button upvote" aria-label="Upvote">
+                                            <i class="fas fa-arrow-up"></i>
+                                        </button>
+                                        <span class="vote-count">12</span>
+                                        <button class="vote-button downvote" aria-label="Downvote">
+                                            <i class="fas fa-arrow-down"></i>
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="comment-content">
+                                        <div class="comment-header">
+                                            <span class="comment-author">Utilisateur2</span>
+                                            <span class="comment-time" data-i18n="topic.comment.time">il y a 45 minutes</span>
+                                        </div>
+                                        <div class="comment-text">
+                                            <p data-i18n="topic.comment.reply">Je suis d'accord avec ce point de vue. Le format de discussion est très clair et permet des échanges structurés.</p>
+                                        </div>
+                                        <div class="comment-actions">
+                                            <button class="comment-action">
+                                                <i class="far fa-comment"></i> <span data-i18n="topic.comment.action.reply">Répondre</span>
+                                            </button>
+                                            <button class="comment-action">
+                                                <i class="fas fa-flag"></i> <span data-i18n="topic.comment.action.report">Signaler</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Autre commentaire -->
+                    <div class="comment">
+                        <div class="vote-container">
+                            <button class="vote-button upvote" aria-label="Upvote">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <span class="vote-count">8</span>
+                            <button class="vote-button downvote" aria-label="Downvote">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-author">Utilisateur3</span>
+                                <span class="comment-time" data-i18n="topic.comment.time">il y a 30 minutes</span>
+                            </div>
+                            <div class="comment-text">
+                                <p data-i18n="topic.comment.suggestion">Je pense que nous pourrions ajouter plus de fonctionnalités à cette discussion. Qu'en pensez-vous ?</p>
+                                
+                                <div class="message-quote">
+                                    <div class="quote-author">Citation de Utilisateur1</div>
+                                    <div class="quote-content">Ceci est un exemple de commentaire bien noté. Les utilisateurs peuvent voter pour ou contre les commentaires, et les meilleurs remontent en haut.</div>
+                                </div>
+                                
+                                <p data-i18n="topic.comment.example">Par exemple, la fonction de citation est très pratique pour référencer des messages spécifiques.</p>
+                            </div>
+                            <div class="comment-actions">
+                                <button class="comment-action">
+                                    <i class="far fa-comment"></i> <span data-i18n="topic.comment.action.reply">Répondre</span>
+                                </button>
+                                <button class="comment-action">
+                                    <i class="fas fa-flag"></i> <span data-i18n="topic.comment.action.report">Signaler</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="pagination">
+                    <ul class="pagination-list">
+                        <li class="pagination-item disabled">
+                            <i class="fas fa-chevron-left"></i>
+                        </li>
+                        <li class="pagination-item active">1</li>
+                        <li class="pagination-item">2</li>
+                        <li class="pagination-item">3</li>
+                        <li class="pagination-item">
+                            <i class="fas fa-ellipsis-h"></i>
+                        </li>
+                        <li class="pagination-item">10</li>
+                        <li class="pagination-item">
+                            <i class="fas fa-chevron-right"></i>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Barre latérale -->
+        <aside class="sidebar">
+            <!-- À propos de la communauté -->
+            <div class="widget">
+                <div class="widget-header">
+                    À propos de la communauté
+                </div>
+                <div class="widget-content">
+                    <p>Bienvenue sur notre communauté de passionnés de mangas et d'animés. Partagez vos avis, découvrez de nouvelles séries et discutez avec d'autres fans.</p>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+                        <i class="fas fa-plus"></i> Rejoindre
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Règles du forum -->
+            <div class="widget">
+                <div class="widget-header">
+                    Règles du forum
+                </div>
+                <div class="widget-content">
+                    <ol class="content-list">
+                        <li>Soyez respectueux envers les autres membres</li>
+                        <li>Pas de contenu inapproprié</li>
+                        <li>Respectez le droit d'auteur</li>
+                        <li>Pas de spam ou de publicité</li>
+                        <li>Restez dans le sujet des discussions</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <!-- Membres en ligne -->
+            <div class="widget">
+                <div class="widget-header">
+                    Membres en ligne <span class="badge badge-secondary">24</span>
+                </div>
+                <div class="widget-content">
+                    <ul class="online-users">
+                        <li class="online-user">
+                            <img src="https://ui-avatars.com/api/?name=User1&background=00b894&color=fff" alt="User1" class="user-avatar">
+                            <span class="user-name">User1</span>
+                            <span class="user-status online"></span>
+                        </li>
+                        <li class="online-user">
+                            <img src="https://ui-avatars.com/api/?name=User2&background=ff6b6b&color=fff" alt="User2" class="user-avatar">
+                            <span class="user-name">User2</span>
+                            <span class="user-status online"></span>
+                        </li>
+                        <li class="online-user">
+                            <img src="https://ui-avatars.com/api/?name=User3&background=5f7fff&color=fff" alt="User3" class="user-avatar">
+                            <span class="user-name">User3</span>
+                            <span class="user-status online"></span>
+                        </li>
+                    </ul>
+                    <a href="#" class="btn btn-secondary" style="width: 100%; margin-top: 10px; text-align: center;">
+                        Voir tout
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Tags populaires -->
+            <div class="widget">
+                <div class="widget-header">
+                    Tags populaires
+                </div>
+                <div class="widget-content">
+                    <div class="tags-list">
+                        <a href="#" class="tag">#anime</a>
+                        <a href="#" class="tag">#manga</a>
+                        <a href="#" class="tag">#discussion</a>
+                        <a href="#" class="tag">#recommandation</a>
+                        <a href="#" class="tag">#shonen</a>
+                        <a href="#" class="tag">#seinen</a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright">&copy;</span>2025
+                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
+                        <!-- Triangle rouge à gauche -->
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <!-- Bande noire en haut -->
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <!-- Bande blanche au milieu -->
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <!-- Bande verte en bas -->
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket><i class="fas fa-circle-question"></i></a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+    <script src="/js/help-ticket.js"></script>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initForum, loadTopic, loadReplies, handleReplySubmit } from '/js/forum-service.js';
+        
+        // Initialiser la page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Initialisation de la page de sujet...');
+            
+            // Initialiser le forum
+            await initForum();
+            
+            // Récupérer l'ID du sujet depuis l'URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const topicId = urlParams.get('id');
+            
+            if (topicId) {
+                try {
+                    // Charger le sujet et les réponses
+                    const topic = await loadTopic(topicId);
+                    const replies = await loadReplies(topicId);
+                    
+                    // Mettre à jour l'interface utilisateur
+                    updateTopicUI(topic);
+                    updateRepliesUI(replies);
+                    
+                    // Afficher le contenu
+                    document.getElementById('topicContent').style.display = 'block';
+                    document.getElementById('repliesSection').style.display = 'block';
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    
+                } catch (error) {
+                    console.error('Erreur lors du chargement du sujet:', error);
+                    const errorMessage = document.getElementById('errorMessage');
+                    errorMessage.textContent = 'Impossible de charger le sujet. Veuillez réessayer plus tard.';
+                    errorMessage.style.display = 'block';
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                }
+            } else {
+                // Rediriger vers la page du forum si aucun ID n'est fourni
+                window.location.href = 'forum.html';
+            }
+            
+            // Gérer la soumission du formulaire de réponse
+            const replyForm = document.getElementById('replyForm');
+            if (replyForm && topicId) {
+                // Mettre à jour l'ID du sujet dans le formulaire
+                replyForm.dataset.topicId = topicId;
+                
+                // Gérer la soumission du formulaire
+                replyForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await handleReplySubmit(e);
+                });
+                
+                // Gérer le bouton d'annulation
+                const cancelButton = replyForm.querySelector('.cancel-reply');
+                if (cancelButton) {
+                    cancelButton.addEventListener('click', () => {
+                        replyForm.reset();
+                    });
+                }
+            }
+            
+            // Mettre à jour l'interface utilisateur avec les informations du sujet
+            function updateTopicUI(topic) {
+                if (!topic) return;
+                
+                document.getElementById('topicTitle').textContent = topic.title || 'Sans titre';
+                document.getElementById('topicDate').textContent = topic.created_at || '';
+                document.getElementById('topicCategory').textContent = topic.category || 'Général';
+                document.getElementById('authorName').textContent = topic.author_name || 'Auteur inconnu';
+                
+                const topicBody = document.querySelector('.post-body');
+                if (topicBody) {
+                    topicBody.innerHTML = topic.content || '<p>Aucun contenu disponible.</p>';
+                }
+            }
+            
+            // Mettre à jour l'interface utilisateur avec les réponses
+            function updateRepliesUI(replies) {
+                const repliesList = document.getElementById('repliesList');
+                const repliesCount = document.getElementById('repliesCount');
+                
+                if (!repliesList || !repliesCount) return;
+                
+                // Mettre à jour le compteur de réponses
+                repliesCount.textContent = replies ? replies.length : 0;
+                
+                // Vider la liste des réponses existantes
+                repliesList.innerHTML = '';
+                
+                if (!replies || replies.length === 0) {
+                    const noReplies = document.createElement('div');
+                    noReplies.className = 'no-replies';
+                    noReplies.innerHTML = `
+                        <i class="far fa-comment-dots"></i>
+                        <p>Soyez le premier à commenter ce sujet !</p>
+                    `;
+                    repliesList.appendChild(noReplies);
+                    return;
+                }
+                
+                // Ajouter chaque réponse à la liste
+                replies.forEach(reply => {
+                    const replyElement = document.createElement('div');
+                    replyElement.className = 'comment';
+                    replyElement.dataset.id = reply.id;
+                    
+                    // Récupérer les informations de l'auteur
+                    const author = reply.user || {};
+                    const authorName = author.username || 'Utilisateur inconnu';
+                    const authorAvatar = author.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName.charAt(0).toUpperCase())}&background=00b894&color=fff`;
+                    
+                    // Vérifier si l'utilisateur actuel est l'auteur de la réponse
+                    const isAuthor = window.currentUser && window.currentUser.id === reply.user_id;
+                    
+                    replyElement.innerHTML = `
+                        <div class="vote-container">
+                            <button class="vote-btn upvote" aria-label="Upvote">
+                                <i class="fas fa-arrow-up"></i>
+                            </button>
+                            <span class="vote-count">${reply.votes || 0}</span>
+                            <button class="vote-btn downvote" aria-label="Downvote">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="comment-content">
+                            <header class="comment-header">
+                                <img src="${authorAvatar}" 
+                                     alt="${authorName}" 
+                                     class="avatar">
+                                <span class="author">${authorName}</span>
+                                <span class="comment-date">${formatDate(reply.created_at)}</span>
+                            </header>
+                            
+                            <div class="comment-body">
+                                ${reply.content || '<p>Contenu non disponible</p>'}
+                            </div>
+                            
+                            <footer class="comment-footer">
+                                <button class="action-btn reply-btn">
+                                    <i class="far fa-comment"></i> Répondre
+                                </button>
+                                <button class="action-btn">
+                                    <i class="far fa-flag"></i> Signaler
+                                </button>
+                                ${isAuthor ? `
+                                    <div class="comment-actions">
+                                        <button class="action-btn edit-btn">
+                                            <i class="far fa-edit"></i> Modifier
+                                        </button>
+                                        <button class="action-btn delete-btn">
+                                            <i class="far fa-trash-alt"></i> Supprimer
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </footer>
+                        </div>
+                    `;
+                    
+                    repliesList.appendChild(replyElement);
+                });
+                
+                // Configurer les événements pour les boutons d'action
+                setupReplyActions();
+            }
+            
+            // Fonction utilitaire pour formater une date
+            function formatDate(dateString) {
+                if (!dateString) return '';
+                
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '';
+                
+                return date.toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+            
+            // Configurer les événements pour les boutons d'action des réponses
+            function setupReplyActions() {
+                // Gérer les clics sur le bouton de réponse
+                document.querySelectorAll('.reply-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const commentElement = e.target.closest('.comment');
+                        if (commentElement) {
+                            const replyTo = commentElement.dataset.id;
+                            // Ajouter ici la logique pour répondre à un commentaire spécifique
+                            console.log('Répondre au commentaire:', replyTo);
+                            
+                            // Faire défiler jusqu'au formulaire de réponse
+                            const replyForm = document.getElementById('replyForm');
+                            if (replyForm) {
+                                replyForm.scrollIntoView({ behavior: 'smooth' });
+                                const textarea = replyForm.querySelector('textarea[name="content"]');
+                                if (textarea) {
+                                    textarea.focus();
+                                    textarea.value = `@${commentElement.querySelector('.author').textContent} `;
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                // Gérer les clics sur le bouton de modification
+                document.querySelectorAll('.edit-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const commentElement = e.target.closest('.comment');
+                        if (commentElement) {
+                            const replyId = commentElement.dataset.id;
+                            const contentElement = commentElement.querySelector('.comment-body');
+                            const currentContent = contentElement.textContent.trim();
+                            
+                            // Remplacer le contenu par un formulaire d'édition
+                            const editForm = document.createElement('div');
+                            editForm.className = 'edit-form';
+                            editForm.innerHTML = `
+                                <textarea class="edit-textarea">${currentContent}</textarea>
+                                <div class="edit-actions">
+                                    <button class="btn btn-secondary cancel-edit">Annuler</button>
+                                    <button class="btn btn-primary save-edit">Enregistrer</button>
+                                </div>
+                            `;
+                            
+                            // Sauvegarder l'ancien contenu pour pouvoir annuler
+                            const oldContent = contentElement.innerHTML;
+                            contentElement.innerHTML = '';
+                            contentElement.appendChild(editForm);
+                            
+                            // Focus sur le textarea d'édition
+                            const textarea = editForm.querySelector('.edit-textarea');
+                            textarea.focus();
+                            textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+                            
+                            // Gérer l'annulation de l'édition
+                            const cancelButton = editForm.querySelector('.cancel-edit');
+                            cancelButton.addEventListener('click', () => {
+                                contentElement.innerHTML = oldContent;
+                            });
+                            
+                            // Gérer la sauvegarde de l'édition
+                            const saveButton = editForm.querySelector('.save-edit');
+                            saveButton.addEventListener('click', async () => {
+                                const newContent = textarea.value.trim();
+                                if (newContent && newContent !== currentContent) {
+                                    try {
+                                        // Mettre à jour la réponse dans la base de données
+                                        const { error } = await supabase
+                                            .from('forum_replies')
+                                            .update({ 
+                                                content: newContent,
+                                                updated_at: new Date().toISOString()
+                                            })
+                                            .eq('id', replyId);
+                                            
+                                        if (error) throw error;
+                                        
+                                        // Mettre à jour l'affichage
+                                        contentElement.innerHTML = newContent;
+                                        
+                                        // Afficher un message de succès
+                                        showSuccess('Réponse mise à jour avec succès !');
+                                        
+                                    } catch (error) {
+                                        console.error('Erreur lors de la mise à jour de la réponse:', error);
+                                        showError('Une erreur est survenue lors de la mise à jour de la réponse.');
+                                        contentElement.innerHTML = oldContent; // Revenir à l'ancien contenu en cas d'erreur
+                                    }
+                                } else {
+                                    contentElement.innerHTML = oldContent; // Annuler si le contenu n'a pas changé
+                                }
+                            });
+                        }
+                    });
+                });
+                
+                // Gérer les clics sur le bouton de suppression
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const commentElement = e.target.closest('.comment');
+                        if (commentElement && confirm('Êtes-vous sûr de vouloir supprimer cette réponse ?')) {
+                            const replyId = commentElement.dataset.id;
+                            
+                            try {
+                                // Supprimer la réponse de la base de données
+                                const { error } = await supabase
+                                    .from('forum_replies')
+                                    .delete()
+                                    .eq('id', replyId);
+                                    
+                                if (error) throw error;
+                                
+                                // Supprimer l'élément du DOM
+                                commentElement.remove();
+                                
+                                // Mettre à jour le compteur de réponses
+                                const repliesCount = document.getElementById('repliesCount');
+                                if (repliesCount) {
+                                    const count = parseInt(repliesCount.textContent) - 1;
+                                    repliesCount.textContent = Math.max(0, count);
+                                }
+                                
+                                // Afficher un message de succès
+                                showSuccess('Réponse supprimée avec succès !');
+                                
+                            } catch (error) {
+                                console.error('Erreur lors de la suppression de la réponse:', error);
+                                showError('Une erreur est survenue lors de la suppression de la réponse.');
+                            }
+                        }
+                    });
+                });
+                
+                // Gérer les votes (upvote/downvote)
+                document.querySelectorAll('.vote-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const commentElement = e.target.closest('.comment');
+                        if (commentElement) {
+                            const replyId = commentElement.dataset.id;
+                            const isUpvote = e.target.closest('.upvote');
+                            const voteCountElement = commentElement.querySelector('.vote-count');
+                            
+                            try {
+                                // Mettre à jour le vote dans la base de données
+                                const { data, error } = await supabase.rpc('handle_vote', {
+                                    p_reply_id: replyId,
+                                    p_user_id: window.currentUser?.id,
+                                    p_is_upvote: isUpvote ? 1 : -1
+                                });
+                                
+                                if (error) throw error;
+                                
+                                // Mettre à jour le compteur de votes
+                                if (voteCountElement) {
+                                    voteCountElement.textContent = data?.votes || 0;
+                                }
+                                
+                                // Mettre en surbrillance le bouton de vote sélectionné
+                                const upvoteButton = commentElement.querySelector('.upvote');
+                                const downvoteButton = commentElement.querySelector('.downvote');
+                                
+                                if (isUpvote) {
+                                    upvoteButton.classList.toggle('active');
+                                    downvoteButton?.classList.remove('active');
+                                } else {
+                                    downvoteButton?.classList.toggle('active');
+                                    upvoteButton?.classList.remove('active');
+                                }
+                                
+                            } catch (error) {
+                                console.error('Erreur lors du vote:', error);
+                                showError('Vous devez être connecté pour voter.');
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
+        // Initialiser la localisation
+        document.addEventListener('DOMContentLoaded', function() {
+            window.localization.init();
+        });
+    </script>
+</body>
+</html>

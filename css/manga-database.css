@@ -1,0 +1,1330 @@
+/* Variables */
+:root {
+    --primary: #2e7d32;  /* Vert foncé */
+    --primary-dark: #1b5e20;  /* Plus foncé */
+    --primary-light: #4caf50;  /* Vert clair */
+    --secondary: #1b5e20;  /* Vert foncé */
+    --dark: #121212;
+    --dark-light: #1e1e1e;
+    --darker: #0a0a0a;
+    --light: #f5f5f5;
+    --light-gray: #e0e0e0;
+    --gray: #757575;
+    --dark-gray: #333;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --danger: #f44336;
+    --info: #2196f3;
+    --transition: all 0.3s ease;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Reset et styles de base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Bouton favori */
+.favorite-btn {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 193, 7, 0.95);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+}
+
+.favorite-btn:hover {
+    background: rgba(255, 193, 7, 1);
+    transform: translateX(-50%) scale(1.15);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.6);
+}
+
+.favorite-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.favorite-btn i {
+    transition: all 0.3s ease;
+}
+
+.favorite-btn:hover i {
+    transform: scale(1.2);
+}
+
+/* Boutons de statut */
+.status-btn {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.status-btn:hover {
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.status-btn:active {
+    transform: translateX(-50%) scale(0.95);
+}
+
+.status-btn i {
+    color: white;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.status-btn:hover i {
+    transform: scale(1.1);
+}
+
+/* Styles pour s'assurer que l'avatar s'affiche correctement */
+.main-header .avatar-link {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 55px !important;
+    height: 55px !important;
+    border: 3px solid var(--primary);
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+    position: relative;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-left: 1rem;
+    z-index: 1000;
+}
+
+.main-header .avatar-link::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    border-radius: 50%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.main-header .avatar-link:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+}
+
+.main-header .avatar-link:hover::before {
+    opacity: 1;
+}
+
+.main-header .user-avatar {
+    width: 49px !important;
+    height: 49px !important;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    object-fit: cover;
+    position: relative;
+    z-index: 2;
+    image-rendering: auto;
+    filter: contrast(1.05) brightness(1.02);
+    transition: all 0.3s ease;
+}
+
+.main-header .user-avatar:hover {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    filter: contrast(1.1) brightness(1.05);
+    transform: scale(1.02);
+    border-color: rgba(255, 255, 255, 1);
+}
+
+/* Responsive pour l'avatar */
+@media (max-width: 768px) {
+    .main-header .user-avatar {
+        width: 45px !important;
+        height: 45px !important;
+    }
+    
+    .main-header .avatar-link {
+        width: 45px !important;
+        height: 45px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-header .user-avatar {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    
+    .main-header .avatar-link {
+        width: 40px !important;
+        height: 40px !important;
+    }
+}
+
+body {
+    background-color: var(--dark);
+    color: var(--light);
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* S'assurer que le main ne chevauche pas le header */
+main.manga-database {
+    padding-top: 0; /* Le padding est géré par .container */
+    margin-top: 0;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    padding-top: 100px; /* Espace pour le header fixe (augmenté pour éviter le chevauchement) */
+}
+
+/* En-tête de page */
+.page-title {
+    text-align: center;
+    margin: 30px 0;
+    font-size: 2.5rem;
+    background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent; /* Fallback pour les navigateurs qui ne supportent pas text-fill-color */
+    display: inline-block;
+    width: 100%;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Barre de recherche */
+.search-container {
+    margin-bottom: 30px;
+    background: var(--dark-light);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    position: relative;
+    z-index: 1;
+}
+
+.search-box {
+    display: flex;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.search-box input {
+    flex: 1;
+    padding: 15px 25px;
+    border: 2px solid var(--gray);
+    border-radius: 50px;
+    font-size: 1rem;
+    background: var(--darker);
+    color: var(--light);
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+/* Affichage du terme de recherche */
+.search-term-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--primary);
+    color: var(--light);
+    padding: 10px 15px;
+    border-radius: 25px;
+    margin: 15px 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: slideInDown 0.3s ease;
+}
+
+.search-term-display span {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.clear-search-btn {
+    background: none;
+    border: none;
+    color: var(--light);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+}
+
+.clear-search-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(138, 43, 226, 0.3);
+}
+
+.search-box button {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    bottom: 5px;
+    width: 50px;
+    background: var(--primary);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.search-box button:hover {
+    background: var(--primary-dark);
+    transform: scale(0.95);
+}
+
+/* Filtres */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--light-gray);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.filter-group select {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--dark-gray);
+    background: var(--darker);
+    color: var(--light);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px;
+}
+
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(138, 43, 226, 0.3);
+}
+
+/* Bouton de réinitialisation des filtres */
+.genre-sort-btn {
+    background: var(--primary);
+    color: var(--light);
+    border: none;
+    padding: 12px 20px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    width: 100%;
+    justify-content: center;
+}
+
+.genre-sort-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(46, 125, 50, 0.3);
+}
+
+.genre-sort-btn i {
+    font-size: 0.8rem;
+}
+
+.reset-filters-btn {
+    background: var(--danger);
+    color: var(--light);
+    border: none;
+    padding: 12px 20px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    width: 100%;
+    justify-content: center;
+}
+
+.reset-filters-btn:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+.reset-filters-btn i {
+    font-size: 0.8rem;
+}
+
+/* Container des genres */
+.genre-container {
+    background: #1a1d24;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: slideDown 0.3s ease-out;
+    border: 1px solid #2a2d35;
+}
+
+.genre-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.genre-option {
+    background: #23262f;
+    color: #e8eaed;
+    border: 1px solid #00b894;
+    border-radius: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-align: left;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    position: relative;
+    overflow: hidden;
+}
+
+.genre-option:hover {
+    background: #00b894;
+    color: #1a1d24;
+    border-color: #00b894;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 184, 148, 0.4);
+}
+
+.genre-option:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 184, 148, 0.3);
+}
+
+/* Style pour les genres sélectionnés */
+.genre-option.selected {
+    background: #00b894;
+    color: #1a1d24;
+    border-color: #00b894;
+    box-shadow: 0 2px 8px rgba(0, 184, 148, 0.4);
+    transform: translateY(-1px);
+}
+
+.genre-option.selected:hover {
+    background: #00a085;
+    color: #1a1d24;
+    border-color: #00a085;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 184, 148, 0.5);
+}
+
+/* Animation pour l'apparition des genres */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+
+/* Grille de mangas */
+.manga-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 25px;
+    margin: 30px 0;
+    position: relative;
+    z-index: 1;
+}
+
+/* Empêcher tout élément de s'afficher au-dessus de la grille */
+.manga-grid::before,
+.manga-grid::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Cacher tout élément avec fond vert qui pourrait être une bannière mal placée */
+.manga-grid > div:not(.manga-card),
+.manga-grid > *:not(.manga-card) {
+    display: none !important;
+}
+
+/* Cacher les éléments qui pourraient être créés par erreur au-dessus des cartes */
+.manga-card + div[style*="green"],
+.manga-card + div[style*="background"],
+.manga-card + *[style*="position: absolute"],
+.manga-card + *[style*="position: fixed"] {
+    display: none !important;
+}
+
+.manga-card {
+    background: var(--dark-light);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+    box-shadow: var(--box-shadow);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    isolation: isolate; /* Créer un nouveau contexte d'empilement */
+    contain: layout style paint; /* Isolation stricte du contenu */
+}
+
+/* Empêcher tout élément de s'afficher au-dessus de la carte */
+.manga-card::before,
+.manga-card::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Empêcher tout élément enfant de sortir de la carte (sauf les badges et boutons) */
+.manga-card > *:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) {
+    position: relative;
+    z-index: auto;
+}
+
+/* S'assurer que rien ne peut apparaître au-dessus de manga-image */
+.manga-image {
+    position: relative;
+    padding-top: 140%;
+    overflow: hidden;
+    z-index: 1;
+    contain: layout style paint;
+}
+
+/* Empêcher tout élément de s'afficher au-dessus de l'image */
+.manga-image::before,
+.manga-image::after {
+    display: none !important;
+    content: none !important;
+}
+
+.manga-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Empêcher le synopsis d'apparaître dans la zone de l'image */
+/* IMPORTANT: Ne pas affecter les badges et boutons (.manga-badge, .score-badge, .type-badge, .favorite-btn, .status-btn) */
+.manga-image .manga-synopsis,
+.manga-image .content-synopsis,
+.manga-image > p,
+.manga-image > h1,
+.manga-image > h2,
+.manga-image > h3,
+.manga-image > h4,
+.manga-image > h5,
+.manga-image > h6 {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+}
+
+/* Cacher les divs qui contiennent du synopsis ou du texte long, mais garder les badges et boutons */
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) p,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) .manga-synopsis,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) .content-synopsis,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) h1,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) h2,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) h3,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) h4,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) h5,
+.manga-image > div:not(.manga-badge):not(.score-badge):not(.type-badge):not(.favorite-btn):not(.status-btn) h6 {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* S'assurer que les badges et boutons sont toujours visibles */
+.manga-image .manga-badge,
+.manga-image .score-badge,
+.manga-image .type-badge,
+.manga-image .favorite-btn,
+.manga-image .status-btn {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: absolute !important;
+    z-index: 10 !important;
+}
+
+.manga-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+    background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+}
+
+.manga-card:hover .manga-image img {
+    transform: scale(1.05);
+}
+
+.manga-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    z-index: 2;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.score-badge {
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.score-badge i {
+    margin-right: 3px;
+    color: #ffd700;
+}
+
+.type-badge {
+    top: 10px;
+    right: 10px;
+    background: var(--primary);
+}
+
+.manga-info {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.manga-title {
+    font-size: 1.1rem;
+    margin: 0 0 10px 0;
+    color: white;
+    font-weight: 600;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: 3em;
+    line-height: 1.4;
+}
+
+.manga-meta {
+    display: flex;
+    justify-content: space-between;
+    color: var(--gray);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+.manga-synopsis {
+    font-size: 0.9rem;
+    color: #bbb;
+    margin-bottom: 15px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    position: relative;
+    z-index: 1;
+    max-height: 4.5em; /* Limiter la hauteur pour éviter le débordement */
+}
+
+/* S'assurer que le synopsis ne peut jamais apparaître en dehors de sa carte */
+.manga-card .manga-synopsis {
+    contain: layout style paint; /* Isolation du contenu */
+}
+
+.manga-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: auto;
+}
+
+.genre-tag {
+    background: rgba(46, 125, 50, 0.2);
+    color: #81c784;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.genre-tag:hover {
+    background: rgba(46, 125, 50, 0.3);
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 40px 0;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+
+.pagination button {
+    background: var(--dark-light);
+    border: 1px solid var(--dark-gray);
+    color: var(--light);
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    min-width: 40px;
+}
+
+/* Styles spécifiques pour les boutons Précédent/Suivant */
+.pagination button[id*="prev"],
+.pagination button[id*="next"] {
+    min-width: 100px;
+    width: auto;
+    padding: 0 20px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.pagination button:hover:not(:disabled) {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination button.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+
+.page-ellipsis {
+    color: var(--gray);
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+}
+
+/* Styles spécifiques pour les boutons de page */
+.page-number {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    margin: 0 2px;
+}
+
+/* S'assurer que les boutons de pagination sont en ligne */
+.pagination > * {
+    display: inline-flex !important;
+    flex-direction: row;
+}
+
+/* Forcer l'affichage en ligne pour tous les éléments de pagination */
+.pagination button,
+.pagination span {
+    display: inline-block !important;
+    white-space: nowrap;
+}
+
+/* S'assurer que les boutons de page ne passent pas à la ligne */
+.page-numbers {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px;
+}
+
+/* État de chargement */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 50px 0;
+    color: var(--gray);
+    font-size: 1.1rem;
+    grid-column: 1 / -1;
+    text-align: center;
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Message d'erreur */
+.error-message {
+    background: rgba(244, 67, 54, 0.1);
+    border-left: 4px solid var(--danger);
+    padding: 15px 20px;
+    margin: 20px 0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--light);
+    grid-column: 1 / -1;
+}
+
+.error-message i {
+    color: var(--danger);
+    font-size: 1.2rem;
+}
+
+
+
+/* Modal de détails du manga */
+.manga-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.manga-modal.show {
+    opacity: 1;
+}
+
+.manga-modal-content {
+    background: var(--dark-light);
+    margin: 50px auto;
+    max-width: 900px;
+    width: 90%;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.manga-modal.show .manga-modal-content {
+    transform: translateY(0);
+}
+
+.close {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.close:hover {
+    background: var(--danger);
+    transform: rotate(90deg);
+}
+
+/* Styles supprimés pour éviter les conflits avec details-pages.css */
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.info-item h4 {
+    color: var(--gray);
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.info-item p, .info-item a {
+    color: var(--light);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.info-item a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.info-item a:hover {
+    text-decoration: underline;
+}
+
+.trailer {
+    margin-top: 30px;
+}
+
+.trailer h4 {
+    color: var(--light);
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.trailer-embed {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+    background: var(--darker);
+}
+
+.trailer-embed iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Styles responsifs */
+@media (max-width: 1200px) {
+    .anime-details {
+        grid-template-columns: 1fr 1.5fr;
+    }
+}
+
+@media (max-width: 992px) {
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    
+    .anime-details {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .anime-poster {
+        max-width: 350px;
+        margin: 0 auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .filters {
+        flex-direction: column;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .manga-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .search-container {
+        padding: 20px 15px;
+    }
+    
+    .manga-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 20px auto;
+    }
+    
+    .anime-details {
+        padding: 20px 15px;
+    }
+    
+    .anime-header .anime-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* Très petits écrans (téléphones en mode portrait) */
+@media (max-width: 400px) {
+    .manga-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .manga-card {
+        min-height: 200px;
+    }
+    
+    .manga-title {
+        font-size: 0.9rem;
+        min-height: 2.5em;
+    }
+    
+    .manga-meta {
+        font-size: 0.8rem;
+    }
+    
+    .genre-tag {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
+
+/* Animation de chargement des cartes */
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.skeleton {
+    animation: pulse 1.5s infinite ease-in-out;
+    background: linear-gradient(90deg, var(--dark-gray) 25%, var(--dark-light) 50%, var(--dark-gray) 75%);
+    background-size: 200% 100%;
+    border-radius: var(--border-radius);
+}
+
+/* Amélioration de l'accessibilité */
+:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Personnalisation de la barre de défilement */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Styles pour le modal de statut */
+.status-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.close-modal:hover {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.modal-body {
+    padding: 20px 25px 25px;
+}
+
+.status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-option {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.status-option:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.status-option[data-status="watching"] {
+    color: #2196f3;
+}
+
+.status-option[data-status="completed"] {
+    color: #4caf50;
+}
+
+.status-option[data-status="on-hold"] {
+    color: #ff9800;
+}
+
+.status-option[data-status="dropped"] {
+    color: #f44336;
+}
+
+.status-option[data-status="plan-to-watch"] {
+    color: #9c27b0;
+}
+
+.status-option i {
+    font-size: 1.2rem;
+    width: 20px;
+    text-align: center;
+}
+
+.status-option span {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}

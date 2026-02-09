@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créateur de Tier List - MangaWatch</title>
+    
+    <!-- Polices -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/tierlist.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <script src="/js/localization.js"></script>
+</head>
+<body>
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <form class="search-bar" id="searchForm">
+            <input type="text" placeholder="Rechercher des mangas..." id="searchInput">
+            <button type="submit" aria-label="Rechercher">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+        
+        <!-- Bouton hamburger pour mobile -->
+        <button class="hamburger-btn" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <!-- Avatar utilisateur -->
+        <a href="profil.html" class="avatar-link">
+            <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar">
+        </a>
+    </header>
+
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+            <a href="tierlist.html" class="active">
+                <i class="fas fa-list-ol"></i>
+                <span data-i18n="nav.tierlist">Tier List</span>
+            </a>
+            <a href="forum.html">
+                <i class="fas fa-comments"></i>
+                <span data-i18n="nav.forum">Forum</span>
+            </a>
+        </nav>
+    </div>
+
+    <main class="tierlist-container">
+        <div class="tierlist-header">
+            <h1 class="tierlist-title" data-i18n="tierlist.title">Créateur de Tier List</h1>
+            <p class="tierlist-subtitle" data-i18n="tierlist.subtitle">Classez vos mangas préférés par ordre de préférence</p>
+            
+            <div class="tierlist-actions">
+                <button id="addImagesBtn" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> <span data-i18n="tierlist.add_images">Ajouter des images</span>
+                </button>
+                <button id="saveTierListBtn" class="btn btn-secondary">
+                    <i class="fas fa-save"></i> <span data-i18n="tierlist.save">Enregistrer</span>
+                </button>
+                <button id="shareTierListBtn" class="btn btn-secondary">
+                    <i class="fas fa-share-alt"></i> <span data-i18n="tierlist.share">Partager</span>
+                </button>
+                <button id="resetTierListBtn" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tiers -->
+        <div class="tierlist-tiers">
+            <!-- Tier S -->
+            <div class="tier-row tier-s">
+                <div class="tier-label">S</div>
+                <div class="tier-content" data-tier="s">
+                    <!-- Les éléments du tier S seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Tier A -->
+            <div class="tier-row tier-a">
+                <div class="tier-label">A</div>
+                <div class="tier-content" data-tier="a">
+                    <!-- Les éléments du tier A seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Tier B -->
+            <div class="tier-row tier-b">
+                <div class="tier-label">B</div>
+                <div class="tier-content" data-tier="b">
+                    <!-- Les éléments du tier B seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Tier C -->
+            <div class="tier-row tier-c">
+                <div class="tier-label">C</div>
+                <div class="tier-content" data-tier="c">
+                    <!-- Les éléments du tier C seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+            
+            <!-- Tier D -->
+            <div class="tier-row tier-d">
+                <div class="tier-label">D</div>
+                <div class="tier-content" data-tier="d">
+                    <!-- Les éléments du tier D seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Zone non classée -->
+        <div class="unranked-container">
+            <h3 class="unranked-title">
+                <i class="fas fa-layer-group"></i> Non classé
+            </h3>
+            <div class="unranked-items" id="unrankedItems">
+                <p class="empty-message">Glissez des images ici ou cliquez sur "Ajouter des images"</p>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Modal d'ajout d'images -->
+    <div id="addImagesModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Ajouter des images</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="imageUpload">Télécharger des images</label>
+                    <input type="file" id="imageUpload" class="form-control" accept="image/*" multiple>
+                    <p class="form-hint">Sélectionnez une ou plusieurs images à ajouter à votre tier list.</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Ou chercher des images en ligne</label>
+                    <div class="search-box">
+                        <input type="text" id="imageSearchInput" class="form-control" placeholder="Rechercher des images...">
+                        <button id="searchImagesBtn" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Rechercher
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="searchResults" class="search-results">
+                    <h4>Résultats de la recherche</h4>
+                    <div id="searchResultsGrid" class="search-results-grid">
+                        <!-- Les résultats de la recherche seront ajoutés ici dynamiquement -->
+                    </div>
+                </div>
+                
+                <div id="selectedImagesPreview" class="selected-images-preview">
+                    <h4>Images sélectionnées</h4>
+                    <div id="selectedImagesGrid" class="selected-images-grid">
+                        <!-- Les images sélectionnées seront affichées ici dynamiquement -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelAddImages" class="btn btn-secondary">Annuler</button>
+                <button id="confirmAddImages" class="btn btn-primary" disabled>Ajouter (0)</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/tierlist.js"></script>
+    <script src="/js/hamburger-menu.js"></script>
+    <script>
+        // Initialisation de la localisation
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.localization) {
+                window.localization.init();
+            }
+        });
+        
+        // Gérer la soumission du formulaire de recherche
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const query = document.getElementById('searchInput').value.trim();
+            if (query) {
+                // Rediriger vers la page de recherche avec le terme de recherche
+                window.location.href = `manga.html?search=${encodeURIComponent(query)}`;
+            }
+        });
+    </script>
+    
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
+                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
+                        <!-- Triangle rouge à gauche -->
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <!-- Bande noire en haut -->
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <!-- Bande blanche au milieu -->
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <!-- Bande verte en bas -->
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket><i class="fas fa-circle-question"></i></a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+    <script src="/js/help-ticket.js"></script>
+</body>
+</html>

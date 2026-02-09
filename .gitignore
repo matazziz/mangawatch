@@ -1,0 +1,47 @@
+# Dépendances
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Fichiers d'environnement
+.env
+.env.local
+.env.production
+
+# Clés et secrets (ne jamais commiter)
+mangawatch-key.json
+*-key.json
+*.pem
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Dossiers de build (si vous en avez plus tard)
+dist/
+build/
+.next/
+out/
+
+# Fichiers temporaires
+*.tmp
+.cache/
+
+# Fichiers d'éditeur
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Netlify
+.netlify/
+

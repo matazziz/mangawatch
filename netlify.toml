@@ -1,0 +1,63 @@
+[build]
+  # Netlify servira les fichiers statiques depuis la racine
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  # Rediriger la racine vers la page d'accueil
+  from = "/"
+  to = "/pages/acceuil.html"
+  status = 200
+
+[[redirects]]
+  # Redirection pour /acceuil
+  from = "/acceuil"
+  to = "/pages/acceuil.html"
+  status = 200
+
+[[redirects]]
+  # Redirection pour /home
+  from = "/home"
+  to = "/pages/acceuil.html"
+  status = 200
+
+# Headers pour la sécurité et les performances
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Headers spécifiques pour les fichiers statiques
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.mp4"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+

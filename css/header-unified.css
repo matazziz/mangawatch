@@ -1,0 +1,587 @@
+/* Header unifié pour toutes les pages - Thème Death Note */
+
+/* Variables pour les couleurs et les polices */
+:root {
+    --primary-color: #00a84d; /* Vert principal */
+    --primary-dark: #008a3d; /* Vert foncé */
+    --primary-light: #00c45d; /* Vert clair */
+    --secondary-color: #007bff; /* Bleu secondaire */
+    --text-primary: #ffffff; /* Texte blanc */
+    --text-secondary: rgba(255, 255, 255, 0.7); /* Texte secondaire */
+    --background-color: #121212; /* Fond principal */
+    --header-bg: rgba(18, 18, 18, 0.95); /* Fond du header avec transparence */
+    --surface: #181818; /* Surface des cartes */
+    --border: rgba(255, 255, 255, 0.1); /* Bordures */
+    --shadow: rgba(0, 0, 0, 0.2); /* Ombres */
+    --accent: #1ed760; /* Accent */
+    --gradient-primary: linear-gradient(135deg, #00a84d, #00c45d); /* Dégradé principal */
+    --gradient-secondary: linear-gradient(135deg, rgba(0, 168, 77, 0.1), rgba(0, 168, 77, 0.05)); /* Dégradé secondaire */
+    --hover-color: rgba(0, 168, 77, 0.1); /* Couleur de survol */
+    --active-color: rgba(0, 168, 77, 0.2); /* Couleur active */
+    --border-radius: 8px; /* Rayon des coins */
+    --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Police principale */
+    --font-accent: 'Garamond', serif; /* Police d'accentuation */
+}
+
+/* Reset et styles de base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding-top: 70px; /* Espace pour le header fixe */
+}
+
+/* Styles pour le contenu principal */
+main {
+    flex: 1;
+    min-height: calc(100vh - 70px - 140px); /* Hauteur totale - header - footer agrandi */
+    width: 100%;
+}
+
+.main-container {
+    flex: 1;
+    min-height: calc(100vh - 70px - 140px);
+    width: 100%;
+}
+
+/* Styles du header */
+.main-header {
+    background-color: var(--header-bg);
+    backdrop-filter: blur(10px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 168, 77, 0.3);
+    height: 70px;
+    transition: all 0.3s ease;
+}
+
+/* Logo et lien du logo */
+.logo-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    transition: transform 0.3s ease;
+}
+
+.logo-link:hover {
+    transform: scale(1.05);
+}
+
+.logo-image {
+    height: 40px;
+    width: auto;
+    filter: drop-shadow(0 0 5px rgba(0, 168, 77, 0.5));
+    transition: all 0.3s ease;
+}
+
+.logo-link:hover .logo-image {
+    filter: drop-shadow(0 0 8px rgba(0, 200, 93, 0.7));
+    transform: scale(1.05);
+}
+
+/* Barre de recherche */
+.search-bar {
+    flex: 0 1 500px;
+    position: relative;
+    margin: 0 2rem;
+    max-width: 100%;
+}
+
+.search-bar input[type="text"] {
+    width: 100%;
+    padding: 0.8rem 1.2rem 0.8rem 3.2rem;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-primary);
+    font-family: var(--font-main);
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.search-bar input[type="text"]:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 168, 77, 0.3);
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.search-bar input[type="text"]::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.search-bar button {
+    position: absolute;
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    padding: 0.4rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-bar button:hover {
+    color: var(--accent);
+    background-color: var(--hover-color);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.search-bar button:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Navigation principale - CACHÉE PAR DÉFAUT */
+.nav-links {
+    display: none; /* Caché par défaut sur mobile */
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.4rem;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border);
+    margin: 0 0.5rem;
+    margin-left: -2rem; /* Décaler vers la gauche */
+}
+
+.nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-family: var(--font-main);
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.nav-links a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--gradient-secondary);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: -1;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: white;
+    transform: translateY(-2px);
+}
+
+.nav-links a.active {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 168, 77, 0.3);
+}
+
+.nav-links a:hover::before {
+    opacity: 1;
+}
+
+.nav-links a:active {
+    transform: translateY(0);
+}
+
+/* Avatar utilisateur - Style circulaire similaire au logo */
+.avatar-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-left: 1.5rem;
+    border: 3px solid var(--primary-color);
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent));
+    padding: 2px;
+    box-shadow: 0 0 15px rgba(0, 168, 77, 0.3);
+    position: relative;
+}
+
+.avatar-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(0, 168, 77, 0.2), rgba(30, 215, 96, 0.1));
+    z-index: 1;
+    pointer-events: none;
+}
+
+.user-avatar {
+    width: 49px;
+    height: 49px;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: center;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    display: block;
+    background-color: #333;
+    position: relative;
+    z-index: 2;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: auto;
+    filter: contrast(1.05) brightness(1.02);
+}
+
+.avatar-link:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 168, 77, 0.5);
+    border-color: var(--accent);
+}
+
+.user-avatar:hover {
+    transform: scale(1.05);
+    border-color: var(--accent);
+    cursor: pointer;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    filter: contrast(1.1) brightness(1.05);
+}
+
+.avatar-link:hover::before {
+    background: linear-gradient(135deg, rgba(0, 168, 77, 0.4), rgba(30, 215, 96, 0.2));
+}
+
+/* Bouton hamburger - À DROITE DU PROFIL */
+.hamburger-btn {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 30px;
+    height: 25px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 10;
+    margin-left: 1rem;
+}
+
+.hamburger-btn span {
+    width: 100%;
+    height: 3px;
+    background: var(--primary-color);
+    border-radius: 10px;
+    transition: all 0.3s linear;
+    position: relative;
+    transform-origin: 1px;
+}
+
+.hamburger-btn:hover span {
+    background: var(--accent);
+}
+
+/* Animation du hamburger */
+.hamburger-btn.active span:nth-child(1) {
+    transform: rotate(45deg);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+    transform: rotate(-45deg);
+}
+
+/* Menu mobile */
+.mobile-menu {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    padding: 1rem;
+}
+
+.mobile-menu.active {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.mobile-menu .nav-links {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background: none;
+    padding: 0;
+    border: none;
+    margin: 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.mobile-menu .nav-links a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.2rem;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border);
+    margin: 0.2rem;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.mobile-menu .nav-links a i {
+    width: 16px;
+    text-align: center;
+    font-size: 1rem;
+}
+
+.mobile-menu .nav-links a:hover,
+.mobile-menu .nav-links a.active {
+    background: var(--gradient-primary);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 168, 77, 0.3);
+    border-color: transparent;
+}
+
+/* Bouton de déconnexion */
+.action-button {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.25rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: var(--font-main);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-transform: none;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+    box-shadow: 0 4px 12px rgba(0, 168, 77, 0.25);
+    position: relative;
+    overflow: hidden;
+    height: fit-content;
+}
+
+.action-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent);
+    transition: all 0.3s ease;
+}
+
+.action-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 168, 77, 0.4);
+    background: var(--gradient-primary);
+}
+
+.action-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 10px rgba(0, 168, 77, 0.3);
+}
+
+/* Styles responsifs */
+@media (min-width: 1200px) {
+    /* Desktop - Afficher seulement Accueil, Mangas & Anime, et Profil */
+    .nav-links {
+        display: flex;
+    }
+    
+    .hamburger-btn {
+        display: flex; /* Toujours visible pour accéder à Tier List et Forum */
+    }
+    
+    .mobile-menu {
+        display: block; /* Toujours disponible pour Tier List et Forum */
+    }
+}
+
+@media (max-width: 1199px) {
+    /* Tablette et mobile - Utiliser le menu hamburger pour tout */
+    .nav-links {
+        display: none;
+    }
+    
+    .hamburger-btn {
+        display: flex;
+    }
+    
+    .search-bar {
+        flex: 0 1 350px;
+        margin: 0 1rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .search-bar {
+        flex: 0 1 280px;
+    }
+    
+    .action-button {
+        padding: 0.5rem 1.2rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .main-header {
+        padding: 0.8rem 1rem;
+    }
+    
+    .search-bar {
+        flex: 0 1 200px;
+        margin: 0 0.5rem;
+    }
+    
+    .search-bar input[type="text"] {
+        padding: 0.7rem 1rem 0.7rem 2.8rem;
+        font-size: 0.9rem;
+    }
+    
+    .logo-image {
+        height: 35px;
+    }
+    
+    .user-avatar {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .hamburger-btn {
+        width: 25px;
+        height: 20px;
+    }
+    
+    .hamburger-btn span {
+        height: 2px;
+    }
+}
+
+@media (max-width: 480px) {
+    .main-header {
+        padding: 0.6rem 0.8rem;
+    }
+    
+    .logo-image {
+        height: 30px;
+    }
+    
+    .search-bar {
+        flex: 0 1 150px;
+        margin: 0 0.3rem;
+    }
+    
+    .search-bar input[type="text"] {
+        padding: 0.6rem 0.8rem 0.6rem 2.5rem;
+        font-size: 0.85rem;
+    }
+    
+    .search-bar button {
+        left: 0.6rem;
+        font-size: 0.9rem;
+    }
+    
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .hamburger-btn {
+        width: 22px;
+        height: 18px;
+    }
+    
+    .mobile-menu .nav-links a {
+        padding: 0.8rem 1.2rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Animation pour le chargement */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.main-header {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Effet de survol sur les éléments de navigation */
+.nav-links a {
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-links a::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(178, 0, 0, 0.2), transparent);
+    transition: 0.5s;
+}
+
+.nav-links a:hover::before {
+    left: 100%;
+}

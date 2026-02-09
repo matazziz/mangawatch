@@ -1,0 +1,1160 @@
+[
+  {
+    "nom": "Osamu Tezuka",
+    "portrait": "",
+    "description": "Osamu Tezuka (1928-1989), surnommé le « dieu du manga », est le pionnier du manga moderne. Médecin de formation, il a révolutionné la bande dessinée japonaise par son style cinématographique, ses récits humanistes et son incroyable productivité. Il est l’auteur d’Astro Boy, Black Jack, Le Roi Léo, Bouddha, Phénix, et a influencé des générations d’auteurs.",
+    "oeuvres": [
+      {
+        "titre": "Astro Boy",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/Astro_Boy_volume_1_cover.jpg",
+        "description": "Le robot le plus célèbre du manga, symbole d’humanisme et d’aventure."
+      },
+      {
+        "titre": "Black Jack",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/Black_Jack_vol_1.jpg",
+        "description": "Un chirurgien de génie, héros de récits médicaux et moraux."
+      },
+      {
+        "titre": "Phénix",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/Phoenix_Tezuka_vol_1.jpg",
+        "description": "Une fresque philosophique sur la vie, la mort et la réincarnation."
+      }
+    ]
+  },
+  {
+    "nom": "Naoki Urasawa",
+    "portrait": "",
+    "description": "Naoki Urasawa (né en 1960 à Tokyo) est l’un des plus grands mangakas contemporains. Il est célèbre pour ses thrillers psychologiques, ses intrigues complexes et ses personnages profonds. Urasawa a marqué le manga avec Monster, 20th Century Boys et Pluto, et a reçu de nombreux prix prestigieux.",
+    "oeuvres": [
+      {
+        "titre": "Monster",
+        "image": "https://upload.wikimedia.org/wikipedia/en/6/6b/Monster_%28manga%29_volume_1_cover.jpg",
+        "description": "Un thriller haletant sur la traque d'un tueur en série en Allemagne."
+      },
+      {
+        "titre": "20th Century Boys",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2d/20th_Century_Boys_vol01_Cover.jpg",
+        "description": "Un récit de science-fiction et de complot, entre enfance et apocalypse."
+      },
+      {
+        "titre": "Pluto",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/Pluto_volume_1_cover.jpg",
+        "description": "Une relecture mature d'Astro Boy, mêlant enquête et réflexion sur l’humanité."
+      }
+    ]
+  },
+  {
+    "nom": "Akira Toriyama",
+    "portrait": "",
+    "description": "Akira Toriyama est le créateur de Dragon Ball, l’un des mangas les plus influents de l’histoire, et de Dr. Slump. Son style dynamique, son humour et ses personnages inoubliables ont marqué des générations de lecteurs et inspiré de nombreux auteurs à travers le monde.",
+    "oeuvres": [
+      {
+        "titre": "Dragon Ball",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/22/Dragon_Ball_vol._1.png",
+        "description": "L’aventure épique de Son Goku à la recherche des Dragon Balls."
+      },
+      {
+        "titre": "Dr. Slump",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2b/DrSlump_vol1_cover.jpg",
+        "description": "Une comédie absurde dans le village du Pingouin avec la petite robot Arale."
+      },
+      {
+        "titre": "Sand Land",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/Sand_Land_manga_vol_1.jpg",
+        "description": "Un one-shot d’aventure dans un monde désertique."
+      }
+    ]
+  },
+  {
+    "nom": "Rumiko Takahashi",
+    "portrait": "",
+    "description": "Rumiko Takahashi est l’une des mangakas les plus populaires au monde, connue pour ses comédies romantiques et fantastiques. Elle a marqué l’histoire du manga avec des séries comme Ranma ½, Maison Ikkoku, InuYasha et Urusei Yatsura. Son humour, ses personnages attachants et sa longévité en font une figure incontournable.",
+    "oeuvres": [
+      {
+        "titre": "Ranma ½",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2c/Ranma1_2vol1cover.jpg",
+        "description": "Une comédie d’arts martiaux et de quiproquos autour d’un garçon qui se transforme en fille."
+      },
+      {
+        "titre": "InuYasha",
+        "image": "https://upload.wikimedia.org/wikipedia/en/6/6b/InuyashaVolume1.jpg",
+        "description": "Un shōnen fantastique mêlant romance, action et folklore japonais."
+      },
+      {
+        "titre": "Urusei Yatsura",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/UruseiYatsura_vol1.jpg",
+        "description": "Une série culte de science-fiction et d’humour déjanté."
+      }
+    ]
+  },
+  {
+    "nom": "Masashi Kishimoto",
+    "portrait": "",
+    "description": "Masashi Kishimoto, né en 1974, est le créateur de Naruto, l’un des mangas les plus populaires de tous les temps. Il s’inspire d’Akira Toriyama et de la culture japonaise pour créer un univers riche en ninjas, valeurs d’amitié et dépassement de soi. Naruto a marqué une génération entière et s’est imposé comme un phénomène mondial.",
+    "oeuvres": [
+      {
+        "titre": "Naruto",
+        "image": "https://upload.wikimedia.org/wikipedia/en/9/94/NarutoCoverTankobon1.jpg",
+        "description": "L’histoire d’un jeune ninja rejeté qui rêve de devenir Hokage."
+      },
+      {
+        "titre": "Boruto",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2c/Boruto_vol_1.jpg",
+        "description": "La suite de Naruto, centrée sur la nouvelle génération de ninjas."
+      },
+      {
+        "titre": "Samurai 8",
+        "image": "https://upload.wikimedia.org/wikipedia/en/2/2e/Samurai_8_vol_1.jpg",
+        "description": "Un manga de science-fiction mêlant samouraïs et univers futuriste."
+      }
+    ]
+  },
+  {
+    "nom": "CLAMP",
+    "portrait": "",
+    "description": "CLAMP est un collectif féminin de mangakas fondé en 1987, célèbre pour ses univers fantastiques, ses personnages complexes et son style graphique raffiné. Le groupe a marqué le manga avec des œuvres comme Card Captor Sakura, X et Tsubasa Reservoir Chronicle, explorant souvent les thèmes du destin, de l’amour et du sacrifice.",
+    "oeuvres": [
+      {
+        "titre": "Card Captor Sakura",
+        "annee": 1996,
+        "description": "Une jeune fille découvre qu’elle est la chasseuse des cartes magiques, dans un univers doux et poétique.",
+        "image": ""
+      },
+      {
+        "titre": "X",
+        "annee": 1992,
+        "description": "Un récit apocalyptique où s’affrontent deux groupes pour le destin de l’humanité.",
+        "image": ""
+      },
+      {
+        "titre": "Tsubasa Reservoir Chronicle",
+        "annee": 2003,
+        "description": "Une aventure à travers des mondes parallèles, mêlant action, romance et mystère.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Takehiko Inoue",
+    "portrait": "",
+    "description": "Takehiko Inoue est reconnu pour la puissance émotionnelle de ses récits et la beauté de son dessin. Il a révolutionné le manga de sport avec Slam Dunk et a exploré l’histoire du Japon avec Vagabond, une fresque sur Miyamoto Musashi. Son œuvre Real aborde le handicap et la résilience.",
+    "oeuvres": [
+      {
+        "titre": "Slam Dunk",
+        "annee": 1990,
+        "description": "L’ascension d’un lycéen rebelle dans le basket-ball, devenu un classique du genre.",
+        "image": ""
+      },
+      {
+        "titre": "Vagabond",
+        "annee": 1998,
+        "description": "L’épopée de Miyamoto Musashi, samouraï légendaire, dans un manga d’une grande intensité.",
+        "image": ""
+      },
+      {
+        "titre": "Real",
+        "annee": 1999,
+        "description": "Un manga poignant sur le handibasket et la reconstruction de soi.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoshihiro Togashi",
+    "portrait": "",
+    "description": "Yoshihiro Togashi est l’auteur de Yu Yu Hakusho et Hunter x Hunter, deux séries majeures du shōnen. Il est reconnu pour ses intrigues complexes, ses personnages nuancés et sa capacité à renouveler les codes du genre. Son style évolutif et ses pauses prolongées font de lui une figure à part dans le manga.",
+    "oeuvres": [
+      {
+        "titre": "Yu Yu Hakusho",
+        "annee": 1990,
+        "description": "Un adolescent ressuscité devient détective du monde des esprits.",
+        "image": ""
+      },
+      {
+        "titre": "Hunter x Hunter",
+        "annee": 1998,
+        "description": "L’aventure d’un jeune garçon à la recherche de son père, dans un univers de chasseurs et de pouvoirs.",
+        "image": ""
+      },
+      {
+        "titre": "Level E",
+        "annee": 1995,
+        "description": "Une comédie de science-fiction décalée sur un prince extraterrestre farceur.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Hiromu Arakawa",
+    "portrait": "",
+    "description": "Hiromu Arakawa s’est imposée avec Fullmetal Alchemist, un shōnen culte mêlant alchimie, aventure et réflexion sur l’humanité. Elle a aussi signé Silver Spoon, chronique rurale inspirée de sa propre expérience, et Heroic Legend of Arslan, adaptation d’une saga de fantasy.",
+    "oeuvres": [
+      {
+        "titre": "Fullmetal Alchemist",
+        "annee": 2001,
+        "description": "Deux frères alchimistes cherchent la pierre philosophale pour retrouver leurs corps.",
+        "image": ""
+      },
+      {
+        "titre": "Silver Spoon",
+        "annee": 2011,
+        "description": "Le quotidien d’un lycéen dans une école agricole, entre humour et réalisme.",
+        "image": ""
+      },
+      {
+        "titre": "Heroic Legend of Arslan",
+        "annee": 2013,
+        "description": "Une fresque épique de fantasy et de batailles, adaptée d’un roman célèbre.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kentaro Miura",
+    "portrait": "",
+    "description": "Kentaro Miura (1966-2021) est le créateur de Berserk, l’un des mangas les plus sombres et influents. Son dessin d’une virtuosité rare, ses thèmes de la fatalité et de la lutte contre le destin, ont marqué des générations de lecteurs. Berserk reste une référence du dark fantasy.",
+    "oeuvres": [
+      {
+        "titre": "Berserk",
+        "annee": 1989,
+        "description": "La quête sanglante de Guts dans un univers médiéval brutal et surnaturel.",
+        "image": ""
+      },
+      {
+        "titre": "Duranki",
+        "annee": 2019,
+        "description": "Un manga inachevé mêlant mythologie et aventure.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Hajime Isayama",
+    "portrait": "",
+    "description": "Hajime Isayama est l’auteur de L’Attaque des Titans, un phénomène mondial. Son récit dystopique, ses rebondissements et sa réflexion sur la liberté et l’oppression ont captivé des millions de lecteurs. Il a renouvelé le shōnen par sa noirceur et sa complexité.",
+    "oeuvres": [
+      {
+        "titre": "L’Attaque des Titans (Shingeki no Kyojin)",
+        "annee": 2009,
+        "description": "L’humanité lutte pour sa survie face à des titans dévoreurs d’hommes.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kazuo Koike",
+    "portrait": "",
+    "description": "Kazuo Koike (1936-2019) est un scénariste majeur, maître du gekiga. Il a marqué le manga adulte avec Lone Wolf and Cub, Lady Snowblood et Crying Freeman. Son écriture puissante, ses personnages tragiques et son sens du récit ont influencé le cinéma et la bande dessinée mondiale.",
+    "oeuvres": [
+      {
+        "titre": "Lone Wolf and Cub",
+        "annee": 1970,
+        "description": "La vengeance d’un samouraï déchu accompagné de son jeune fils, dans un Japon féodal violent.",
+        "image": ""
+      },
+      {
+        "titre": "Lady Snowblood",
+        "annee": 1972,
+        "description": "L’histoire d’une femme assassin en quête de vengeance, source d’inspiration pour Kill Bill.",
+        "image": ""
+      },
+      {
+        "titre": "Crying Freeman",
+        "annee": 1986,
+        "description": "Un tueur à gages qui pleure ses victimes, pris dans un engrenage criminel.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Leiji Matsumoto",
+    "portrait": "",
+    "description": "Leiji Matsumoto (1938-2023) est un maître de la science-fiction japonaise. Il a créé des univers interstellaires poétiques et mélancoliques avec Albator, Galaxy Express 999 et Queen Emeraldas. Son style unique et ses récits humanistes ont marqué l’imaginaire collectif.",
+    "oeuvres": [
+      {
+        "titre": "Albator (Space Pirate Captain Harlock)",
+        "annee": 1977,
+        "description": "Les aventures d’un pirate de l’espace rebelle et charismatique.",
+        "image": ""
+      },
+      {
+        "titre": "Galaxy Express 999",
+        "annee": 1977,
+        "description": "Un voyage initiatique à bord d’un train spatial, entre rêve et mélancolie.",
+        "image": ""
+      },
+      {
+        "titre": "Queen Emeraldas",
+        "annee": 1978,
+        "description": "Les périples d’une femme pirate dans l’espace infini.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Moto Hagio",
+    "portrait": "",
+    "description": "Moto Hagio est une pionnière du shōjo manga et du manga de science-fiction psychologique. Elle a exploré les thèmes de l’identité, de la famille et de l’amour avec une grande sensibilité. Ses œuvres majeures, Le Cœur de Thomas et Les Poignards pour une envolée, ont marqué l’histoire du manga féminin.",
+    "oeuvres": [
+      {
+        "titre": "Le Cœur de Thomas",
+        "annee": 1974,
+        "description": "Un drame poignant sur l’amour et la perte dans un pensionnat allemand.",
+        "image": ""
+      },
+      {
+        "titre": "Les Poignards pour une envolée",
+        "annee": 1977,
+        "description": "Un recueil de nouvelles explorant la psychologie et la science-fiction.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Go Nagai",
+    "portrait": "",
+    "description": "Go Nagai est un pionnier du manga moderne, créateur de séries cultes comme Devilman, Mazinger Z et Cutie Honey. Il a révolutionné le genre du mecha et du fantastique, et son influence s’étend à l’animation japonaise et à la pop culture mondiale.",
+    "oeuvres": [
+      {
+        "titre": "Devilman",
+        "annee": 1972,
+        "description": "Un adolescent fusionne avec un démon pour sauver l’humanité, dans un récit apocalyptique.",
+        "image": ""
+      },
+      {
+        "titre": "Mazinger Z",
+        "annee": 1972,
+        "description": "Le robot géant qui a lancé le genre du mecha.",
+        "image": ""
+      },
+      {
+        "titre": "Cutie Honey",
+        "annee": 1973,
+        "description": "La première héroïne androïde du manga, entre action et humour.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kaoru Mori",
+    "portrait": "",
+    "description": "Kaoru Mori est reconnue pour la finesse de son dessin et la richesse de ses reconstitutions historiques. Elle a séduit le public avec Emma, romance victorienne, et Bride Stories, fresque sur l’Asie centrale. Son travail minutieux et son regard sur la condition féminine sont salués.",
+    "oeuvres": [
+      {
+        "titre": "Emma",
+        "annee": 2002,
+        "description": "Une histoire d’amour impossible dans l’Angleterre victorienne.",
+        "image": ""
+      },
+      {
+        "titre": "Bride Stories",
+        "annee": 2008,
+        "description": "La vie de jeunes femmes en Asie centrale au XIXe siècle, entre traditions et modernité.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yuu Watase",
+    "portrait": "",
+    "description": "Yuu Watase est une figure majeure du shōjo manga, connue pour ses récits mêlant romance, aventure et fantastique. Elle a marqué le genre avec Fushigi Yûgi, Ayashi no Ceres et Alice 19th, explorant les émotions adolescentes et les mondes parallèles.",
+    "oeuvres": [
+      {
+        "titre": "Fushigi Yûgi",
+        "annee": 1991,
+        "description": "Deux lycéennes plongent dans un livre magique et deviennent prêtresses dans un monde fantastique.",
+        "image": ""
+      },
+      {
+        "titre": "Ayashi no Ceres",
+        "annee": 1996,
+        "description": "Une lycéenne découvre qu’elle est la réincarnation d’une créature céleste.",
+        "image": ""
+      },
+      {
+        "titre": "Alice 19th",
+        "annee": 2001,
+        "description": "Une adolescente acquiert le pouvoir des mots pour sauver sa sœur.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Akiko Higashimura",
+    "portrait": "",
+    "description": "Akiko Higashimura est une autrice prolifique, connue pour son humour, son regard sur la société japonaise et ses récits autobiographiques. Elle a rencontré le succès avec Kuragehime, Kakukaku Shikajika et Princess Jellyfish, abordant la différence, la création et l’émancipation féminine.",
+    "oeuvres": [
+      {
+        "titre": "Kuragehime (Princess Jellyfish)",
+        "annee": 2008,
+        "description": "Le quotidien déjanté d’une bande d’otaku et d’une jeune créatrice timide.",
+        "image": ""
+      },
+      {
+        "titre": "Kakukaku Shikajika",
+        "annee": 2011,
+        "description": "Un récit autobiographique sur la vocation artistique et la relation maître-élève.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Katsuhiro Otomo",
+    "portrait": "",
+    "description": "Katsuhiro Otomo est le créateur d’Akira, œuvre culte de la science-fiction et du cyberpunk. Son style cinématographique, son sens du détail et sa réflexion sur la société moderne ont marqué le manga et l’animation mondiale. Il a aussi réalisé des films d’animation majeurs.",
+    "oeuvres": [
+      {
+        "titre": "Akira",
+        "annee": 1982,
+        "description": "Un Tokyo post-apocalyptique, des adolescents aux pouvoirs psychiques et une révolution en marche.",
+        "image": ""
+      },
+      {
+        "titre": "Dômu",
+        "annee": 1980,
+        "description": "Un thriller surnaturel dans un complexe d’immeubles japonais.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoko Kamio",
+    "portrait": "",
+    "description": "Yoko Kamio est l’autrice de Boys Over Flowers, l’un des shōjo les plus populaires au monde. Elle a su capter les tourments de l’adolescence, les différences sociales et les histoires d’amour contrariées, touchant un large public au Japon et à l’international.",
+    "oeuvres": [
+      {
+        "titre": "Boys Over Flowers (Hana Yori Dango)",
+        "annee": 1992,
+        "description": "Une lycéenne pauvre affronte un groupe de garçons riches et arrogants dans une école d’élite.",
+        "image": ""
+      },
+      {
+        "titre": "Cat Street",
+        "annee": 2004,
+        "description": "Le parcours d’une ancienne enfant star en quête de reconstruction.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Makoto Yukimura",
+    "portrait": "",
+    "description": "Makoto Yukimura est salué pour la profondeur de ses personnages et la rigueur de ses reconstitutions historiques. Il a marqué le seinen avec Planetes, récit de science-fiction réaliste, et Vinland Saga, fresque viking épique et violente.",
+    "oeuvres": [
+      {
+        "titre": "Planetes",
+        "annee": 1999,
+        "description": "Des éboueurs de l’espace confrontés à la solitude et à la conquête spatiale.",
+        "image": ""
+      },
+      {
+        "titre": "Vinland Saga",
+        "annee": 2005,
+        "description": "La quête de vengeance d’un jeune viking, entre guerre et quête de sens.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Ai Yazawa",
+    "portrait": "",
+    "description": "Ai Yazawa est une autrice emblématique du shōjo manga, reconnue pour ses récits réalistes sur l’amour, l’amitié et la quête de soi. Elle a marqué toute une génération avec Nana, Paradise Kiss et Gokinjo Monogatari, explorant la jeunesse urbaine et les rêves artistiques.",
+    "oeuvres": [
+      {
+        "titre": "Nana",
+        "annee": 2000,
+        "description": "Deux jeunes femmes que tout oppose se lient d’amitié à Tokyo, entre musique, amour et désillusions.",
+        "image": ""
+      },
+      {
+        "titre": "Paradise Kiss",
+        "annee": 1999,
+        "description": "Une lycéenne découvre le monde de la mode et de la création, bouleversant sa vie.",
+        "image": ""
+      },
+      {
+        "titre": "Gokinjo Monogatari",
+        "annee": 1995,
+        "description": "Le quotidien d’étudiants en art, entre passions, doutes et amitiés.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Sui Ishida",
+    "portrait": "",
+    "description": "Sui Ishida s’est imposé avec Tokyo Ghoul, un manga sombre et psychologique sur l’identité et la monstruosité. Son style graphique expressif et ses récits torturés ont séduit un large public, notamment avec Tokyo Ghoul:re et Jack Jeanne.",
+    "oeuvres": [
+      {
+        "titre": "Tokyo Ghoul",
+        "annee": 2011,
+        "description": "Un étudiant devient mi-humain, mi-goule, et lutte pour sa place dans un monde hostile.",
+        "image": ""
+      },
+      {
+        "titre": "Tokyo Ghoul:re",
+        "annee": 2014,
+        "description": "La suite de Tokyo Ghoul, explorant la mémoire, la rédemption et la violence.",
+        "image": ""
+      },
+      {
+        "titre": "Jack Jeanne",
+        "annee": 2020,
+        "description": "Un projet transmédia mêlant manga et jeu vidéo autour du théâtre et de l’identité.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yana Toboso",
+    "portrait": "",
+    "description": "Yana Toboso est connue pour Black Butler, un manga mêlant mystère, humour noir et esthétique victorienne. Elle a su créer un univers gothique unique, peuplé de personnages ambigus et fascinants, et a aussi travaillé sur des jeux vidéo et des illustrations.",
+    "oeuvres": [
+      {
+        "titre": "Black Butler (Kuroshitsuji)",
+        "annee": 2006,
+        "description": "Un jeune aristocrate anglais et son majordome démoniaque résolvent des affaires surnaturelles.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Akira Amano",
+    "portrait": "",
+    "description": "Akira Amano s’est fait connaître avec Reborn!, un shōnen déjanté mêlant mafia, comédie et action. Elle a aussi travaillé sur des character designs pour des jeux vidéo et des animes, et continue d’explorer des univers variés.",
+    "oeuvres": [
+      {
+        "titre": "Reborn! (Katekyo Hitman Reborn!)",
+        "annee": 2004,
+        "description": "Un collégien timide devient le futur parrain de la mafia italienne, guidé par un bébé tueur à gages.",
+        "image": ""
+      },
+      {
+        "titre": "ēlDLIVE",
+        "annee": 2013,
+        "description": "Un adolescent rejoint une police intergalactique dans une aventure de science-fiction.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Hirohiko Araki",
+    "portrait": "",
+    "description": "Hirohiko Araki est le créateur de JoJo’s Bizarre Adventure, une saga culte connue pour son style excentrique, ses combats inventifs et ses références à la pop culture occidentale. Son dessin évolutif et son imagination débordante en font une figure unique du manga.",
+    "oeuvres": [
+      {
+        "titre": "JoJo’s Bizarre Adventure",
+        "annee": 1987,
+        "description": "La saga multigénérationnelle de la famille Joestar, entre pouvoirs surnaturels et aventures extravagantes.",
+        "image": ""
+      },
+      {
+        "titre": "Baoh",
+        "annee": 1984,
+        "description": "Un thriller de science-fiction sur un cobaye humain doté de pouvoirs destructeurs.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Natsuki Takaya",
+    "portrait": "",
+    "description": "Natsuki Takaya est l’autrice de Fruits Basket, l’un des shōjo les plus populaires, mêlant romance, humour et fantastique. Elle aborde avec sensibilité les thèmes de la famille, du deuil et de l’acceptation de soi.",
+    "oeuvres": [
+      {
+        "titre": "Fruits Basket",
+        "annee": 1998,
+        "description": "Une orpheline découvre le secret d’une famille maudite, dont les membres se transforment en animaux du zodiaque chinois.",
+        "image": ""
+      },
+      {
+        "titre": "Twinkle Stars",
+        "annee": 2007,
+        "description": "Une romance lycéenne sur la solitude et la reconstruction émotionnelle.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kazue Kato",
+    "portrait": "",
+    "description": "Kazue Kato s’est fait connaître avec Blue Exorcist, un shōnen fantastique sur la lutte entre démons et exorcistes. Son univers riche et ses personnages attachants lui ont valu un large succès au Japon et à l’international.",
+    "oeuvres": [
+      {
+        "titre": "Blue Exorcist (Ao no Exorcist)",
+        "annee": 2009,
+        "description": "Le fils de Satan décide de combattre les démons pour protéger l’humanité.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Tite Kubo",
+    "portrait": "",
+    "description": "Tite Kubo est le créateur de Bleach, un shōnen d’action et de fantasy urbaine. Son style graphique tranchant, ses combats spectaculaires et ses personnages charismatiques ont fait de Bleach un pilier du manga moderne.",
+    "oeuvres": [
+      {
+        "titre": "Bleach",
+        "annee": 2001,
+        "description": "Un lycéen acquiert des pouvoirs de shinigami et affronte des esprits malfaisants.",
+        "image": ""
+      },
+      {
+        "titre": "Burn the Witch",
+        "annee": 2018,
+        "description": "Une aventure fantastique dans un Londres secret peuplé de dragons.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoshiki Tonogai",
+    "portrait": "",
+    "description": "Yoshiki Tonogai est un mangaka spécialisé dans le thriller psychologique et l’horreur. Il s’est fait connaître avec Doubt, Judge et Secret, des récits haletants où la paranoïa et la survie sont au cœur de l’intrigue.",
+    "oeuvres": [
+      {
+        "titre": "Doubt",
+        "annee": 2007,
+        "description": "Un jeu mortel où des jeunes doivent démasquer le loup caché parmi eux.",
+        "image": ""
+      },
+      {
+        "titre": "Judge",
+        "annee": 2010,
+        "description": "Des inconnus sont forcés de juger et condamner leurs pairs pour survivre.",
+        "image": ""
+      },
+      {
+        "titre": "Secret",
+        "annee": 2013,
+        "description": "Trois meurtriers cachés parmi six survivants d’un accident de bus.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kaoru Tada",
+    "portrait": "",
+    "description": "Kaoru Tada (1960-1999) est l’autrice d’Itazura na Kiss, un shōjo culte adapté dans de nombreux pays. Son humour, ses personnages attachants et ses histoires d’amour contrariées ont marqué le genre.",
+    "oeuvres": [
+      {
+        "titre": "Itazura na Kiss",
+        "annee": 1990,
+        "description": "Une lycéenne maladroite tombe amoureuse du garçon le plus brillant de l’école.",
+        "image": ""
+      },
+      {
+        "titre": "Aishite Knight",
+        "annee": 1981,
+        "description": "Une romance musicale dans le milieu du rock japonais des années 80.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Shigeru Mizuki",
+    "portrait": "",
+    "description": "Shigeru Mizuki (1922-2015) est un maître du manga d’horreur et du folklore japonais. Il a popularisé les yōkai (esprits) avec GeGeGe no Kitaro et a aussi signé des récits autobiographiques sur la guerre et la mémoire.",
+    "oeuvres": [
+      {
+        "titre": "GeGeGe no Kitaro",
+        "annee": 1960,
+        "description": "Un garçon mi-humain, mi-yōkai, protège les humains des esprits malveillants.",
+        "image": ""
+      },
+      {
+        "titre": "NonNonBâ",
+        "annee": 1977,
+        "description": "Un récit d’enfance et de transmission autour des légendes japonaises.",
+        "image": ""
+      },
+      {
+        "titre": "Opération Mort",
+        "annee": 1973,
+        "description": "Un témoignage bouleversant sur la guerre du Pacifique.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yuki Urushibara",
+    "portrait": "",
+    "description": "Yuki Urushibara est l’autrice de Mushishi, un manga contemplatif et poétique sur la nature et l’invisible. Son œuvre, saluée pour sa sensibilité et son atmosphère unique, explore la relation entre l’homme et les êtres surnaturels appelés mushi.",
+    "oeuvres": [
+      {
+        "titre": "Mushishi",
+        "annee": 1999,
+        "description": "Un homme parcourt le Japon pour étudier les mushi, créatures mystérieuses entre vie et mort.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Haruko Ichikawa",
+    "portrait": "",
+    "description": "Haruko Ichikawa s’est fait connaître avec L’Ère des Cristaux (Houseki no Kuni), un manga de science-fiction et de philosophie sur l’identité et la transformation. Son style graphique novateur et ses thèmes existentiels ont séduit un public international.",
+    "oeuvres": [
+      {
+        "titre": "L’Ère des Cristaux (Houseki no Kuni)",
+        "annee": 2012,
+        "description": "Des êtres de gemmes luttent pour survivre dans un monde post-apocalyptique.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoshitoki Oima",
+    "portrait": "",
+    "description": "Yoshitoki Oima s’est fait connaître avec A Silent Voice, un manga poignant sur le handicap et la rédemption. Elle poursuit avec To Your Eternity, une fresque existentielle et fantastique. Son style sensible et sa capacité à aborder des thèmes difficiles la distinguent dans le paysage du manga contemporain.",
+    "oeuvres": [
+      {
+        "titre": "A Silent Voice",
+        "annee": 2013,
+        "description": "L’histoire d’une jeune fille sourde et de son ancien harceleur en quête de pardon.",
+        "image": ""
+      },
+      {
+        "titre": "To Your Eternity",
+        "annee": 2016,
+        "description": "Un être immortel découvre l’humanité à travers les époques et les rencontres.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kiyohiko Azuma",
+    "portrait": "",
+    "description": "Kiyohiko Azuma est célèbre pour ses comédies du quotidien, Azumanga Daioh et Yotsuba&!. Son humour tendre, ses personnages attachants et son sens de l’observation font de ses œuvres des incontournables du slice of life.",
+    "oeuvres": [
+      {
+        "titre": "Azumanga Daioh",
+        "annee": 1999,
+        "description": "Le quotidien loufoque d’un groupe de lycéennes et de leurs professeurs.",
+        "image": ""
+      },
+      {
+        "titre": "Yotsuba&!",
+        "annee": 2003,
+        "description": "Les aventures d’une fillette curieuse et pleine d’énergie dans la vie de tous les jours.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Hiro Mashima",
+    "portrait": "",
+    "description": "Hiro Mashima est le créateur de Fairy Tail, un shōnen d’aventure et de magie à succès mondial. Il a aussi signé Rave et Edens Zero, explorant toujours l’amitié, la persévérance et l’action spectaculaire.",
+    "oeuvres": [
+      {
+        "titre": "Fairy Tail",
+        "annee": 2006,
+        "description": "Les aventures d’une guilde de mages soudés par l’amitié et le combat.",
+        "image": ""
+      },
+      {
+        "titre": "Rave",
+        "annee": 1999,
+        "description": "Un jeune héros part à la recherche de pierres magiques pour sauver le monde.",
+        "image": ""
+      },
+      {
+        "titre": "Edens Zero",
+        "annee": 2018,
+        "description": "Une épopée spatiale mêlant science-fiction, action et humour.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Natsume Ono",
+    "portrait": "",
+    "description": "Natsume Ono est une autrice reconnue pour son style graphique atypique et ses récits intimistes. Elle a séduit avec Ristorante Paradiso, House of Five Leaves et ACCA: 13-Territory Inspection Dept., explorant la psychologie et les relations humaines.",
+    "oeuvres": [
+      {
+        "titre": "Ristorante Paradiso",
+        "annee": 2005,
+        "description": "Une jeune femme découvre les secrets d’un restaurant italien à Rome.",
+        "image": ""
+      },
+      {
+        "titre": "House of Five Leaves",
+        "annee": 2006,
+        "description": "Un samouraï timide rejoint un groupe de bandits dans le Japon d’Edo.",
+        "image": ""
+      },
+      {
+        "titre": "ACCA: 13-Territory Inspection Dept.",
+        "annee": 2013,
+        "description": "Un inspecteur enquête sur un complot politique dans un pays fictif.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kei Sanbe",
+    "portrait": "",
+    "description": "Kei Sanbe est un mangaka spécialisé dans le thriller et le suspense. Il s’est fait connaître avec Erased, un récit haletant mêlant voyage dans le temps et enquête criminelle. Il a aussi signé Le Berceau des esprits et Island, explorant souvent les traumatismes et la rédemption.",
+    "oeuvres": [
+      {
+        "titre": "Erased (Boku dake ga Inai Machi)",
+        "annee": 2012,
+        "description": "Un homme remonte le temps pour empêcher des meurtres d’enfants et sauver sa mère.",
+        "image": ""
+      },
+      {
+        "titre": "Le Berceau des esprits",
+        "annee": 2008,
+        "description": "Des lycéens se retrouvent piégés sur une île peuplée de créatures terrifiantes.",
+        "image": ""
+      },
+      {
+        "titre": "Island",
+        "annee": 2002,
+        "description": "Un huis clos angoissant sur une île mystérieuse, entre horreur et survie.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Inio Asano",
+    "portrait": "",
+    "description": "Inio Asano est reconnu pour ses récits introspectifs et mélancoliques, abordant la jeunesse, la solitude et la difficulté de grandir. Il a marqué le manga contemporain avec Bonne nuit Punpun, Solanin et Dead Dead Demon’s Dededede Destruction.",
+    "oeuvres": [
+      {
+        "titre": "Bonne nuit Punpun",
+        "annee": 2007,
+        "description": "Le parcours chaotique d’un garçon sensible, entre rêves brisés et quête de sens.",
+        "image": ""
+      },
+      {
+        "titre": "Solanin",
+        "annee": 2005,
+        "description": "Des jeunes adultes cherchent leur place dans la société, entre espoirs et désillusions.",
+        "image": ""
+      },
+      {
+        "titre": "Dead Dead Demon’s Dededede Destruction",
+        "annee": 2014,
+        "description": "Deux lycéennes vivent sous la menace d’une invasion extraterrestre, entre quotidien et apocalypse.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yuki Midorikawa",
+    "portrait": "",
+    "description": "Yuki Midorikawa est l’autrice de Natsume Yuujinchou, un manga poétique sur la relation entre humains et esprits. Son œuvre, empreinte de douceur et de mélancolie, explore l’acceptation de soi et la transmission des souvenirs.",
+    "oeuvres": [
+      {
+        "titre": "Natsume Yuujinchou (Le Pacte des Yôkai)",
+        "annee": 2003,
+        "description": "Un adolescent hérite d’un carnet liant des esprits et tente de les libérer.",
+        "image": ""
+      },
+      {
+        "titre": "Hotarubi no Mori e",
+        "annee": 2002,
+        "description": "Une histoire d’amitié et d’amour impossible entre une fillette et un esprit de la forêt.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Satsuki Yoshino",
+    "portrait": "",
+    "description": "Satsuki Yoshino est connue pour Barakamon, une comédie chaleureuse sur la reconstruction de soi à la campagne. Elle a aussi signé Handa-kun, préquelle humoristique, et explore souvent les thèmes de la famille et de l’acceptation.",
+    "oeuvres": [
+      {
+        "titre": "Barakamon",
+        "annee": 2009,
+        "description": "Un calligraphe citadin s’installe sur une île rurale et découvre une nouvelle façon de vivre.",
+        "image": ""
+      },
+      {
+        "titre": "Handa-kun",
+        "annee": 2013,
+        "description": "La jeunesse du héros de Barakamon, entre malentendus et humour décalé.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoshihide Fujiwara",
+    "portrait": "",
+    "description": "Yoshihide Fujiwara est un mangaka spécialisé dans le suspense et le drame psychologique. Il a notamment travaillé sur The Drops of God, manga sur le vin, et sur diverses adaptations de romans policiers.",
+    "oeuvres": [
+      {
+        "titre": "The Drops of God (Kami no Shizuku)",
+        "annee": 2004,
+        "description": "Un jeune homme doit retrouver des vins d’exception pour hériter de la collection de son père.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Karuho Shiina",
+    "portrait": "",
+    "description": "Karuho Shiina est l’autrice de Sawako (Kimi ni Todoke), un shōjo touchant sur l’amitié, la timidité et l’acceptation de soi. Son style délicat et ses personnages attachants ont conquis un large public.",
+    "oeuvres": [
+      {
+        "titre": "Sawako (Kimi ni Todoke)",
+        "annee": 2006,
+        "description": "Une lycéenne timide apprend à s’ouvrir aux autres grâce à l’amitié et à l’amour.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoshikazu Yasuhiko",
+    "portrait": "",
+    "description": "Yoshikazu Yasuhiko est un dessinateur et animateur de renom, connu pour son travail sur la saga Mobile Suit Gundam. Il a aussi signé des mangas historiques et de science-fiction, salués pour leur réalisme et leur profondeur.",
+    "oeuvres": [
+      {
+        "titre": "Mobile Suit Gundam: The Origin",
+        "annee": 2001,
+        "description": "La genèse de la saga Gundam, entre guerre, politique et drame humain.",
+        "image": ""
+      },
+      {
+        "titre": "Venus Wars",
+        "annee": 1986,
+        "description": "Un récit de science-fiction sur la colonisation de Vénus et la guerre civile.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Moyoco Anno",
+    "portrait": "",
+    "description": "Moyoco Anno est une autrice reconnue pour ses récits sur la féminité, la mode et la psychologie. Elle a marqué le manga avec Happy Mania, Sugar Sugar Rune et Hataraki Man, explorant les aspirations et les contradictions de ses héroïnes.",
+    "oeuvres": [
+      {
+        "titre": "Happy Mania",
+        "annee": 1996,
+        "description": "Les déboires sentimentaux d’une jeune femme en quête du grand amour.",
+        "image": ""
+      },
+      {
+        "titre": "Sugar Sugar Rune",
+        "annee": 2003,
+        "description": "Deux apprenties sorcières rivalisent pour devenir reine du monde magique.",
+        "image": ""
+      },
+      {
+        "titre": "Hataraki Man",
+        "annee": 2004,
+        "description": "Le quotidien d’une journaliste surinvestie dans son travail.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Masamune Shirow",
+    "portrait": "",
+    "description": "Masamune Shirow est le créateur de Ghost in the Shell, œuvre majeure de la science-fiction et du cyberpunk. Il a aussi signé Appleseed et Dominion, explorant les rapports entre l’homme, la machine et la société.",
+    "oeuvres": [
+      {
+        "titre": "Ghost in the Shell",
+        "annee": 1989,
+        "description": "Une enquêtrice cyborg lutte contre le crime dans un futur hyperconnecté.",
+        "image": ""
+      },
+      {
+        "titre": "Appleseed",
+        "annee": 1985,
+        "description": "Deux agents d’élite tentent de préserver la paix dans une cité utopique post-apocalyptique.",
+        "image": ""
+      },
+      {
+        "titre": "Dominion",
+        "annee": 1985,
+        "description": "Une brigade de police loufoque lutte contre la criminalité dans une ville polluée.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yuki Suetsugu",
+    "portrait": "",
+    "description": "Yuki Suetsugu est l’autrice de Chihayafuru, un manga passionnant sur le karuta, jeu de cartes traditionnel japonais. Elle explore la passion, la compétition et l’amitié à travers des personnages attachants et déterminés.",
+    "oeuvres": [
+      {
+        "titre": "Chihayafuru",
+        "annee": 2007,
+        "description": "Une lycéenne se lance dans la compétition de karuta pour devenir la meilleure du Japon.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kozue Amano",
+    "portrait": "",
+    "description": "Kozue Amano est connue pour ses mangas contemplatifs et apaisants, comme Aria et Aqua. Elle crée des univers poétiques où la beauté du quotidien et la douceur de vivre sont au cœur du récit.",
+    "oeuvres": [
+      {
+        "titre": "Aria",
+        "annee": 2002,
+        "description": "Sur une planète Mars terraformée, des gondolières font découvrir la ville de Néo-Venise.",
+        "image": ""
+      },
+      {
+        "titre": "Aqua",
+        "annee": 2001,
+        "description": "La genèse de l’univers d’Aria, entre découverte et émerveillement.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Katsura Hoshino",
+    "portrait": "",
+    "description": "Katsura Hoshino est la créatrice de D.Gray-man, un shōnen gothique mêlant action, drame et surnaturel. Son univers sombre et ses personnages tourmentés ont séduit de nombreux lecteurs.",
+    "oeuvres": [
+      {
+        "titre": "D.Gray-man",
+        "annee": 2004,
+        "description": "Des exorcistes combattent des créatures démoniaques pour sauver l’humanité.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yumi Tamura",
+    "portrait": "",
+    "description": "Yumi Tamura est une autrice prolifique, reconnue pour ses récits d’aventure, de science-fiction et de romance. Elle a marqué le shōjo avec Basara, une fresque post-apocalyptique, et 7 Seeds, un manga de survie intense et psychologique.",
+    "oeuvres": [
+      {
+        "titre": "Basara",
+        "annee": 1990,
+        "description": "Dans un Japon dévasté, une jeune femme se fait passer pour son frère jumeau pour mener la révolte contre un tyran.",
+        "image": ""
+      },
+      {
+        "titre": "7 Seeds",
+        "annee": 2001,
+        "description": "Des groupes de survivants se réveillent dans un monde post-apocalyptique pour assurer la survie de l’humanité.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Hiroya Oku",
+    "portrait": "",
+    "description": "Hiroya Oku est le créateur de Gantz, un manga de science-fiction violent et provocateur, et d’Inuyashiki, qui interroge la nature humaine à travers la technologie. Son style visuel réaliste et ses scénarios extrêmes en font une figure à part du manga contemporain.",
+    "oeuvres": [
+      {
+        "titre": "Gantz",
+        "annee": 2000,
+        "description": "Des personnes décédées sont ressuscitées pour participer à un jeu mortel contre des extraterrestres.",
+        "image": ""
+      },
+      {
+        "titre": "Inuyashiki",
+        "annee": 2014,
+        "description": "Un vieil homme et un lycéen deviennent des cyborgs dotés de pouvoirs destructeurs.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yuki Kodama",
+    "portrait": "",
+    "description": "Yuki Kodama est connue pour Sakamichi no Apollon (Kids on the Slope), un manga sur l’amitié, la musique jazz et l’adolescence dans le Japon des années 1960. Elle a aussi signé Blood Lad, une comédie fantastique décalée.",
+    "oeuvres": [
+      {
+        "titre": "Sakamichi no Apollon (Kids on the Slope)",
+        "annee": 2007,
+        "description": "Un lycéen introverti découvre l’amitié et la passion du jazz dans une petite ville côtière.",
+        "image": ""
+      },
+      {
+        "titre": "Blood Lad",
+        "annee": 2009,
+        "description": "Un vampire otaku tente de ramener à la vie une humaine dans le monde des démons.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kiyoko Arai",
+    "portrait": "",
+    "description": "Kiyoko Arai est une autrice de shōjo manga, connue pour Angel Lip, Beauty Pop et Ask Dr. Rin!. Elle aborde avec humour et sensibilité les thèmes de la beauté, de la confiance en soi et de l’amitié.",
+    "oeuvres": [
+      {
+        "titre": "Angel Lip",
+        "annee": 1997,
+        "description": "Une lycéenne découvre le monde de la mode et de la beauté tout en s’affirmant.",
+        "image": ""
+      },
+      {
+        "titre": "Beauty Pop",
+        "annee": 2003,
+        "description": "Une jeune coiffeuse de génie transforme la vie de ses camarades grâce à son talent.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Kouji Seo",
+    "portrait": "",
+    "description": "Kouji Seo est un mangaka spécialisé dans la romance et le drame adolescent. Il a rencontré le succès avec Suzuka, A Town Where You Live et Fuuka, explorant les premiers amours, les rêves et les épreuves de la jeunesse.",
+    "oeuvres": [
+      {
+        "titre": "Suzuka",
+        "annee": 2004,
+        "description": "Un lycéen passionné d’athlétisme tombe amoureux d’une jeune sportive talentueuse.",
+        "image": ""
+      },
+      {
+        "titre": "A Town Where You Live (Kimi no Iru Machi)",
+        "annee": 2008,
+        "description": "Une romance à distance pleine de rebondissements et de malentendus.",
+        "image": ""
+      },
+      {
+        "titre": "Fuuka",
+        "annee": 2014,
+        "description": "Un jeune homme se lance dans la musique et l’amour après une rencontre inattendue.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yoshiharu Tsuge",
+    "portrait": "",
+    "description": "Yoshiharu Tsuge est une figure majeure du manga d’auteur (gekiga). Il a révolutionné le récit introspectif et autobiographique avec L’Homme sans talent et ses nouvelles, influençant toute une génération d’artistes.",
+    "oeuvres": [
+      {
+        "titre": "L’Homme sans talent",
+        "annee": 1985,
+        "description": "Un mangaka déchu tente de survivre en vendant des pierres au bord d’une rivière.",
+        "image": ""
+      },
+      {
+        "titre": "La Vis",
+        "annee": 1968,
+        "description": "Un recueil de nouvelles surréalistes et poétiques sur la solitude et l’absurdité.",
+        "image": ""
+      }
+    ]
+  },
+  {
+    "nom": "Yuki Shimizu",
+    "portrait": "",
+    "description": "Yuki Shimizu est une autrice spécialisée dans le boys’ love (yaoi). Elle est connue pour Love Mode et Ze, des séries mêlant romance, drame et sensualité, qui ont contribué à populariser le genre.",
+    "oeuvres": [
+      {
+        "titre": "Love Mode",
+        "annee": 1995,
+        "description": "Des histoires d’amour entre hommes, dans un club huppé de Tokyo.",
+        "image": ""
+      },
+      {
+        "titre": "Ze",
+        "annee": 2004,
+        "description": "Des relations passionnées et surnaturelles entre maîtres et serviteurs.",
+        "image": ""
+      }
+    ]
+  }
+] 

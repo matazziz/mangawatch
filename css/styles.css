@@ -1,0 +1,286 @@
+:root {
+    --bg: #181a20;
+    --card: #23262f;
+    --accent: #00b894;
+    --text: #f5f6fa;
+    --secondary: #a5b1c2;
+  }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+  }
+  
+  .main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--card);
+    padding: 1rem 2rem;
+    box-shadow: 0 2px 8px #0003;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  
+  .logo-link {
+    display: inline-block;
+    height: 36px; /* Hauteur du conteneur logo */
+  }
+  
+  .logo-image {
+    height: 100%; /* Remplit la hauteur du conteneur */
+    width: auto;
+    display: block;
+  }
+  
+  .search-bar {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    margin: 0 2rem;
+    max-height: 36px; /* Limite la hauteur de la barre */
+  }
+  
+  .search-bar input {
+    padding: 0 1rem;
+    border: none;
+    border-radius: 18px 0 0 18px;
+    outline: none;
+    width: 260px;
+    font-size: 1rem;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    height: 36px; /* Hauteur fixe */
+    box-sizing: border-box;
+  }
+  .search-bar input {
+    width: 100%;
+    max-width: 400px; /* Largeur max */
+    /* autres propriétés inchangées */
+  }
+  
+  .search-bar button {
+    padding: 0 1rem;
+    border: none;
+    border-radius: 0 18px 18px 0;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    height: 36px; /* Hauteur fixe */
+  }
+  
+  .search-bar button:hover {
+    background: #a30b06;
+  }
+  
+  body {
+    background-color: #000000; /* Fond noir */
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0,
+      transparent 29px,
+      #052405 29px,
+      #053505 33px,
+      transparent 33px,
+      transparent 62px
+    );
+    /* 
+      Explications :
+      - Lignes vert foncé (#0b3d0b) de 4px de large (de 29px à 33px)
+      - Espacées tous les 62px (ligne + espace transparent)
+    */
+  }
+  .main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* espace entre logo, barre et nav */
+    padding: 1rem 2rem;
+    background: var(--card, #181818);
+    box-shadow: 0 2px 8px #0003;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    gap: 1rem;
+  }
+  
+  /* Logo à gauche */
+  .logo-link {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+  }
+  
+  .logo-image {
+    height: 60px;
+    width: auto;
+    display: block;
+  }
+  
+  /* Barre de recherche centrée */
+  .search-bar {
+    flex: 1 1 400px; /* prend de la place, minimum 400px */
+    max-width: 600px; /* limite la largeur max */
+    display: flex;
+    justify-content: center;
+  }
+  
+  .search-bar input {
+    width: 100%;
+    max-width: 400px;
+    padding: 0 1rem;
+    border: none;
+    border-radius: 18px 0 0 18px;
+    outline: none;
+    font-size: 1rem;
+    background: var(--bg, #222);
+    color: var(--text, #fff);
+    border: 1px solid var(--accent, #1ed760);
+    height: 36px;
+    box-sizing: border-box;
+  }
+  
+  .search-bar button {
+    padding: 0 1rem;
+    border: none;
+    border-radius: 0 18px 18px 0;
+    background: var(--accent, #1ed760);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    height: 36px;
+    transition: background 0.2s;
+  }
+  
+  /* Navigation à droite */
+  .nav-links {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .nav-links a {
+    color: var(--secondary, #bbb);
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.2s;
+  }
+  
+  .nav-links a:hover {
+    color: var(--accent, #1ed760);
+  }
+  
+  .profile-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+  }
+
+  .profile-avatar {
+    margin-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  .profile-avatar img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .profile-details h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--text-primary);
+  }
+
+  .profile-details p {
+    margin: 0.5rem 0 0;
+    color: var(--text-secondary);
+    font-size: 1rem;
+  }
+  
+  /* Responsive */
+  @media (max-width: 800px) {
+    .main-header {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 1rem;
+      gap: 1rem;
+    }
+    .search-bar {
+      max-width: 100%;
+    }
+    .search-bar input {
+      max-width: 100%;
+    }
+    .nav-links {
+      justify-content: center;
+      gap: 1rem;
+    }
+  }
+  .site-intro {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+  }
+  
+  .site-intro h2 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+  }
+  
+  .site-intro p {
+    font-size: 1em;
+    margin-bottom: 15px;
+  }
+  
+  .site-intro ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .site-intro li {
+    margin: 5px 0;
+  }
+  .site-intro {
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+  }
+  
+  .site-intro h2 {
+    font-size: 1.5em;
+    margin-bottom: 10px;
+  }
+  
+  .site-intro p {
+    font-size: 1em;
+    margin-bottom: 15px;
+  }
+  
+  .site-intro ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .site-intro li {
+    margin: 5px 0;
+  }
+  .site-intro {
+    background-color: rgba(249, 249, 249, 0.9); /* Couleur blanche avec 90% d'opacité */
+    padding: 20px;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+    border-radius: 8px; /* Ajout d'arrondi pour un effet plus moderne */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Légère ombre pour un effet de profondeur */
+  }

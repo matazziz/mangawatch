@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - Gestion des badges certifiés</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/messaging.css">
+    <style>
+        body {
+            font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0a0e27;
+            color: #f5f6fa;
+            min-height: 100vh;
+            padding-top: 80px;
+        }
+        
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .admin-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .admin-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #00b894;
+            text-shadow: 0 0 20px rgba(0, 184, 148, 0.3);
+        }
+        
+        .admin-header p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        
+        .admin-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .admin-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: #00b894;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .user-search {
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        
+        .user-search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-search input {
+            width: 100%;
+            padding: 1rem 3rem 1rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #f5f6fa;
+            font-size: 1rem;
+        }
+        
+        .user-search input::placeholder {
+            color: #888;
+        }
+        
+        .user-search input:focus {
+            outline: none;
+            border-color: #00b894;
+            box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);
+        }
+        
+        .user-search-clear {
+            position: absolute;
+            right: 12px;
+            background: transparent;
+            border: none;
+            color: #888;
+            cursor: pointer;
+            padding: 8px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+            width: 32px;
+            height: 32px;
+        }
+        
+        .user-search-clear:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        
+        .user-search-clear.visible {
+            display: flex;
+        }
+        
+        .users-list {
+            display: grid;
+            gap: 1rem;
+        }
+        
+        .user-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .user-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Styles pour les signalements */
+        .reports-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .report-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #e17055;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .report-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-left-color: #d63031;
+        }
+        
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .report-info {
+            flex: 1;
+        }
+        
+        .report-user {
+            font-weight: 600;
+            color: #00b894;
+            margin-bottom: 0.25rem;
+        }
+        
+        .report-meta {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 0.5rem;
+        }
+        
+        .report-reason {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            background: rgba(225, 112, 85, 0.2);
+            border: 1px solid rgba(225, 112, 85, 0.3);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: #e17055;
+            margin-top: 0.5rem;
+        }
+        
+        .report-comment-text {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+            color: #ccc;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .report-actions-admin {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        
+        .ban-btn {
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #e17055 0%, #d63031 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .ban-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(225, 112, 85, 0.4);
+        }
+        
+        .ban-btn.banned {
+            background: linear-gradient(135deg, #636e72 0%, #2d3436 100%);
+            cursor: not-allowed;
+        }
+        
+        .ban-btn.banned:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .ignore-btn {
+            padding: 0.6rem 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .ignore-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .warn-btn {
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .warn-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+        }
+
+        .thank-btn {
+            padding: 0.6rem 1.2rem;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .thank-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #00b894;
+        }
+        
+        .user-details h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #f5f6fa;
+        }
+        
+        .user-details p {
+            margin: 0.25rem 0 0 0;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        .verified-badge-preview {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.2rem;
+            height: 1.2rem;
+            background: linear-gradient(135deg, #1DA1F2 0%, #1DA1F2 100%);
+            border-radius: 50%;
+            color: #ffffff;
+            font-size: 0.7rem;
+            margin-left: 0.5rem;
+        }
+        
+        .user-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .verified-status {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .verified-status.verified {
+            background: rgba(29, 161, 242, 0.2);
+            color: #1DA1F2;
+            border: 1px solid #1DA1F2;
+        }
+        
+        .verified-status.not-verified {
+            background: rgba(255, 255, 255, 0.1);
+            color: #aaa;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .toggle-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .toggle-btn.verify {
+            background: linear-gradient(135deg, #1DA1F2 0%, #1DA1F2 100%);
+            color: white;
+        }
+        
+        .toggle-btn.verify:hover {
+            box-shadow: 0 0 20px rgba(29, 161, 242, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .toggle-btn.unverify {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f5f6fa;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .toggle-btn.unverify:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #888;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: rgba(0, 184, 148, 0.1);
+            border: 1px solid rgba(0, 184, 148, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        /* Styles pour le formulaire de messagerie */
+        .message-form-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            color: #f5f6fa;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .form-control {
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #f5f6fa;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #00b894;
+            box-shadow: 0 0 10px rgba(0, 184, 148, 0.3);
+        }
+
+        .form-control::placeholder {
+            color: #888;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+
+        .btn-primary {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
+        }
+
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #f5f6fa;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .message-templates {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .template-btn {
+            padding: 0.75rem;
+            background: rgba(0, 184, 148, 0.1);
+            border: 1px solid rgba(0, 184, 148, 0.3);
+            border-radius: 8px;
+            color: #00b894;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .template-btn:hover {
+            background: rgba(0, 184, 148, 0.2);
+            border-color: rgba(0, 184, 148, 0.5);
+            transform: translateX(5px);
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin: 0;
+            color: #00b894;
+        }
+        
+        .stat-card p {
+            margin: 0.5rem 0 0 0;
+            color: #aaa;
+        }
+        
+        /* Popup de confirmation personnalisé */
+        .custom-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .custom-modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .custom-modal {
+            background: linear-gradient(135deg, #1a1d2e 0%, #23262f 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+                        0 0 40px rgba(0, 184, 148, 0.2);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .custom-modal-overlay.active .custom-modal {
+            transform: scale(1);
+        }
+        
+        .custom-modal::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #1DA1F2, #00b894, #1DA1F2);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        .custom-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .custom-modal-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        
+        .custom-modal-icon.warning {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+            color: #ff6b6b;
+            border: 2px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .custom-modal-icon.success {
+            background: linear-gradient(135deg, rgba(0, 184, 148, 0.2), rgba(0, 184, 148, 0.1));
+            color: #00b894;
+            border: 2px solid rgba(0, 184, 148, 0.3);
+        }
+        
+        .custom-modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f5f6fa;
+            margin: 0;
+        }
+        
+        .custom-modal-body {
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            font-size: 1.05rem;
+        }
+        
+        .custom-modal-body strong {
+            color: #00b894;
+            font-weight: 600;
+        }
+        
+        .custom-modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+        }
+        
+        .custom-modal-btn {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .custom-modal-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f5f6fa;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .custom-modal-btn.cancel:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .custom-modal-btn.confirm {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        .custom-modal-btn.confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+        }
+        
+        .custom-modal-btn.cancel:hover,
+        .custom-modal-btn.confirm:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <nav class="nav-links">
+            <a href="acceuil.html">Accueil</a>
+            <a href="profil.html">Retour au profil</a>
+        </nav>
+        
+        <div class="header-right">
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="/images/logo.png" alt="Avatar utilisateur" class="user-avatar" onerror="this.src='/images/logo.png'">
+            </a>
+        </div>
+    </header>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="fas fa-shield-alt"></i> Administration</h1>
+            <p>Gestion des badges certifiés</p>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="total-users">0</h3>
+                <p>Utilisateurs total</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="verified-count">0</h3>
+                <p>Utilisateurs certifiés</p>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <h2><i class="fas fa-users"></i> Liste des utilisateurs</h2>
+            
+            <div class="user-search">
+                <div class="user-search-wrapper">
+                    <input type="text" id="user-search-input" placeholder="Rechercher un utilisateur par email ou nom...">
+                    <button class="user-search-clear" id="user-search-clear" title="Effacer la recherche">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="users-list" id="users-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Chargement des utilisateurs...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Signalements -->
+        <div class="admin-section">
+            <h2><i class="fas fa-flag"></i> Signalements des utilisateurs</h2>
+            
+            <div class="reports-list" id="reports-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Chargement des signalements...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Messagerie Admin -->
+        <div class="admin-section">
+            <h2><i class="fas fa-paper-plane"></i> Envoyer un message</h2>
+            
+            <div class="message-form-container">
+                <div class="form-group">
+                    <label for="message-recipient-type">Type de destinataire</label>
+                    <select id="message-recipient-type" class="form-control">
+                        <option value="global">🌍 Tous les utilisateurs (Message global)</option>
+                        <option value="user">👤 Utilisateur spécifique</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="user-select-group" style="display: none;">
+                    <label for="message-recipient-user-search">Rechercher un utilisateur</label>
+                    <input type="text" id="message-recipient-user-search" class="form-control" placeholder="Rechercher par nom ou email...">
+                    <select id="message-recipient-user" class="form-control" style="margin-top: 0.5rem;">
+                        <option value="">Choisir un utilisateur...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="message-type">Type de message</label>
+                    <select id="message-type" class="form-control">
+                        <option value="info">ℹ️ Information</option>
+                        <option value="warning">⚠️ Avertissement</option>
+                        <option value="ban">🚫 Bannissement</option>
+                        <option value="thank">❤️ Remerciement</option>
+                        <option value="global">📢 Annonce globale</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="message-title">Titre</label>
+                    <input type="text" id="message-title" class="form-control" placeholder="Titre du message">
+                </div>
+
+                <div class="form-group">
+                    <label for="message-content">Contenu</label>
+                    <textarea id="message-content" class="form-control" rows="8" placeholder="Contenu du message..."></textarea>
+                    <small style="color: #888; font-size: 0.85rem; margin-top: 0.5rem; display: block;">
+                        💡 Utilisez les modèles pré-remplis ci-dessous ou personnalisez votre message
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label>Modèles de messages prédéfinis</label>
+                    <div class="message-templates">
+                        <button type="button" class="template-btn" data-template="warning-harassment">
+                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Harcèlement
+                        </button>
+                        <button type="button" class="template-btn" data-template="warning-spam">
+                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Spam
+                        </button>
+                        <button type="button" class="template-btn" data-template="warning-inappropriate">
+                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Contenu inapproprié
+                        </button>
+                        <button type="button" class="template-btn" data-template="ban">
+                            <i class="fas fa-ban"></i> Bannissement
+                        </button>
+                        <button type="button" class="template-btn" data-template="thank-report">
+                            <i class="fas fa-heart"></i> Remerciement - Signalement
+                        </button>
+                        <button type="button" class="template-btn" data-template="thank-report-ban">
+                            <i class="fas fa-heart"></i> Remerciement - Signalement (Bannissement)
+                        </button>
+                        <button type="button" class="template-btn" data-template="global-event">
+                            <i class="fas fa-bullhorn"></i> Annonce - Événement
+                        </button>
+                        <button type="button" class="template-btn" data-template="share-site">
+                            <i class="fas fa-share-alt"></i> Partage du site - Certification
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn-primary" id="send-message-btn">
+                        <i class="fas fa-paper-plane"></i> Envoyer le message
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de confirmation personnalisé -->
+    <div class="custom-modal-overlay" id="confirm-modal-overlay">
+        <div class="custom-modal">
+            <div class="custom-modal-header">
+                <div class="custom-modal-icon warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="custom-modal-title">Retirer la certification</h3>
+            </div>
+            <div class="custom-modal-body">
+                Êtes-vous sûr de vouloir retirer la certification de <strong id="confirm-modal-email"></strong> ?
+                <br><br>
+                Cette action retirera le badge certifié de cet utilisateur.
+            </div>
+            <div class="custom-modal-actions">
+                <button class="custom-modal-btn cancel" id="confirm-modal-cancel">
+                    <i class="fas fa-times"></i>
+                    Annuler
+                </button>
+                <button class="custom-modal-btn confirm" id="confirm-modal-confirm">
+                    <i class="fas fa-check"></i>
+                    Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup de confirmation pour l'envoi de message -->
+    <div class="custom-modal-overlay" id="send-message-modal-overlay">
+        <div class="custom-modal">
+            <div class="custom-modal-header">
+                <div class="custom-modal-icon success">
+                    <i class="fas fa-paper-plane"></i>
+                </div>
+                <h3 class="custom-modal-title">Confirmer l'envoi du message</h3>
+            </div>
+            <div class="custom-modal-body" id="send-message-modal-body">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="custom-modal-actions">
+                <button class="custom-modal-btn cancel" id="send-message-modal-cancel">
+                    <i class="fas fa-times"></i>
+                    Annuler
+                </button>
+                <button class="custom-modal-btn confirm" id="send-message-modal-confirm">
+                    <i class="fas fa-paper-plane"></i>
+                    Envoyer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup pour saisir le message d'avertissement/remerciement -->
+    <div class="custom-modal-overlay" id="message-input-modal-overlay">
+        <div class="custom-modal">
+            <div class="custom-modal-header">
+                <div class="custom-modal-icon" id="message-input-modal-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h3 class="custom-modal-title" id="message-input-modal-title">Envoyer un message</h3>
+            </div>
+            <div class="custom-modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <p style="margin-bottom: 0.75rem; color: #aaa;">
+                        <strong style="color: #00b894;">Destinataire :</strong><br>
+                        <span style="color: #ccc;" id="message-input-recipient"></span>
+                    </p>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label for="message-input-textarea" style="display: block; color: #aaa; margin-bottom: 0.5rem; font-weight: 500;">
+                        Message :
+                    </label>
+                    <textarea 
+                        id="message-input-textarea" 
+                        rows="8" 
+                        style="
+                            width: 100%;
+                            padding: 12px;
+                            background: rgba(255, 255, 255, 0.05);
+                            border: 2px solid rgba(255, 255, 255, 0.1);
+                            border-radius: 8px;
+                            color: #f5f6fa;
+                            font-family: inherit;
+                            font-size: 0.95rem;
+                            resize: vertical;
+                            box-sizing: border-box;
+                        "
+                        placeholder="Entrez votre message ici..."></textarea>
+                </div>
+            </div>
+            <div class="custom-modal-actions">
+                <button class="custom-modal-btn cancel" id="message-input-modal-cancel">
+                    <i class="fas fa-times"></i>
+                    Annuler
+                </button>
+                <button class="custom-modal-btn confirm" id="message-input-modal-confirm">
+                    <i class="fas fa-paper-plane"></i>
+                    Envoyer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Récupérer tous les utilisateurs depuis localStorage
+        function getAllUsers() {
+            const users = [];
+            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+            
+            // Ajouter les comptes
+            accounts.forEach(account => {
+                if (account.email) {
+                    users.push({
+                        email: account.email,
+                        name: account.username || account.name || account.email.split('@')[0],
+                        avatar: localStorage.getItem('avatar_' + account.email) || null
+                    });
+                }
+            });
+            
+            // Ajouter les profils sauvegardés
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('profile_') && !key.startsWith('profile_description_') && !key.startsWith('profile_banner_')) {
+                    try {
+                        const email = key.replace('profile_', '');
+                        // Vérifier que c'est bien un email (contient @)
+                        if (!email.includes('@')) {
+                            continue;
+                        }
+                        
+                        const profileData = localStorage.getItem(key);
+                        // Vérifier que les données commencent par { ou [ (JSON valide)
+                        if (!profileData || (!profileData.trim().startsWith('{') && !profileData.trim().startsWith('['))) {
+                            continue;
+                        }
+                        
+                        const profile = JSON.parse(profileData);
+                        
+                        // Vérifier si l'utilisateur n'est pas déjà dans la liste
+                        if (!users.find(u => u.email === email)) {
+                            users.push({
+                                email: email,
+                                name: profile.name || profile.username || email.split('@')[0],
+                                avatar: localStorage.getItem('avatar_' + email) || profile.picture || null
+                            });
+                        }
+                    } catch (e) {
+                        // Ignorer silencieusement les erreurs de parsing pour éviter les logs répétés
+                        // Ces erreurs sont normales pour les clés qui ne sont pas du JSON
+                    }
+                }
+            }
+            
+            return users;
+        }
+        
+        // Récupérer les utilisateurs certifiés
+        function getVerifiedUsers() {
+            return JSON.parse(localStorage.getItem('verified_users') || '[]');
+        }
+        
+        // Ajouter un utilisateur aux certifiés
+        function verifyUser(email) {
+            const verified = getVerifiedUsers();
+            if (!verified.includes(email)) {
+                verified.push(email);
+                localStorage.setItem('verified_users', JSON.stringify(verified));
+                return true;
+            }
+            return false;
+        }
+        
+        // Retirer un utilisateur des certifiés
+        function unverifyUser(email) {
+            const verified = getVerifiedUsers();
+            const index = verified.indexOf(email);
+            if (index > -1) {
+                verified.splice(index, 1);
+                localStorage.setItem('verified_users', JSON.stringify(verified));
+                return true;
+            }
+            return false;
+        }
+        
+        // Afficher les utilisateurs
+        function displayUsers(users) {
+            const usersList = document.getElementById('users-list');
+            const verified = getVerifiedUsers();
+            
+            if (users.length === 0) {
+                usersList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-user-slash"></i>
+                        <p>Aucun utilisateur trouvé</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            usersList.innerHTML = users.map(user => {
+                const isVerified = verified.includes(user.email);
+                return `
+                    <div class="user-item">
+                        <div class="user-info">
+                            <img src="${user.avatar || '/images/logo.png'}" alt="${user.name}" class="user-avatar" onerror="this.src='/images/logo.png'">
+                            <div class="user-details">
+                                <h3>
+                                    ${user.name}
+                                    ${isVerified ? '<span class="verified-badge-preview"><i class="fas fa-check"></i></span>' : ''}
+                                </h3>
+                                <p>${user.email}</p>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <span class="verified-status ${isVerified ? 'verified' : 'not-verified'}">
+                                ${isVerified ? '<i class="fas fa-check-circle"></i> Certifié' : 'Non certifié'}
+                            </span>
+                            <button class="toggle-btn ${isVerified ? 'unverify' : 'verify'}" onclick="toggleVerification('${user.email}')">
+                                <i class="fas fa-${isVerified ? 'times' : 'check'}"></i>
+                                ${isVerified ? 'Retirer la certification' : 'Certifier'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Afficher le popup de confirmation personnalisé
+        let currentModalCallback = null;
+        
+        function showConfirmModal(email, userName, callback) {
+            const overlay = document.getElementById('confirm-modal-overlay');
+            const modalEmail = document.getElementById('confirm-modal-email');
+            
+            if (!overlay) {
+                console.error('Modal overlay non trouvé');
+                // Fallback vers confirm si le modal n'existe pas
+                if (confirm(`Êtes-vous sûr de vouloir retirer la certification de ${email} ?`)) {
+                    callback();
+                }
+                return;
+            }
+            
+            // Stocker le callback
+            currentModalCallback = callback;
+            
+            // Mettre à jour l'email affiché
+            if (modalEmail) {
+                modalEmail.textContent = email;
+            }
+            
+            // Afficher le modal
+            overlay.classList.add('active');
+        }
+        
+        // Initialiser les event listeners du modal (une seule fois)
+        let modalListenersInitialized = false;
+        
+        function initModalListeners() {
+            if (modalListenersInitialized) return;
+            
+            const overlay = document.getElementById('confirm-modal-overlay');
+            const confirmBtn = document.getElementById('confirm-modal-confirm');
+            const cancelBtn = document.getElementById('confirm-modal-cancel');
+            
+            if (!overlay || !confirmBtn || !cancelBtn) {
+                // Réessayer plus tard si les éléments ne sont pas encore chargés
+                setTimeout(initModalListeners, 100);
+                return;
+            }
+            
+            modalListenersInitialized = true;
+            
+            // Ajouter les listeners
+            confirmBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (currentModalCallback) {
+                    currentModalCallback();
+                    currentModalCallback = null;
+                }
+                overlay.classList.remove('active');
+            });
+            
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                currentModalCallback = null;
+                overlay.classList.remove('active');
+            });
+            
+            // Fermer en cliquant sur l'overlay
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    currentModalCallback = null;
+                    overlay.classList.remove('active');
+                }
+            });
+        }
+        
+        // Initialiser les listeners quand le DOM est prêt
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initModalListeners);
+        } else {
+            initModalListeners();
+        }
+        
+        // Basculer la certification
+        function toggleVerification(email) {
+            const verified = getVerifiedUsers();
+            const isVerified = verified.includes(email);
+            
+            if (isVerified) {
+                // Récupérer le nom de l'utilisateur
+                const allUsers = getAllUsers();
+                const user = allUsers.find(u => u.email === email);
+                const userName = user ? user.name : email;
+                
+                showConfirmModal(email, userName, () => {
+                    unverifyUser(email);
+                    loadUsers();
+                    updateStats();
+                    
+                    // Déclencher un événement pour mettre à jour le badge sur les autres pages
+                    window.dispatchEvent(new CustomEvent('verifiedUsersUpdated', { detail: { email } }));
+                    
+                    // Si on est sur la page de profil, mettre à jour le badge immédiatement
+                    if (typeof window.updateUserNameDisplay === 'function') {
+                        const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+                        if (currentUser && currentUser.email === email) {
+                            const userNameText = document.getElementById('user-name-text');
+                            if (userNameText) {
+                                window.updateUserNameDisplay(userNameText.textContent, email);
+                            }
+                        }
+                    }
+                });
+            } else {
+                verifyUser(email);
+                loadUsers();
+                updateStats();
+                
+                // Déclencher un événement pour mettre à jour le badge sur les autres pages
+                window.dispatchEvent(new CustomEvent('verifiedUsersUpdated', { detail: { email } }));
+                
+                // Si on est sur la page de profil, mettre à jour le badge immédiatement
+                if (typeof window.updateUserNameDisplay === 'function') {
+                    const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+                    if (currentUser && currentUser.email === email) {
+                        const userNameText = document.getElementById('user-name-text');
+                        if (userNameText) {
+                            window.updateUserNameDisplay(userNameText.textContent, email);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Filtrer les utilisateurs
+        function filterUsers(searchTerm) {
+            const allUsers = getAllUsers();
+            if (!searchTerm) {
+                return allUsers;
+            }
+            
+            const term = searchTerm.toLowerCase();
+            return allUsers.filter(user => 
+                user.email.toLowerCase().includes(term) ||
+                user.name.toLowerCase().includes(term)
+            );
+        }
+        
+        // Mettre à jour les statistiques
+        function updateStats() {
+            const allUsers = getAllUsers();
+            const verified = getVerifiedUsers();
+            
+            document.getElementById('total-users').textContent = allUsers.length;
+            document.getElementById('verified-count').textContent = verified.length;
+        }
+        
+        // Charger les utilisateurs
+        function loadUsers() {
+            const searchTerm = document.getElementById('user-search-input').value;
+            const filteredUsers = filterUsers(searchTerm);
+            displayUsers(filteredUsers);
+        }
+        
+        // Récupérer tous les signalements
+        function getAllReports() {
+            return JSON.parse(localStorage.getItem('user_reports') || '[]');
+        }
+        
+        // Récupérer les utilisateurs bannis
+        function getBannedUsers() {
+            return JSON.parse(localStorage.getItem('banned_users') || '[]');
+        }
+        
+        // Bannir un utilisateur
+        function banUser(email) {
+            const banned = getBannedUsers();
+            if (!banned.some(b => b.email === email)) {
+                banned.push({
+                    email: email,
+                    date: new Date().toISOString()
+                });
+                localStorage.setItem('banned_users', JSON.stringify(banned));
+            }
+        }
+        
+        // Vérifier si un utilisateur est banni
+        function isUserBanned(email) {
+            const banned = getBannedUsers();
+            return banned.some(b => b.email === email);
+        }
+        
+        // Obtenir le texte de la raison en français
+        function getReasonText(reason) {
+            const reasons = {
+                'harassment': 'Harcèlement ou comportement toxique',
+                'spam': 'Spam ou publicité non sollicitée',
+                'inappropriate': 'Contenu offensant ou inapproprié',
+                'fake': 'Compte impersonnant quelqu\'un d\'autre',
+                'other': 'Autre raison'
+            };
+            return reasons[reason] || reason;
+        }
+        
+        // Afficher les signalements
+        function displayReports() {
+            const reports = getAllReports();
+            const reportsList = document.getElementById('reports-list');
+            const bannedUsers = getBannedUsers();
+            
+            if (!reportsList) return;
+            
+            if (reports.length === 0) {
+                reportsList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-flag" style="font-size: 3rem; color: #555; margin-bottom: 1rem;"></i>
+                        <p>Aucun signalement pour le moment</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Grouper les signalements par utilisateur signalé
+            const reportsByUser = {};
+            reports.forEach(report => {
+                if (!reportsByUser[report.reportedUser]) {
+                    reportsByUser[report.reportedUser] = [];
+                }
+                reportsByUser[report.reportedUser].push(report);
+            });
+            
+            reportsList.innerHTML = '';
+            
+            Object.keys(reportsByUser).forEach(userEmail => {
+                const userReports = reportsByUser[userEmail];
+                const isBanned = isUserBanned(userEmail);
+                
+                // Obtenir les infos de l'utilisateur
+                const profileData = localStorage.getItem('profile_' + userEmail);
+                let userName = userEmail;
+                let userAvatar = '/images/logo.png';
+                
+                if (profileData) {
+                    try {
+                        const profile = JSON.parse(profileData);
+                        userName = profile.name || profile.username || userEmail;
+                    } catch (e) {
+                        console.error('Erreur:', e);
+                    }
+                }
+                
+                const avatarKey = 'avatar_' + userEmail;
+                const storedAvatar = localStorage.getItem(avatarKey);
+                if (storedAvatar) {
+                    userAvatar = storedAvatar;
+                }
+                
+                const reportItem = document.createElement('div');
+                reportItem.className = 'report-item';
+                
+                // Compter les raisons
+                const reasonCounts = {};
+                const allComments = [];
+                const reportDates = [];
+                const reporters = [];
+                
+                userReports.forEach(report => {
+                    // Compter les raisons
+                    if (!reasonCounts[report.reason]) {
+                        reasonCounts[report.reason] = 0;
+                    }
+                    reasonCounts[report.reason]++;
+                    
+                    // Collecter les commentaires
+                    if (report.comment && report.comment.trim()) {
+                        allComments.push({
+                            comment: report.comment,
+                            reporter: report.reportedBy,
+                            date: report.date
+                        });
+                    }
+                    
+                    // Collecter les dates
+                    reportDates.push(new Date(report.date));
+                    
+                    // Collecter les rapporteurs
+                    if (!reporters.includes(report.reportedBy)) {
+                        reporters.push(report.reportedBy);
+                    }
+                });
+                
+                // Trier les dates pour obtenir la première et la dernière
+                reportDates.sort((a, b) => a - b);
+                const firstDate = reportDates[0];
+                const lastDate = reportDates[reportDates.length - 1];
+                const formattedFirstDate = firstDate.toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const formattedLastDate = lastDate.toLocaleDateString('fr-FR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                // Créer l'affichage des raisons
+                let reasonsHtml = '';
+                Object.keys(reasonCounts).forEach(reason => {
+                    const count = reasonCounts[reason];
+                    reasonsHtml += `
+                        <span class="report-reason" style="margin-right: 0.5rem; margin-bottom: 0.5rem; display: inline-block;">
+                            ${getReasonText(reason)}${count > 1 ? ` (${count})` : ''}
+                        </span>
+                    `;
+                });
+                
+                // Créer l'affichage des rapporteurs (qui a signalé)
+                let reportersHtml = '';
+                if (reporters.length > 0) {
+                    reportersHtml = '<div style="margin-top: 1rem;"><strong style="color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Signalé par :</strong>';
+                    reporters.forEach((reporterEmail, index) => {
+                        // Obtenir les infos du rapporteur
+                        const reporterProfileData = localStorage.getItem('profile_' + reporterEmail);
+                        let reporterName = reporterEmail;
+                        let reporterAvatar = '/images/logo.png';
+                        
+                        if (reporterProfileData) {
+                            try {
+                                const reporterProfile = JSON.parse(reporterProfileData);
+                                reporterName = reporterProfile.name || reporterProfile.username || reporterEmail;
+                            } catch (e) {
+                                console.error('Erreur:', e);
+                            }
+                        }
+                        
+                        const reporterAvatarKey = 'avatar_' + reporterEmail;
+                        const storedReporterAvatar = localStorage.getItem(reporterAvatarKey);
+                        if (storedReporterAvatar) {
+                            reporterAvatar = storedReporterAvatar;
+                        }
+                        
+                        reportersHtml += `
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                                <img src="${reporterAvatar}" alt="${reporterName}" style="
+                                    width: 35px;
+                                    height: 35px;
+                                    border-radius: 50%;
+                                    object-fit: cover;
+                                    border: 2px solid #00b894;
+                                " onerror="this.src='/images/logo.png'">
+                                <div>
+                                    <div style="color: #f5f6fa; font-size: 0.9rem; font-weight: 500;">${reporterName}</div>
+                                    <div style="color: #888; font-size: 0.8rem;">${reporterEmail}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    reportersHtml += '</div>';
+                }
+                
+                // Créer l'affichage des commentaires
+                let commentsHtml = '';
+                if (allComments.length > 0) {
+                    commentsHtml = '<div style="margin-top: 1rem;"><strong style="color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Commentaires :</strong>';
+                    allComments.forEach((commentObj, index) => {
+                        const commentDate = new Date(commentObj.date);
+                        const formattedCommentDate = commentDate.toLocaleDateString('fr-FR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        commentsHtml += `
+                            <div class="report-comment-text" style="${index > 0 ? 'margin-top: 0.75rem;' : ''}">
+                                <div style="font-size: 0.8rem; color: #888; margin-bottom: 0.5rem;">
+                                    Par ${commentObj.reporter} le ${formattedCommentDate}
+                                </div>
+                                ${commentObj.comment}
+                            </div>
+                        `;
+                    });
+                    commentsHtml += '</div>';
+                }
+                
+                reportItem.innerHTML = `
+                    <div class="report-header">
+                        <div class="report-info">
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                                <img src="${userAvatar}" alt="${userName}" style="
+                                    width: 50px;
+                                    height: 50px;
+                                    border-radius: 50%;
+                                    object-fit: cover;
+                                    border: 2px solid ${isBanned ? '#e17055' : '#00b894'};
+                                " onerror="this.src='/images/logo.png'">
+                                <div>
+                                    <div class="report-user">${userName}</div>
+                                    <div style="font-size: 0.85rem; color: #aaa;">${userEmail}</div>
+                                    ${isBanned ? '<div style="color: #e17055; font-size: 0.85rem; margin-top: 0.25rem;"><i class="fas fa-ban"></i> Utilisateur banni</div>' : ''}
+                                </div>
+                            </div>
+                            <div style="margin-top: 0.5rem; color: #aaa; font-size: 0.9rem;">
+                                <strong>${userReports.length}</strong> signalement${userReports.length > 1 ? 's' : ''} de <strong>${reporters.length}</strong> personne${reporters.length > 1 ? 's' : ''}
+                            </div>
+                            <div class="report-meta" style="margin-top: 0.5rem;">
+                                ${userReports.length === 1 ? `Signalé le ${formattedFirstDate}` : `Du ${formattedFirstDate} au ${formattedLastDate}`}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <div style="margin-bottom: 0.75rem;">
+                            <strong style="color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Raisons :</strong>
+                            <div>
+                                ${reasonsHtml}
+                            </div>
+                        </div>
+                        ${reportersHtml}
+                        ${commentsHtml}
+                    </div>
+                    <div class="report-actions-admin">
+                        ${!isBanned ? `
+                            <button class="ban-btn" onclick="handleBanUser('${userEmail}', '${userName.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-ban"></i>
+                                Bannir
+                            </button>
+                        ` : `
+                            <button class="ban-btn banned" disabled>
+                                <i class="fas fa-ban"></i>
+                                Déjà banni
+                            </button>
+                        `}
+                        <button class="warn-btn" onclick="handleWarnUser('${userEmail}', '${userName.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Avertir
+                        </button>
+                        <button class="thank-btn" onclick="handleThankUser('${userEmail}', '${userName.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-heart"></i>
+                            Remercier
+                        </button>
+                        <button class="ignore-btn" onclick="handleIgnoreReport('${userEmail}')">
+                            <i class="fas fa-times"></i>
+                            Ignorer
+                        </button>
+                    </div>
+                `;
+                
+                reportsList.appendChild(reportItem);
+            });
+        }
+        
+        // Gérer le bannissement
+        async function handleBanUser(email, name) {
+            if (confirm(`Voulez-vous vraiment bannir ${name} (${email}) ?\n\nCette action est irréversible.`)) {
+                banUser(email);
+                
+                // Envoyer un message de bannissement
+                await sendBanMessage(email, name);
+                
+                displayReports();
+                alert(`${name} a été banni avec succès et un message lui a été envoyé.`);
+            }
+        }
+        
+        // Gérer l'avertissement
+        async function handleWarnUser(email, name) {
+            const defaultMessage = `Bonjour,\n\nVous avez reçu un avertissement pour comportement inapproprié signalé par d'autres utilisateurs.\n\nVeuillez respecter les règles de la communauté.\n\nCordialement, L'équipe MangaWatch`;
+            showMessageInputModal('warning', email, name, defaultMessage, async (message) => {
+                if (message && message.trim()) {
+                    await sendWarningMessage(email, name, message);
+                    alert(`Avertissement envoyé à ${name} avec succès.`);
+                }
+            });
+        }
+        
+        // Gérer le remerciement
+        async function handleThankUser(email, name) {
+            const reports = getAllReports();
+            const userReports = reports.filter(r => r.reportedUser === email);
+            const reporters = [...new Set(userReports.map(r => r.reportedBy))];
+            
+            if (reporters.length === 0) {
+                alert('Aucun rapporteur trouvé pour ce signalement.');
+                return;
+            }
+            
+            // Obtenir les noms des rapporteurs
+            const reportersInfo = reporters.map(reporterEmail => {
+                const reporterProfileData = localStorage.getItem('profile_' + reporterEmail);
+                let reporterName = reporterEmail;
+                if (reporterProfileData) {
+                    try {
+                        const reporterProfile = JSON.parse(reporterProfileData);
+                        reporterName = reporterProfile.name || reporterProfile.username || reporterEmail;
+                    } catch (e) {
+                        console.error('Erreur:', e);
+                    }
+                }
+                return { email: reporterEmail, name: reporterName };
+            });
+            
+            const defaultMessage = `Bonjour,\n\nNous vous remercions chaleureusement d'avoir signalé des comportements inappropriés sur notre plateforme. Votre vigilance aide à maintenir une communauté saine et respectueuse.\n\nMerci pour votre contribution !\n\nCordialement, L'équipe MangaWatch`;
+            
+            // Afficher la liste des rapporteurs dans le modal
+            const recipientsList = reportersInfo.map(r => `${r.name} (${r.email})`).join(', ');
+            showMessageInputModal('thank', recipientsList, reportersInfo, defaultMessage, async (message) => {
+                if (message && message.trim()) {
+                    await sendThankMessageToReporters(reportersInfo, message);
+                    alert(`Message de remerciement envoyé à ${reportersInfo.length} rapporteur${reportersInfo.length > 1 ? 's' : ''} avec succès.`);
+                }
+            });
+        }
+        
+        // Fonction pour afficher le modal de saisie de message
+        let currentMessageInputCallback = null;
+        function showMessageInputModal(type, emailOrRecipientsList, nameOrReportersInfo, defaultMessage, callback) {
+            const overlay = document.getElementById('message-input-modal-overlay');
+            const modalIcon = document.getElementById('message-input-modal-icon');
+            const modalTitle = document.getElementById('message-input-modal-title');
+            const recipientSpan = document.getElementById('message-input-recipient');
+            const textarea = document.getElementById('message-input-textarea');
+            const confirmBtn = document.getElementById('message-input-modal-confirm');
+            const cancelBtn = document.getElementById('message-input-modal-cancel');
+            
+            if (!overlay || !modalIcon || !modalTitle || !recipientSpan || !textarea || !confirmBtn || !cancelBtn) {
+                // Fallback vers prompt si le modal n'existe pas
+                const message = prompt(type === 'warning' 
+                    ? `Envoyer un avertissement à ${nameOrReportersInfo} (${emailOrRecipientsList}):\n\nEntrez le message d'avertissement:`
+                    : `Remercier les rapporteurs:\n\nEntrez le message de remerciement:`, 
+                    defaultMessage);
+                if (message && callback) {
+                    callback(message);
+                }
+                return;
+            }
+            
+            // Stocker le callback
+            currentMessageInputCallback = callback;
+            
+            // Configurer l'icône et le titre selon le type
+            if (type === 'warning') {
+                modalIcon.className = 'custom-modal-icon warning';
+                modalIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                modalTitle.textContent = 'Envoyer un avertissement';
+                // Configurer le destinataire pour l'avertissement
+                recipientSpan.textContent = `${nameOrReportersInfo} (${emailOrRecipientsList})`;
+            } else if (type === 'thank') {
+                modalIcon.className = 'custom-modal-icon success';
+                modalIcon.innerHTML = '<i class="fas fa-heart"></i>';
+                modalTitle.textContent = 'Remercier les rapporteurs';
+                // Configurer le destinataire pour le remerciement (liste des rapporteurs)
+                recipientSpan.textContent = emailOrRecipientsList;
+            }
+            
+            // Remplir le textarea avec le message par défaut
+            textarea.value = defaultMessage;
+            
+            // Supprimer les anciens event listeners
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            const finalConfirmBtn = document.getElementById('message-input-modal-confirm');
+            
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            const finalCancelBtn = document.getElementById('message-input-modal-cancel');
+            
+            // Ajouter les nouveaux event listeners
+            finalConfirmBtn.onclick = () => {
+                const message = textarea.value.trim();
+                if (currentMessageInputCallback) {
+                    currentMessageInputCallback(message);
+                    currentMessageInputCallback = null;
+                }
+                hideMessageInputModal();
+            };
+            
+            finalCancelBtn.onclick = hideMessageInputModal;
+            
+            // Afficher le modal
+            overlay.classList.add('active');
+            textarea.focus();
+        }
+        
+        function hideMessageInputModal() {
+            const overlay = document.getElementById('message-input-modal-overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+            }
+            currentMessageInputCallback = null;
+        }
+        
+        // Fermer le modal en cliquant sur l'overlay
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('message-input-modal-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        hideMessageInputModal();
+                    }
+                });
+            }
+        });
+        
+        // Gérer l'ignorance d'un signalement
+        function handleIgnoreReport(userEmail) {
+            const reports = getAllReports();
+            const filteredReports = reports.filter(r => r.reportedUser !== userEmail);
+            localStorage.setItem('user_reports', JSON.stringify(filteredReports));
+            displayReports();
+        }
+        
+        // Fonctions d'envoi de messages (à utiliser avec messageService)
+        async function sendBanMessage(email, name) {
+            try {
+                // Importer messageService dynamiquement
+                const { messageService } = await import('/js/messageService.js');
+                
+                await messageService.sendMessage({
+                    recipientEmail: email,
+                    title: 'Votre compte a été banni',
+                    content: `Bonjour ${name},\n\nVotre compte a été banni suite à des signalements pour comportement inapproprié.\n\nCette décision est définitive.\n\nCordialement, L'équipe MangaWatch`,
+                    messageType: 'ban',
+                    metadata: { reason: 'Signalements multiples' }
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'envoi du message de bannissement:', error);
+            }
+        }
+        
+        async function sendWarningMessage(email, name, content) {
+            try {
+                const { messageService } = await import('/js/messageService.js');
+                
+                await messageService.sendMessage({
+                    recipientEmail: email,
+                    title: 'Avertissement',
+                    content: content,
+                    messageType: 'warning',
+                    metadata: {}
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'envoi du message d\'avertissement:', error);
+            }
+        }
+        
+        async function sendThankMessageToReporters(reportersInfo, content) {
+            try {
+                const { messageService } = await import('/js/messageService.js');
+                
+                // Envoyer le message à tous les rapporteurs
+                for (const reporter of reportersInfo) {
+                    await messageService.sendMessage({
+                        recipientEmail: reporter.email,
+                        title: 'Merci pour vos signalements',
+                        content: content,
+                        messageType: 'thank',
+                        metadata: {}
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur lors de l\'envoi du message de remerciement:', error);
+            }
+        }
+        
+        // Ancienne fonction conservée pour compatibilité (ne devrait plus être utilisée)
+        async function sendThankMessage(email, name, content) {
+            await sendThankMessageToReporters([{ email, name }], content);
+        }
+        
+        // Initialisation du formulaire de messagerie
+        function initMessagingForm() {
+            const recipientType = document.getElementById('message-recipient-type');
+            const userSelectGroup = document.getElementById('user-select-group');
+            const recipientUser = document.getElementById('message-recipient-user');
+            const sendBtn = document.getElementById('send-message-btn');
+            
+            // Afficher/masquer la sélection d'utilisateur
+            recipientType.addEventListener('change', () => {
+                if (recipientType.value === 'user') {
+                    userSelectGroup.style.display = 'block';
+                    populateUserSelect();
+                } else {
+                    userSelectGroup.style.display = 'none';
+                }
+            });
+            
+            // Barre de recherche pour les utilisateurs
+            const userSearchInput = document.getElementById('message-recipient-user-search');
+            if (userSearchInput) {
+                userSearchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    const options = recipientUser.querySelectorAll('option');
+                    options.forEach(option => {
+                        if (option.value === '') return; // Garder l'option par défaut
+                        const text = option.textContent.toLowerCase();
+                        option.style.display = text.includes(searchTerm) ? 'block' : 'none';
+                    });
+                });
+            }
+            
+            // Populer la liste des utilisateurs
+            function populateUserSelect() {
+                const users = getAllUsers();
+                recipientUser.innerHTML = '<option value="">Choisir un utilisateur...</option>';
+                users.forEach(user => {
+                    const option = document.createElement('option');
+                    option.value = user.email;
+                    option.textContent = `${user.name} (${user.email})`;
+                    recipientUser.appendChild(option);
+                });
+            }
+
+            // Modèles de messages prédéfinis
+            const templates = {
+                'warning-harassment': {
+                    type: 'warning',
+                    title: 'Avertissement - Comportement inapproprié',
+                    content: 'Bonjour,\n\nVous avez reçu un avertissement suite à des signalements pour comportement de harcèlement ou toxicité sur notre plateforme.\n\nNous vous rappelons que notre communauté se doit d\'être respectueuse et bienveillante envers tous les membres. Nous vous invitons à revoir votre comportement et à respecter les règles de notre communauté.\n\nEn cas de récidive, des sanctions plus sévères pourront être appliquées, pouvant aller jusqu\'au bannissement définitif de votre compte.\n\nNous comptons sur votre compréhension et votre coopération.\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'warning-spam': {
+                    type: 'warning',
+                    title: 'Avertissement - Spam',
+                    content: 'Bonjour,\n\nVous avez reçu un avertissement suite à des signalements pour comportement de spam ou publicité non sollicitée sur notre plateforme.\n\nNous vous rappelons que la promotion de contenu ou services non autorisés est interdite sur MangaWatch. Merci de respecter les règles de notre communauté.\n\nEn cas de récidive, votre compte pourra être suspendu ou banni.\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'warning-inappropriate': {
+                    type: 'warning',
+                    title: 'Avertissement - Contenu inapproprié',
+                    content: 'Bonjour,\n\nVous avez reçu un avertissement suite à des signalements pour publication de contenu offensant ou inapproprié sur notre plateforme.\n\nNous vous rappelons que notre communauté se doit d\'être respectueuse et appropriée pour tous les âges. Merci de veiller à ce que vos contributions respectent nos règles de contenu.\n\nEn cas de récidive, des sanctions pourront être appliquées.\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'ban': {
+                    type: 'ban',
+                    title: 'Votre compte a été banni',
+                    content: 'Bonjour,\n\nVotre compte a été banni définitivement suite à des violations répétées de nos règles de communauté.\n\nCette décision a été prise après examen attentif de votre comportement et des signalements reçus concernant vos actions sur la plateforme.\n\nCette sanction est définitive et irréversible.\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'thank-report': {
+                    type: 'thank',
+                    title: 'Merci pour vos signalements',
+                    content: 'Bonjour,\n\nNous tenions à vous remercier chaleureusement d\'avoir signalé des comportements inappropriés sur notre plateforme.\n\nVotre vigilance et votre contribution aident grandement à maintenir une communauté saine, respectueuse et agréable pour tous nos membres. C\'est grâce à des utilisateurs comme vous que nous pouvons garantir un environnement sûr et bienveillant.\n\nVotre action a permis de prendre les mesures nécessaires. Nous vous remercions sincèrement pour votre implication dans la qualité de notre communauté.\n\nN\'hésitez pas à continuer à nous signaler tout comportement qui vous semblerait inapproprié.\n\nEncore merci !\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'thank-report-ban': {
+                    type: 'thank',
+                    title: 'Merci pour votre signalement - Compte banni',
+                    content: 'Bonjour,\n\nNous tenions à vous remercier chaleureusement d\'avoir signalé un utilisateur dont le comportement justifiait un bannissement sur notre plateforme.\n\nGrâce à votre vigilance et votre action, nous avons pu prendre les mesures nécessaires et bannir cet utilisateur, protégeant ainsi toute notre communauté.\n\nContinuez sur cette lancée ! Votre engagement en faveur d\'une communauté saine et respectueuse est précieux. En récompense de votre implication, vous bénéficierez d\'avantages exclusifs sur le site ainsi que sur notre serveur Discord MangaWatch.\n\nNous vous remercions sincèrement pour votre contribution à la qualité de notre communauté. N\'hésitez pas à continuer à nous signaler tout comportement inapproprié.\n\nMerci encore pour votre vigilance !\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'global-event': {
+                    type: 'global',
+                    title: 'Annonce importante',
+                    content: 'Bonjour à tous,\n\nNous avons le plaisir de vous annoncer un événement spécial sur MangaWatch !\n\nRestez connectés pour plus d\'informations dans les prochains jours.\n\nMerci de faire partie de notre communauté !\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'share-site': {
+                    type: 'global',
+                    title: 'Partagez MangaWatch et obtenez des avantages exclusifs !',
+                    content: 'Bonjour à tous,\n\nNous avons besoin de votre aide pour faire connaître MangaWatch ! 🚀\n\nSi vous appréciez notre plateforme et souhaitez nous soutenir, nous vous encourageons vivement à partager le site au maximum :\n\n👥 Avec votre entourage (famille, amis, collègues, etc.)\n📱 Sur vos réseaux sociaux (Facebook, Instagram, TikTok, etc.)\n💬 Sur Discord\n\n🎁 RÉCOMPENSE : Si vous partagez activement MangaWatch (avec votre entourage et/ou sur les réseaux) et que vous nous prévenez sur les réseaux sociaux ou sur notre serveur Discord, vous pourrez obtenir accès à des fonctionnalités exclusives sur le site, notamment :\n\n✨ Certification de votre compte\n✨ Badges exclusifs\n✨ Accès anticipé aux nouvelles fonctionnalités\n✨ Statut de membre privilégié\n\n📱 Comment nous prévenir ?\n- Partagez sur notre serveur Discord MangaWatch\n- Envoyez-nous un message via les réseaux sociaux\n\nVotre soutien est précieux pour faire grandir notre communauté ! Chaque partage compte et nous aide à améliorer continuellement la plateforme.\n\nMerci infiniment pour votre engagement ! 🙏\n\nCordialement,\nL\'équipe MangaWatch'
+                }
+            };
+
+            // Gérer les clics sur les modèles
+            document.querySelectorAll('.template-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const templateKey = btn.dataset.template;
+                    const template = templates[templateKey];
+                    if (template) {
+                        document.getElementById('message-type').value = template.type;
+                        document.getElementById('message-title').value = template.title;
+                        document.getElementById('message-content').value = template.content;
+                    }
+                });
+            });
+            
+            // Envoyer un message (utiliser onclick pour éviter les doublons)
+            let isSending = false;
+            sendBtn.onclick = async () => {
+                if (isSending) return;
+                isSending = true;
+                const recipientTypeValue = recipientType.value;
+                const recipientEmail = recipientTypeValue === 'user' ? recipientUser.value : null;
+                const messageType = document.getElementById('message-type').value;
+                const title = document.getElementById('message-title').value.trim();
+                const content = document.getElementById('message-content').value.trim();
+                
+                if (!title || !content) {
+                    alert('Veuillez remplir le titre et le contenu du message.');
+                    return;
+                }
+                
+                if (recipientTypeValue === 'user' && !recipientEmail) {
+                    alert('Veuillez sélectionner un utilisateur.');
+                    return;
+                }
+                
+                // Afficher le popup de confirmation
+                const messageTypes = {
+                    'info': { label: 'Information', icon: 'fa-info-circle', color: '#3498db' },
+                    'warning': { label: 'Avertissement', icon: 'fa-exclamation-triangle', color: '#f39c12' },
+                    'ban': { label: 'Bannissement', icon: 'fa-ban', color: '#e74c3c' },
+                    'thank': { label: 'Remerciement', icon: 'fa-heart', color: '#2ecc71' },
+                    'global': { label: 'Annonce globale', icon: 'fa-bullhorn', color: '#9b59b6' }
+                };
+                
+                const type = messageTypes[messageType] || messageTypes.info;
+                const recipientName = recipientTypeValue === 'user' && recipientEmail 
+                    ? recipientUser.options[recipientUser.selectedIndex].textContent 
+                    : 'Tous les utilisateurs';
+                
+                showSendMessageModal({
+                    recipient: recipientName,
+                    type: type.label,
+                    typeIcon: type.icon,
+                    title: title,
+                    content: content.substring(0, 150) + (content.length > 150 ? '...' : ''),
+                    fullContent: content
+                }, async () => {
+                    // Callback de confirmation
+                    try {
+                        const { messageService } = await import('/js/messageService.js');
+                        
+                        await messageService.sendMessage({
+                            recipientEmail: recipientEmail,
+                            title: title,
+                            content: content,
+                            messageType: messageType,
+                            metadata: {}
+                        });
+                        
+                        // Afficher un message de succès
+                        const successOverlay = document.getElementById('send-message-modal-overlay');
+                        const modalBody = document.getElementById('send-message-modal-body');
+                        const modalTitle = successOverlay.querySelector('.custom-modal-title');
+                        const modalIcon = successOverlay.querySelector('.custom-modal-icon');
+                        
+                        modalIcon.className = 'custom-modal-icon success';
+                        modalIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
+                        modalTitle.textContent = 'Message envoyé avec succès !';
+                        modalBody.innerHTML = `
+                            <div style="text-align: center; padding: 1rem 0;">
+                                <p style="color: #00b894; font-size: 1.1rem; margin-bottom: 1rem;">
+                                    <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
+                                    Votre message a été envoyé avec succès.
+                                </p>
+                                <p style="color: #aaa; font-size: 0.9rem;">
+                                    Destinataire: <strong style="color: #00b894;">${recipientName}</strong><br>
+                                    Type: <strong style="color: #00b894;">${type.label}</strong>
+                                </p>
+                            </div>
+                        `;
+                        
+                        const confirmBtn = document.getElementById('send-message-modal-confirm');
+                        confirmBtn.innerHTML = '<i class="fas fa-check"></i> OK';
+                        confirmBtn.onclick = () => {
+                            hideSendMessageModal();
+                            // Réinitialiser le formulaire
+                            document.getElementById('message-title').value = '';
+                            document.getElementById('message-content').value = '';
+                            recipientType.value = 'global';
+                            userSelectGroup.style.display = 'none';
+                            // Réinitialiser le bouton
+                            confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer';
+                            // Réafficher le bouton annuler
+                            document.getElementById('send-message-modal-cancel').style.display = 'flex';
+                        };
+                        
+                        // Masquer le bouton annuler
+                        document.getElementById('send-message-modal-cancel').style.display = 'none';
+                        confirmBtn.style.display = 'block';
+                        
+                    } catch (error) {
+                        console.error('Erreur lors de l\'envoi du message:', error);
+                        hideSendMessageModal();
+                        alert('Erreur lors de l\'envoi du message. Veuillez réessayer.');
+                    }
+                    isSending = false; // Réinitialiser le flag après l'envoi
+                });
+            };
+        }
+        
+        // Fonction pour afficher le popup de confirmation d'envoi de message
+        let currentSendMessageCallback = null;
+        
+        function showSendMessageModal(messageData, callback) {
+            const overlay = document.getElementById('send-message-modal-overlay');
+            const modalBody = document.getElementById('send-message-modal-body');
+            const modalTitle = overlay.querySelector('.custom-modal-title');
+            const modalIcon = overlay.querySelector('.custom-modal-icon');
+            const cancelBtn = document.getElementById('send-message-modal-cancel');
+            const confirmBtn = document.getElementById('send-message-modal-confirm');
+            
+            // Réinitialiser l'affichage
+            cancelBtn.style.display = 'flex';
+            confirmBtn.style.display = 'flex';
+            confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer';
+            
+            // Stocker le callback
+            currentSendMessageCallback = callback;
+            
+            // Configurer l'icône et le titre
+            modalIcon.className = 'custom-modal-icon success';
+            modalIcon.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            modalTitle.textContent = 'Confirmer l\'envoi du message';
+            
+            // Configurer le contenu
+            modalBody.innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <p style="margin-bottom: 0.75rem;">
+                        <strong style="color: #00b894;">Destinataire :</strong><br>
+                        <span style="color: #ccc;">${messageData.recipient}</span>
+                    </p>
+                    <p style="margin-bottom: 0.75rem;">
+                        <strong style="color: #00b894;">Type de message :</strong><br>
+                        <span style="color: #ccc;"><i class="fas ${messageData.typeIcon}"></i> ${messageData.type}</span>
+                    </p>
+                    <p style="margin-bottom: 0.75rem;">
+                        <strong style="color: #00b894;">Titre :</strong><br>
+                        <span style="color: #ccc;">${messageData.title}</span>
+                    </p>
+                    <p>
+                        <strong style="color: #00b894;">Aperçu du contenu :</strong><br>
+                        <span style="color: #aaa; font-style: italic;">${messageData.content}</span>
+                    </p>
+                </div>
+                <p style="color: #888; font-size: 0.9rem; text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    Êtes-vous sûr de vouloir envoyer ce message ?
+                </p>
+            `;
+            
+            // Supprimer les anciens event listeners pour éviter les doublons
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            const finalConfirmBtn = document.getElementById('send-message-modal-confirm');
+            
+            // Supprimer tous les anciens listeners en créant un nouveau bouton
+            finalConfirmBtn.onclick = () => {
+                if (currentSendMessageCallback) {
+                    currentSendMessageCallback();
+                }
+            };
+            
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            const finalCancelBtn = document.getElementById('send-message-modal-cancel');
+            finalCancelBtn.onclick = hideSendMessageModal;
+            
+            // Afficher le modal
+            overlay.classList.add('active');
+        }
+        
+        function hideSendMessageModal() {
+            const overlay = document.getElementById('send-message-modal-overlay');
+            overlay.classList.remove('active');
+            currentSendMessageCallback = null;
+        }
+        
+        // Fermer le modal en cliquant sur l'overlay
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('send-message-modal-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        hideSendMessageModal();
+                    }
+                });
+            }
+        });
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUsers();
+            updateStats();
+            displayReports();
+            initMessagingForm();
+            
+            // Gestion de la recherche
+            const searchInput = document.getElementById('user-search-input');
+            const searchClear = document.getElementById('user-search-clear');
+            
+            // Afficher/masquer le bouton de suppression selon le contenu
+            searchInput.addEventListener('input', () => {
+                loadUsers();
+                // Afficher le bouton de suppression si le champ n'est pas vide
+                if (searchInput.value.trim().length > 0) {
+                    searchClear.classList.add('visible');
+                } else {
+                    searchClear.classList.remove('visible');
+                }
+            });
+            
+            // Bouton pour effacer la recherche
+            searchClear.addEventListener('click', () => {
+                searchInput.value = '';
+                searchClear.classList.remove('visible');
+                loadUsers();
+            });
+        });
+    </script>
+</body>
+</html>
+

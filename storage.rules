@@ -1,0 +1,31 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Règle pour les bannières utilisateur
+    // Format attendu : banners/{email}_{timestamp}.{extension}
+    match /banners/{fileName} {
+      // Permettre la lecture publique (pour affichage dans les tags <img>)
+      allow read: if true;
+      // Permettre l'écriture (upload) à tous les utilisateurs authentifiés
+      allow write: if request.auth != null;
+      // Permettre la suppression à tous les utilisateurs authentifiés
+      allow delete: if request.auth != null;
+    }
+    
+    // Règle pour les avatars utilisateur
+    match /avatars/{fileName} {
+      // Permettre la lecture publique (pour affichage dans les tags <img>)
+      allow read: if true;
+      // Permettre l'écriture (upload) à tous les utilisateurs authentifiés
+      allow write: if request.auth != null;
+      // Permettre la suppression à tous les utilisateurs authentifiés
+      allow delete: if request.auth != null;
+    }
+    
+    // Règle par défaut : refuser tout accès non authentifié
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+

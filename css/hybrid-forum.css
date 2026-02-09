@@ -1,0 +1,1714 @@
+/* ===========================================
+   HYBRID FORUM STYLE (Reddit + Forum)
+   =========================================== */
+
+/* ===========================================
+   HYBRID FORUM STYLE (Reddit + Forum)
+   Thème Death Note
+   =========================================== */
+
+:root {
+    /* Couleurs principales */
+    --primary-color: #00a84d; /* Vert principal */
+    --primary-dark: #008a3d; /* Vert foncé */
+    --primary-light: #00c45d; /* Vert clair */
+    --secondary-color: #007bff; /* Bleu secondaire */
+    --text-primary: #ffffff; /* Texte blanc */
+    --text-secondary: rgba(255, 255, 255, 0.7); /* Texte secondaire */
+    --background-color: #121212; /* Fond principal */
+    --header-bg: rgba(18, 18, 18, 0.95); /* Fond du header avec transparence */
+    --surface: #181818; /* Surface des cartes */
+    --border: rgba(255, 255, 255, 0.1); /* Bordures */
+    --shadow: rgba(0, 0, 0, 0.2); /* Ombres */
+    --accent: #1ed760; /* Accent */
+    --gradient-primary: linear-gradient(135deg, #00a84d, #00c45d); /* Dégradé principal */
+    --gradient-secondary: linear-gradient(135deg, rgba(0, 168, 77, 0.1), rgba(0, 168, 77, 0.05)); /* Dégradé secondaire */
+    --hover-color: rgba(0, 168, 77, 0.1); /* Couleur de survol */
+    --active-color: rgba(0, 168, 77, 0.2); /* Couleur active */
+    
+    /* Variables spécifiques au forum */
+    --primary-bg: #121212;
+    --secondary-bg: #1e1e1e;
+    --post-bg: #181818;
+    --post-border: rgba(255, 255, 255, 0.1);
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --accent: #00c45d;
+    --accent-hover: #1ed760;
+    --upvote: #00c45d;
+    --downvote: #ff6b6b;
+    --button-bg: #2a2a2a;
+    --button-hover: #333333;
+    --input-bg: #1e1e1e;
+    --input-border: rgba(255, 255, 255, 0.1);
+    --highlight: #2a2a2a;
+    --divider: rgba(255, 255, 255, 0.1);
+    --online: #00c45d;
+    --offline: #ff6b6b;
+    --link: #4fbcff;
+    --link-hover: #6fc6ff;
+    --success: #00c45d;
+    --warning: #ffd635;
+    --danger: #ff6b6b;
+    --info: #4fbcff;
+    
+    /* Espacements et bordures */
+    --border-radius: 8px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    
+    /* Polices */
+    --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-accent: 'Garamond', serif;
+}
+
+/* Reset et styles de base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: var(--font-main);
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding-top: 80px; /* Espace pour le header fixe */
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--accent-hover);
+    text-decoration: none;
+}
+
+/* Boutons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: 0 2px 10px rgba(0, 200, 93, 0.3);
+}
+
+.btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 200, 93, 0.4);
+}
+
+.btn-secondary {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background-color: var(--button-hover);
+    border-color: var(--accent);
+}
+
+/* Cartes et conteneurs */
+.card {
+    background-color: var(--surface);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: var(--spacing-md);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 1.1rem;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.card-body {
+    padding: var(--spacing-md);
+}
+
+/* Formulaires */
+.form-control {
+    width: 100%;
+    padding: 10px 15px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 200, 93, 0.2);
+}
+
+textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Layout principal */
+.forum-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px 15px;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 20px;
+}
+
+/* Colonne principale */
+.main-content {
+    grid-column: 1;
+}
+
+/* Barre latérale */
+.sidebar {
+    grid-column: 2;
+}
+
+/* En-tête du sujet */
+.topic-header {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--post-border);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    padding: 20px;
+}
+
+.topic-header h1 {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.topic-meta {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 15px;
+}
+
+.topic-meta .author {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-right: 10px;
+}
+
+.topic-meta .separator {
+    margin: 0 8px;
+    color: var(--text-secondary);
+}
+
+.topic-content {
+    margin: 20px 0;
+    line-height: 1.6;
+}
+
+/* Système de votes */
+.vote-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: var(--spacing-md);
+    min-width: 36px;
+}
+
+.vote-button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 32px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.vote-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    border-radius: var(--border-radius);
+}
+
+.vote-button:hover::before {
+    opacity: 0.1;
+}
+
+.vote-button:active {
+    transform: scale(0.95);
+}
+
+.vote-button.upvote {
+    color: var(--text-secondary);
+}
+
+.vote-button.upvote:hover,
+.vote-button.upvote.active {
+    color: var(--upvote);
+}
+
+.vote-button.downvote {
+    color: var(--text-secondary);
+}
+
+.vote-button.downvote:hover,
+.vote-button.downvote.active {
+    color: var(--downvote);
+}
+
+.vote-count {
+    font-weight: 700;
+    margin: 4px 0;
+    font-size: 0.95rem;
+    min-width: 20px;
+    text-align: center;
+    color: var(--text-primary);
+    transition: color 0.2s ease;
+}
+
+/* Style pour le compteur de votes positif */
+.vote-count.positive {
+    color: var(--upvote);
+}
+
+/* Style pour le compteur de votes négatif */
+.vote-count.negative {
+    color: var(--downvote);
+}
+
+/* Messages et commentaires */
+.comments-section {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin-bottom: var(--spacing-lg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.comment {
+    display: flex;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border);
+    transition: all 0.2s ease;
+    position: relative;
+    background-color: var(--surface);
+}
+
+.comment:last-child {
+    border-bottom: none;
+}
+
+.comment:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.comment-content {
+    flex: 1;
+    position: relative;
+    padding-left: var(--spacing-md);
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.9rem;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.comment-author-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--accent);
+}
+
+.comment-time {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+}
+
+.comment-text {
+    color: var(--text-primary);
+    line-height: 1.6;
+    font-size: 0.95rem;
+    margin-bottom: var(--spacing-sm);
+    word-break: break-word;
+}
+
+.comment-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-sm);
+    font-size: 0.85rem;
+}
+
+.comment-action {
+    display: inline-flex;
+    align-items: center;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.comment-action:hover {
+    background-color: var(--hover-color);
+    color: var(--text-primary);
+}
+
+.comment-action i {
+    margin-right: 4px;
+    font-size: 0.9em;
+}
+
+.comment-action.like {
+    color: var(--upvote);
+}
+
+.comment-action.dislike {
+    color: var(--downvote);
+}
+
+.comment-action.reply:hover {
+    color: var(--accent);
+}
+
+.comment-action.report:hover {
+    color: var(--danger);
+}
+
+/* Style pour les réponses imbriquées */
+.comment-replies {
+    margin-left: var(--spacing-lg);
+    padding-left: var(--spacing-md);
+    border-left: 2px solid var(--border);
+    margin-top: var(--spacing-md);
+}
+
+/* Style pour le badge OP (Original Poster) */
+.badge-op {
+    background-color: var(--accent);
+    color: #000;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+}
+
+/* Formulaire de réponse */
+.reply-form {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.reply-form:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.reply-form h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.reply-form h3 i {
+    color: var(--accent);
+}
+
+.reply-textarea {
+    width: 100%;
+    min-height: 120px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: var(--spacing-md);
+    resize: vertical;
+    transition: all 0.2s ease;
+    font-family: var(--font-main);
+}
+
+.reply-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(0, 200, 93, 0.2);
+}
+
+.reply-textarea::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+/* Style pour le compteur de caractères */
+.char-counter {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-right: auto;
+    transition: color 0.2s ease;
+}
+
+.char-counter.warning {
+    color: var(--warning);
+}
+
+.char-counter.error {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+/* Style pour l'aperçu Markdown */
+.preview-content {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    min-height: 100px;
+    color: var(--text-primary);
+    line-height: 1.6;
+}
+
+/* Style pour les onglets d'édition/aperçu */
+.editor-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--spacing-md);
+}
+
+.editor-tab {
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.editor-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.editor-tab:hover:not(.active) {
+    color: var(--text-primary);
+    background-color: var(--hover-color);
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--accent);
+    color: #000;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--input-border);
+}
+
+.btn-secondary:hover {
+    background-color: var(--button-hover);
+}
+
+/* Widgets de la barre latérale */
+.widget {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--post-border);
+    border-radius: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.widget-header {
+    background-color: var(--highlight);
+    padding: 12px 15px;
+    font-weight: 600;
+    font-size: 14px;
+    border-bottom: 1px solid var(--divider);
+}
+
+.widget-content {
+    padding: 15px;
+}
+
+/* Liste des membres en ligne */
+.online-users {
+    list-style: none;
+}
+
+.online-user {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--divider);
+}
+
+.online-user:last-child {
+    border-bottom: none;
+}
+
+.user-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.user-name {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.user-status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 8px;
+    background-color: var(--online);
+}
+
+.user-status.offline {
+    background-color: var(--offline);
+}
+
+/* Tags et catégories */
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tag {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    padding: 4px 10px;
+    border-radius: 50px;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.tag:hover {
+    background-color: var(--button-hover);
+    text-decoration: none;
+}
+
+/* Réponses imbriquées */
+.comment-replies {
+    margin-left: 30px;
+    border-left: 2px solid var(--divider);
+    padding-left: 15px;
+}
+
+/* Style pour les citations */
+.blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 15px;
+    margin: 10px 0;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Style pour le pied de page */
+.footer {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    border-top: 1px solid var(--divider);
+    margin-top: 30px;
+}
+
+/* Style pour les boutons d'action rapide */
+.quick-actions {
+    display: flex;
+    gap: 15px;
+    margin: 15px 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--divider);
+}
+
+.quick-action {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.quick-action:hover {
+    background-color: var(--button-hover);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.quick-action i {
+    font-size: 16px;
+}
+
+/* Styles pour les onglets de tri */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 15px;
+}
+
+.tab {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background-color: var(--highlight);
+}
+
+.tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+}
+
+/* Style pour les badges */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-primary {
+    background-color: var(--accent);
+    color: #000;
+}
+
+.badge-secondary {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    margin-left: 8px;
+}
+
+/* Style pour les citations dans les messages */
+.message-quote {
+    background-color: var(--highlight);
+    border-left: 3px solid var(--accent);
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 0 4px 4px 0;
+}
+
+.quote-author {
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.quote-content {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Amélioration de la pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 30px;
+    padding: 20px 0;
+}
+
+.pagination-list {
+    display: flex;
+    list-style: none;
+    gap: 5px;
+}
+
+.pagination-item {
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-item:hover:not(.disabled) {
+    background-color: var(--button-hover);
+}
+
+.pagination-item.active {
+    background-color: var(--accent);
+    color: #000;
+    font-weight: 600;
+}
+
+.pagination-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Style pour les listes à puces dans le contenu */
+.content-list {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.content-list li {
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+/* Style pour les images dans le contenu */
+.content-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 15px 0;
+    border: 1px solid var(--divider);
+}
+
+/* Style pour les vidéos intégrées */
+.video-embed {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    margin: 15px 0;
+    border-radius: 4px;
+    background-color: #000;
+}
+
+.video-embed iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Style pour les blocs de code */
+pre {
+    background-color: var(--highlight);
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    padding: 15px;
+    overflow-x: auto;
+    margin: 15px 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+code {
+    background-color: var(--highlight);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+/* Style pour les tableaux */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 14px;
+}
+
+table, th, td {
+    border: 1px solid var(--divider);
+}
+
+th, td {
+    padding: 10px 15px;
+    text-align: left;
+}
+
+th {
+    background-color: var(--highlight);
+    font-weight: 600;
+}
+
+tr:nth-child(even) {
+    background-color: var(--highlight);
+}
+
+.quick-action {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--input-border);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-action:hover {
+    background-color: var(--button-hover);
+    text-decoration: none;
+}
+
+.quick-action i {
+    margin-right: 6px;
+}
+
+/* Style pour les messages d'information */
+.alert {
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+
+.alert i {
+    margin-right: 10px;
+    font-size: 18px;
+}
+
+.alert-info {
+    background-color: rgba(113, 147, 255, 0.1);
+    border-left: 3px solid var(--info);
+    color: var(--text-primary);
+}
+
+.alert-success {
+    background-color: rgba(70, 209, 96, 0.1);
+    border-left: 3px solid var(--success);
+    color: var(--text-primary);
+}
+
+.alert-warning {
+    background-color: rgba(255, 214, 53, 0.1);
+    border-left: 3px solid var(--warning);
+    color: var(--text-primary);
+}
+
+.alert-danger {
+    background-color: rgba(255, 69, 0, 0.1);
+    border-left: 3px solid var(--danger);
+    color: var(--text-primary);
+}
+
+/* Style pour les onglets */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 20px;
+}
+
+.tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+}
+
+.tab:hover {
+    color: var(--text-primary);
+    background-color: var(--highlight);
+}
+
+/* Style pour les badges */
+.badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.badge-primary {
+    background-color: var(--accent);
+    color: #000;
+}
+
+.badge-secondary {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+}
+
+/* Style pour les messages vides */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 36px;
+    margin-bottom: 15px;
+    opacity: 0.6;
+}
+
+.empty-state h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+    color: var(--text-primary);
+}
+
+.empty-state p {
+    margin-bottom: 20px;
+}
+
+/* Style pour les médias intégrés */
+.media-embed {
+    margin: 15px 0;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--divider);
+}
+
+.media-embed img {
+    max-width: 100%;
+    display: block;
+}
+
+.media-caption {
+    padding: 10px 15px;
+    background-color: var(--highlight);
+    font-size: 13px;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--divider);
+}
+
+/* Style pour les citations de code */
+.code-block {
+    background-color: var(--highlight);
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    padding: 12px;
+    margin: 10px 0;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    overflow-x: auto;
+}
+
+.code-block pre {
+    margin: 0;
+}
+
+.code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.code-language {
+    font-weight: 600;
+}
+
+.code-copy {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
+.code-copy:hover {
+    background-color: var(--button-hover);
+}
+
+/* Style pour les listes */
+.content-list {
+    list-style: none;
+    margin: 15px 0;
+    padding-left: 20px;
+}
+
+.content-list li {
+    margin-bottom: 8px;
+    position: relative;
+    padding-left: 15px;
+}
+
+.content-list li:before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+}
+
+/* Style pour les citations de message */
+.message-quote {
+    border-left: 3px solid var(--accent);
+    padding: 10px 15px;
+    margin: 10px 0;
+    background-color: var(--highlight);
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
+}
+
+.quote-author {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--text-primary);
+}
+
+.quote-content {
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Style pour les spoilers */
+.spoiler {
+    background-color: #000;
+    color: #000;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 3px;
+    transition: all 0.2s;
+}
+
+.spoiler:hover {
+    background-color: #111;
+}
+
+.spoiler.revealed {
+    background-color: var(--highlight);
+    color: var(--text-primary);
+    cursor: default;
+}
+
+/* Style pour les messages épinglés */
+.pinned-message {
+    background-color: rgba(255, 215, 0, 0.05);
+    border-left: 3px solid #ffd700;
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 0 4px 4px 0;
+}
+
+.pinned-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    color: #ffd700;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.pinned-header i {
+    margin-right: 6px;
+}
+
+/* Style pour les onglets de contenu */
+.content-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 20px;
+}
+
+.content-tab {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.content-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+}
+
+.content-tab:hover {
+    color: var(--text-primary);
+    background-color: var(--highlight);
+}
+
+.content-tab-badge {
+    background-color: var(--button-bg);
+    color: var(--text-secondary);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 11px;
+    margin-left: 6px;
+    font-weight: 600;
+}
+
+/* Style pour les messages de chargement */
+.loading-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    color: var(--text-secondary);
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--divider);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Style pour les messages d'erreur */
+.error-message {
+    background-color: rgba(255, 69, 0, 0.1);
+    border-left: 3px solid var(--danger);
+    color: var(--text-primary);
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    align-items: center;
+}
+
+.error-message i {
+    margin-right: 10px;
+    color: var(--danger);
+}
+
+/* Style pour les messages de succès */
+.success-message {
+    background-color: rgba(70, 209, 96, 0.1);
+    border-left: 3px solid var(--success);
+    color: var(--text-primary);
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    align-items: center;
+}
+
+.success-message i {
+    margin-right: 10px;
+    color: var(--success);
+}
+
+/* Style pour les messages d'information */
+.info-message {
+    background-color: rgba(113, 147, 255, 0.1);
+    border-left: 3px solid var(--info);
+    color: var(--text-primary);
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    align-items: center;
+}
+
+.info-message i {
+    margin-right: 10px;
+    color: var(--info);
+}
+
+/* Style pour les messages d'avertissement */
+.warning-message {
+    background-color: rgba(255, 214, 53, 0.1);
+    border-left: 3px solid var(--warning);
+    color: var(--text-primary);
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    align-items: center;
+}
+
+.warning-message i {
+    margin-right: 10px;
+    color: var(--warning);
+}
+
+/* Style pour les séparateurs */
+.divider {
+    height: 1px;
+    background-color: var(--divider);
+    margin: 15px 0;
+    border: none;
+}
+
+/* Style pour les images responsives */
+.responsive-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+    margin: 10px 0;
+}
+
+/* Style pour les vidéos responsives */
+.responsive-video {
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+    margin: 15px 0;
+    border-radius: 4px;
+}
+
+.responsive-video iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Style pour les cartes de profil */
+.profile-card {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--post-border);
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-right: 15px;
+}
+
+.profile-info h3 {
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.profile-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+    text-align: center;
+}
+
+.stat {
+    flex: 1;
+}
+
+.stat-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Style pour les boutons de profil */
+.profile-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-profile {
+    flex: 1;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.btn-follow {
+    background-color: var(--accent);
+    color: #000;
+    border: none;
+}
+
+.btn-follow:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn-message {
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--input-border);
+}
+
+.btn-message:hover {
+    background-color: var(--button-hover);
+}
+
+/* Style pour les onglets de profil */
+.profile-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--divider);
+    margin: 0 -20px 20px;
+    padding: 0 20px;
+}
+
+.profile-tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.profile-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+}
+
+.profile-tab:hover {
+    color: var(--text-primary);
+}
+
+/* Style pour la grille des publications */
+.posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.post-card {
+    background-color: var(--secondary-bg);
+    border: 1px solid var(--post-border);
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.2s;
+}
+
+.post-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.post-image {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+}
+
+.post-content {
+    padding: 15px;
+}
+
+.post-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.post-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+}
+
+.post-actions {
+    display: flex;
+    gap: 15px;
+}
+
+.post-action {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.post-action i {
+    margin-right: 4px;
+    font-size: 14px;
+}
+
+/* Style pour la pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.pagination-list {
+    display: flex;
+    list-style: none;
+    gap: 5px;
+}
+
+.pagination-item {
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background-color: var(--button-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-item:hover {
+    background-color: var(--button-hover);
+}
+
+.pagination-item.active {
+    background-color: var(--accent);
+    color: #000;
+}
+
+.pagination-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Style pour le mode sombre/clair */
+@media (prefers-color-scheme: light) {
+    :root {
+        --primary-bg: #f8f9fa;
+        --secondary-bg: #ffffff;
+        --post-bg: #ffffff;
+        --post-border: #e9ecef;
+        --text-primary: #1a1a1b;
+        --text-secondary: #6c757d;
+        --accent: #0079d3;
+        --accent-hover: #1484d6;
+        --upvote: #ff4500;
+        --downvote: #7193ff;
+        --button-bg: #f1f2f3;
+        --button-hover: #e9ecef;
+        --input-bg: #f8f9fa;
+        --input-border: #e9ecef;
+        --highlight: #f8f9fa;
+        --divider: #e9ecef;
+        --online: #46d160;
+        --offline: #ff4500;
+        --link: #0079d3;
+        --link-hover: #005ea3;
+    }
+}
+
+/* Styles responsifs */
+@media (max-width: 768px) {
+    .forum-container {
+        grid-template-columns: 1fr;
+        padding: 10px;
+    }
+    
+    .sidebar {
+        display: none;
+    }
+    
+    .topic-header {
+        padding: 15px;
+    }
+    
+    .comment {
+        padding: 12px 10px;
+    }
+    
+    .comment-replies {
+        margin-left: 15px;
+        padding-left: 10px;
+    }
+    
+    .reply-form {
+        padding: 15px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+
+/* Styles pour les très petits écrans */
+@media (max-width: 480px) {
+    .topic-header h1 {
+        font-size: 20px;
+    }
+    
+    .comment-actions {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .comment-action {
+        font-size: 12px;
+        padding: 2px 6px;
+    }
+    
+    .vote-button {
+        font-size: 18px;
+    }
+    
+    .vote-count {
+        font-size: 13px;
+    }
+}

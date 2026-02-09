@@ -1,0 +1,197 @@
+/* Styles spécifiques à la page Death Note */
+.body-bg {
+    background: #181818;
+    color: #fff;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 32px 0 32px 0;
+    margin-top: 70px; /* Un peu moins de marge pour dégager le header */
+}
+
+.back-button {
+    display: inline-block;
+    margin-bottom: 24px;
+    background: #219a4b;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.back-button:hover {
+    background: #176c34;
+}
+
+.anime-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+    margin-bottom: 12px;
+}
+
+.anime-image-large {
+    width: 200px;
+    height: 290px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 2px 16px #000a;
+    border: 2px solid #219a4b;
+    background: #111;
+}
+
+/* Bouton favori pour les pages de détails */
+.favorite-btn {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 30px;
+    background: rgba(255, 193, 7, 0.95);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+}
+
+.favorite-btn:hover {
+    background: rgba(255, 193, 7, 1);
+    transform: translateX(-50%) scale(1.15);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.6);
+}
+
+.favorite-btn:active {
+    transform: scale(0.95);
+}
+
+.favorite-btn i {
+    transition: all 0.3s ease;
+}
+
+.favorite-btn:hover i {
+    transform: scale(1.2);
+}
+
+/* Position relative pour les conteneurs d'images */
+.manga-poster,
+.anime-poster {
+    position: relative;
+}
+
+.anime-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0 0 12px 0;
+    color: #fff;
+    text-shadow: 2px 2px 6px #000, 0 0 2px #219a4b;
+}
+
+.rating {
+    margin-bottom: 10px;
+}
+
+.stars-input {
+    margin-bottom: 8px;
+}
+.stars-input span {
+    font-size: 2.8rem; /* Augmente la taille des étoiles */
+    color: #219a4b;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.stars-input span.selected {
+    color: #fff;
+    text-shadow: 0 0 8px #219a4b, 0 0 2px #fff;
+}
+
+#user-rating-result {
+    color: #fff;
+    font-weight: bold;
+    margin-top: 2px;
+}
+
+.genres {
+    margin: 14px 0 0 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.genre-tag {
+    background: #219a4b;
+    color: #fff;
+    border-radius: 18px;
+    padding: 5px 16px;
+    font-size: 1rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.genre-tag:hover {
+    background: #176c34;
+}
+
+.synopsis {
+    background: #1c3326;
+    color: #fff;
+    border-radius: 7px;
+    padding: 18px 18px 18px 18px;
+    margin: 22px 0 18px 0;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    box-shadow: 0 2px 12px #0006;
+}
+
+.additional-info {
+    margin-top: 18px;
+    background: #181818;
+    border-radius: 7px;
+    padding: 18px 18px 10px 18px;
+    color: #fff;
+    box-shadow: 0 2px 12px #0004;
+}
+.additional-info h2 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    font-weight: bold;
+}
+.additional-info ul {
+    margin: 0;
+    padding-left: 18px;
+}
+.additional-info li {
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+@media (max-width: 800px) {
+    .container {
+        padding: 12px 4vw;
+    }
+    .anime-header {
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+    }
+    .anime-image-large {
+        width: 160px;
+        height: 230px;
+    }
+    .anime-title {
+        font-size: 2rem;
+        text-align: center;
+    }
+}

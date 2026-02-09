@@ -1,0 +1,1975 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">Détails de l'anime - MangaWatch</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/details-pages-clean.css?v=1.6&t=20241201">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    if (user.customAvatar) avatarUrl = user.customAvatar;
+                    else if (user.avatar) avatarUrl = user.avatar;
+                    else if (user.originalAvatar) avatarUrl = user.originalAvatar;
+                    else if (user.picture) avatarUrl = user.picture;
+                    else {
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) avatarUrl = storedAvatar;
+                    }
+                    if (avatarUrl && avatarUrl !== '') {
+                        const img = new Image();
+                        img.src = avatarUrl;
+                        function updateAvatarSrc() {
+                            const avatarElement = document.getElementById('user-avatar');
+                            if (avatarElement) avatarElement.src = avatarUrl;
+                            else setTimeout(updateAvatarSrc, 10);
+                        }
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', updateAvatarSrc);
+                        } else {
+                            updateAvatarSrc();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Erreur lors du préchargement de l\'avatar:', e);
+            }
+        })();
+    </script>
+    <script src="/js/localization.js"></script>
+    <script src="/js/search.js"></script>
+    <style>
+        /* Réduire la taille de la barre de recherche sur les pages de détail */
+        .search-wrapper {
+            flex: 0 1 480px !important;
+            max-width: 580px !important;
+        }
+    </style>
+</head>
+<body class="body-bg" data-page="anime-details">
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+                <select id="searchType" class="search-type-selector">
+                    <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                    <option value="anime" data-i18n="search.type.anime">Anime</option>
+                    <option value="movie" data-i18n="search.type.movie">Film</option>
+                    <option value="user" data-i18n="search.type.user">Utilisateur</option>
+                </select>
+                <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="details-search" spellcheck="false">
+                <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <!-- Résultats de recherche -->
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" class="active" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="list.html" data-i18n="nav.collection">Collection</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+        
+        <!-- Conteneur pour les éléments de droite -->
+        <div class="header-right">
+            <!-- Bouton hamburger pour mobile -->
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <!-- Avatar utilisateur -->
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
+
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html" class="active">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+        </nav>
+    </div>
+
+    <div class="details-container">
+        <div class="container">
+            <a href="manga-database.html" class="back-button" onclick="returnToCatalogue(event)">
+                <i class="fas fa-arrow-left"></i> <span data-i18n="back_to_catalogue">Retour au catalogue</span>
+            </a>
+            
+            <div id="anime-details">
+                <!-- Les détails de l'anime seront chargés ici par JavaScript -->
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p data-i18n="loading">Chargement des détails de l'anime...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialiser la localisation et charger les détails
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM chargé, initialisation...');
+            
+            if (window.localization) {
+                window.localization.init();
+            }
+            
+            // Charger les détails du contenu
+            if (contentId) {
+                console.log('📡 Chargement des détails pour le contenu ID:', contentId, 'type:', contentType);
+                loadContentDetails().catch(error => {
+                    console.error('❌ Erreur lors du chargement:', error);
+                });
+            } else {
+                console.log('⚠️ Aucun ID de contenu fourni');
+            }
+        });
+        
+        // Récupérer l'ID et le type depuis l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const contentId = urlParams.get('id');
+        let contentType = urlParams.get('type') || 'anime'; // Par défaut anime
+        
+        // Informations de l'URL
+        console.log('URL complète:', window.location.href);
+        console.log('Paramètres URL:', Object.fromEntries(urlParams));
+        console.log('ID contenu récupéré:', contentId);
+        console.log('Type contenu:', contentType);
+        
+        // Fonction pour nettoyer le synopsis en supprimant les mentions MAL rewrite et limiter à 8 lignes
+        function cleanSynopsis(synopsis) {
+            if (!synopsis) return null;
+            
+            // Supprimer les variations de "écrit par MAL rewrite" dans différentes langues
+            const malRewritePatterns = [
+                /écrit par MAL rewrite/i,
+                /written by MAL rewrite/i,
+                /geschrieben von MAL rewrite/i,
+                /escrito por MAL rewrite/i,
+                /scritto da MAL rewrite/i,
+                /MAL rewriteによって書かれた/i,
+                /écrit par MAL/i,
+                /written by MAL/i,
+                /geschrieben von MAL/i,
+                /escrito por MAL/i,
+                /scritto da MAL/i,
+                /MALによって書かれた/i
+            ];
+            
+            let cleanedSynopsis = synopsis;
+            malRewritePatterns.forEach(pattern => {
+                cleanedSynopsis = cleanedSynopsis.replace(pattern, '');
+            });
+            
+            // Supprimer les mentions de sources (Wikipedia, etc.) à la fin
+            const sourcePatterns = [
+                /\s*\(?\s*[Ss]ource\s*:?\s*[Ww]ikipedia[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ss]ource\s*:?\s*[Ww]ikipedia\.org[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ss]ource\s*:?\s*[Ww]ikipedia\.com[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ss]ource\s*:?\s*[Ww]ikipedia\.fr[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ss]ource\s*:?\s*[Ww]ikipedia\.en[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ss]ource\s*:?\s*[Ww]ikipedia\.ja[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ff]rom\s+[Ww]ikipedia[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Vv]ia\s+[Ww]ikipedia[^)]*\)?\s*$/i,
+                /\s*\(?\s*[Ww]ikipedia[^)]*\)?\s*$/i,
+                /\s*\[[Ss]ource\s*:?\s*[Ww]ikipedia[^\]]*\]\s*$/i,
+                /\s*\[[Ww]ikipedia[^\]]*\]\s*$/i,
+                /\s*\(?\s*[Ss]ource\s*:?\s*[^)]+\)?\s*$/i,  // Source générique à la fin
+                /\s*\[[Ss]ource\s*:?\s*[^\]]+\]\s*$/i,  // Source générique entre crochets
+            ];
+            
+            sourcePatterns.forEach(pattern => {
+                cleanedSynopsis = cleanedSynopsis.replace(pattern, '');
+            });
+            
+            // Nettoyer les espaces en trop et la ponctuation
+            cleanedSynopsis = cleanedSynopsis.trim();
+            
+            // Supprimer les caractères résiduels à la fin
+            const residualPatterns = [
+                /[.,;:!?]+$/,  // Ponctuation finale
+                /\[\s*\]$/,     // Crochets vides
+                /\(\s*\)$/,     // Parenthèses vides
+                /\{\s*\}$/,     // Accolades vides
+                /\[\s*$/,       // Crochet ouvrant seul
+                /\]\s*$/,       // Crochet fermant seul
+                /\(\s*$/,       // Parenthèse ouvrante seule
+                /\)\s*$/,       // Parenthèse fermante seule
+                /\{\s*$/,       // Accolade ouvrante seule
+                /\}\s*$/,       // Accolade fermante seule
+                /\s+$/,         // Espaces multiples à la fin
+                /^\s+/,         // Espaces multiples au début
+            ];
+            
+            residualPatterns.forEach(pattern => {
+                cleanedSynopsis = cleanedSynopsis.replace(pattern, '');
+            });
+            
+            // Nettoyer à nouveau les espaces
+            cleanedSynopsis = cleanedSynopsis.trim();
+            
+            // SUPPRIMÉ: Limitation à 10 lignes maximum - garder le synopsis complet
+            // const lines = cleanedSynopsis.split('\n');
+            // if (lines.length > 10) {
+            //     cleanedSynopsis = lines.slice(0, 10).join('\n');
+            //     
+            //     // Chercher le dernier point dans les 10 premières lignes
+            //     const lastPeriodIndex = cleanedSynopsis.lastIndexOf('.');
+            //     if (lastPeriodIndex !== -1) {
+            //         // Couper au dernier point trouvé
+            //         cleanedSynopsis = cleanedSynopsis.substring(0, lastPeriodIndex + 1);
+            //     }
+            //     
+            //     // Ajouter "..." à la fin pour indiquer qu'il y a plus de contenu
+            //     cleanedSynopsis += '\n...';
+            // }
+            
+            // S'assurer que le synopsis ne contient que du texte valide
+            // Supprimer tous les caractères de contrôle sauf les retours à la ligne
+            cleanedSynopsis = cleanedSynopsis.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+            
+            // S'assurer qu'il n'y a pas de caractères qui pourraient être interprétés comme des balises HTML
+            cleanedSynopsis = cleanedSynopsis.replace(/[<>]/g, '');
+            
+            // SUPPRIMÉ: Suppression des mots-clés de genres - garder le contenu original
+            // const genreKeywords = ['Action', 'Aventure', 'Comédie', 'Drame', 'Fantasy', 'Horreur', 'Mystère', 'Romance', 'Sci-Fi', 'Slice of Life', 'Sport', 'Supernatural', 'Thriller'];
+            // genreKeywords.forEach(keyword => {
+            //     const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+            //     cleanedSynopsis = cleanedSynopsis.replace(regex, '');
+            // });
+            
+            // Nettoyer les espaces multiples qui pourraient rester (mais garder les retours à la ligne)
+            cleanedSynopsis = cleanedSynopsis.replace(/[ \t]+/g, ' ').trim();
+            
+            return cleanedSynopsis;
+        }
+        
+        // Fonction pour formater la date
+        function formatDate(dateString) {
+            if (!dateString) return 'Inconnue';
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('fr-FR', options);
+        }
+        
+        // Fonction pour afficher les détails du contenu (anime ou manga)
+        async function loadContentDetails() {
+            return new Promise((resolve, reject) => {
+                console.log('🔍 loadContentDetails appelé avec contentId:', contentId, 'type:', contentType);
+                
+                if (!contentId) {
+                    console.log('❌ Aucun ID de contenu fourni');
+                    document.getElementById('anime-details').innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p data-i18n="no_content_selected">Aucun contenu sélectionné. Veuillez retourner au catalogue.</p>
+                            <a href="manga-database.html" class="cta-button" onclick="returnToCatalogue(event)" data-i18n="back_to_catalogue">Retour au catalogue</a>
+                        </div>
+                    `;
+                    reject(new Error('Aucun ID de contenu fourni'));
+                    return;
+                }
+                
+                // Utiliser l'endpoint approprié selon le type
+                const apiUrl = contentType === 'manga' 
+                    ? `https://api.jikan.moe/v4/manga/${contentId}/full`
+                    : `https://api.jikan.moe/v4/anime/${contentId}/full`;
+                console.log('🌐 Appel API:', apiUrl);
+                
+                fetch(apiUrl)
+                    .then(response => {
+                        console.log('📡 Réponse API reçue:', response.status, response.statusText);
+                        if (!response.ok) {
+                            throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('📦 Données API reçues:', data);
+                        
+                        if (data.data) {
+                            const content = data.data;
+                            console.log('✅ Données contenu reçues:', content);
+                            console.log('🎭 Genres:', content.genres);
+                            console.log('📝 Synopsis original:', content.synopsis);
+                            renderContentDetails(content);
+                            resolve(content);
+                        } else {
+                            console.log('❌ Pas de données dans la réponse API');
+                            throw new Error(`Détails du ${contentType} non trouvés`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('❌ Erreur lors du chargement des détails du contenu:', error);
+                        document.getElementById('anime-details').innerHTML = `
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p data-i18n="load_error">Une erreur est survenue lors du chargement des détails du ${contentType}.</p>
+                                <p>${error.message}</p>
+                                <a href="manga-database.html" class="cta-button" onclick="returnToCatalogue(event)" data-i18n="back_to_catalogue">Retour au catalogue</a>
+                            </div>
+                        `;
+                        reject(error);
+                    });
+            });
+        }
+        
+        // Fonction helper pour obtenir le type traduit
+        function getTranslatedType(contentType, itemType) {
+            function t(key, fallback = key) {
+                if (window.localization) {
+                    const translation = window.localization.get(key);
+                    return translation !== key ? translation : fallback;
+                }
+                return fallback;
+            }
+            
+            if (contentType === 'anime' || contentType === 'film') {
+                if (itemType === 'Movie') {
+                    return t('collection.type.film', t('search.type.movie', 'Film'));
+                } else {
+                    return t('collection.type.anime', 'Anime');
+                }
+            } else {
+                // Pour les mangas - mapper les types de l'API vers les clés de traduction
+                const typeMap = {
+                    'Manga': 'collection.type.manga',
+                    'Novel': 'collection.type.novel',
+                    'Light Novel': 'collection.type.novel',
+                    'One Shot': 'collection.type.manga',
+                    'Doujinshi': 'collection.type.doujin',
+                    'Doujin': 'collection.type.doujin',
+                    'Manhwa': 'collection.type.manhwa',
+                    'Manhua': 'collection.type.manhua'
+                };
+                
+                const translationKey = typeMap[itemType];
+                if (translationKey) {
+                    return t(translationKey, itemType);
+                }
+                
+                return itemType || t(`collection.type.${contentType}`, contentType);
+            }
+        }
+
+        // Fonction pour afficher les détails du contenu dans le DOM
+        function renderContentDetails(content) {
+            // Stocker les données du contenu globalement
+            contentData = content;
+            
+            // Détecter le contentType réel à partir de content.type de l'API
+            let detectedContentType = urlParams.get('type') || 'anime'; // Utiliser le type de l'URL par défaut
+            
+            if (content && content.type) {
+                const apiType = content.type.toLowerCase();
+                
+                // Mapper les types de l'API vers les types internes
+                if (apiType === 'doujinshi' || apiType.includes('doujin')) {
+                    detectedContentType = 'doujin';
+                } else if (apiType === 'manhwa' || apiType.includes('manhwa')) {
+                    detectedContentType = 'manhwa';
+                } else if (apiType === 'manhua' || apiType.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                } else if (apiType === 'novel' || apiType === 'light novel' || apiType.includes('novel')) {
+                    detectedContentType = 'roman';
+                } else if (apiType === 'movie') {
+                    detectedContentType = 'film';
+                } else if (apiType === 'manga' || apiType.includes('manga')) {
+                    detectedContentType = 'manga';
+                }
+            }
+            
+            // Détection supplémentaire par titre et genres si nécessaire
+            if (content && detectedContentType === 'manga') {
+                const titleLower = (content.title || '').toLowerCase();
+                const genresStr = (content.genres?.map(g => g.name).join(' ') || '').toLowerCase();
+                
+                if (titleLower.includes('doujin') || 
+                    titleLower.includes('totally captivated') ||
+                    titleLower.includes('hentai') ||
+                    genresStr.includes('erotica') ||
+                    genresStr.includes('adult') ||
+                    genresStr.includes('hentai')) {
+                    detectedContentType = 'doujin';
+                } else if (titleLower.includes('manhwa') ||
+                           titleLower.includes('solo leveling') ||
+                           titleLower.includes('tower of god') ||
+                           titleLower.includes('noblesse')) {
+                    detectedContentType = 'manhwa';
+                } else if (titleLower.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                }
+            }
+            
+            // Mettre à jour le contentType global avec le type détecté
+            contentType = detectedContentType;
+            
+            const detailsContainer = document.getElementById('anime-details');
+            
+            // Créer le HTML pour les genres
+            let genresHTML;
+            if (content.genres && content.genres.length > 0) {
+                // S'assurer que les genres sont bien des objets avec une propriété name
+                const validGenres = content.genres.filter(genre => 
+                    genre && typeof genre === 'object' && genre.name && typeof genre.name === 'string'
+                );
+                
+                // Filtrer pour ne garder que les genres valides (pas de texte du synopsis)
+                const filteredGenres = validGenres.filter(genre => {
+                    const name = genre.name.toLowerCase();
+                    // Exclure les mots qui pourraient venir du synopsis
+                    const excludedWords = ['le', 'la', 'les', 'un', 'une', 'des', 'et', 'ou', 'avec', 'pour', 'dans', 'sur', 'par', 'de', 'du', 'des'];
+                    return !excludedWords.includes(name) && name.length > 2;
+                });
+                
+                if (filteredGenres.length > 0) {
+                    genresHTML = filteredGenres.map(genre => 
+                        `<span class="genre-tag">${genre.name}</span>`
+                    ).join('');
+                } else {
+                    genresHTML = '<span data-i18n="no_genre">Aucun genre spécifié</span>';
+                }
+            } else {
+                genresHTML = '<span data-i18n="no_genre">Aucun genre spécifié</span>';
+            }
+            
+            // Préparer l'URL de l'image avec fallback traduit
+            const tFn = window.t || (window.localization ? function(key) { return window.localization.get(key); } : function(key) { return key; });
+            const imageUnavailableText = encodeURIComponent(tFn('common.image_unavailable'));
+            const defaultImageUrl = `https://via.placeholder.com/300x450/1a1a1a/333333?text=${imageUnavailableText}`;
+            const imageUrl = content.images?.jpg?.large_image_url || content.images?.jpg?.image_url || defaultImageUrl;
+            
+            // Créer la structure HTML
+            detailsContainer.innerHTML = `
+                <div class="details-header" data-content='${JSON.stringify({
+                    title: content.title,
+                    title_japanese: content.title_japanese,
+                    title_english: content.title_english,
+                    type: contentType
+                })}'>
+                    <div class="details-poster">
+                        <img src="${imageUrl}" 
+                             alt="${content.title}" 
+                             onerror="(function(img) { const tFn = window.t || (window.localization ? function(key) { return window.localization.get(key); } : function(key) { return key; }); const text = encodeURIComponent(tFn('common.image_unavailable')); img.src = 'https://via.placeholder.com/300x450/1a1a1a/333333?text=' + text; })(this);" />
+                    </div>
+                    <div class="details-info">
+                        <h1 class="details-title anime-title">${content.title}</h1>
+                        <div class="details-meta">
+                            <div class="details-score">
+                                <i class="fas fa-star"></i>
+                                <span>${content.score ? content.score.toFixed(1) : 'N/A'}/10</span>
+                            </div>
+                            <div class="details-type" data-original-type="${content.type || contentType}" data-content-type="${contentType}">${getTranslatedType(contentType, content.type)}</div>
+                            <div class="details-year">${content.year || ''}</div>
+                        </div>
+                        <div class="user-rating-section">
+                            <h3 class="rating-title" data-i18n="your_rating">Votre note :</h3>
+                            <div class="rating-container">
+                                <div class="rating-stars" data-anime-id="${content.mal_id}">
+                                    <span class="star" data-value="1">★</span>
+                                    <span class="star" data-value="2">★</span>
+                                    <span class="star" data-value="3">★</span>
+                                    <span class="star" data-value="4">★</span>
+                                    <span class="star" data-value="5">★</span>
+                                    <span class="star" data-value="6">★</span>
+                                    <span class="star" data-value="7">★</span>
+                                    <span class="star" data-value="8">★</span>
+                                    <span class="star" data-value="9">★</span>
+                                    <span class="star" data-value="10">★</span>
+                                </div>
+                                <button class="clear-rating-btn hidden" data-anime-id="${content.mal_id}">
+                                    <i class="fas fa-times"></i>
+                                    <span data-i18n="cancel">Annuler</span>
+                                </button>
+                            </div>
+                            <div class="rating-text" data-i18n="click_to_rate">Cliquez sur les étoiles pour noter</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="synopsis-section">
+                    <h2 class="synopsis-title" data-i18n="synopsis">Synopsis</h2>
+                    <p class="synopsis-text anime-synopsis" data-synopsis="${content.synopsis || ''}">${cleanSynopsis(content.synopsis) ? cleanSynopsis(content.synopsis).replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''}</p>
+                </div>
+                
+                <div class="genres-section">
+                    <h2 class="genres-title" data-i18n="genres">Genres</h2>
+                    <div class="genres-list">
+                        ${genresHTML}
+                    </div>
+                </div>
+                
+                <div class="additional-info">
+                    <h2 data-i18n="general_info">Informations générales</h2>
+                    <ul>
+                        <li><span class="label" data-i18n="original_title">Titre original :</span> <span class="value" data-no-i18n>${content.title_japanese || ''}</span></li>
+                        <li><span class="label" data-i18n="english_title">Titre anglais :</span> <span class="value" data-no-i18n>${content.title_english || ''}</span></li>
+                        <li><span class="label" data-i18n="type">Type :</span> <span class="value" data-no-i18n>${content.type || ''}</span></li>
+                        <li><span class="label" data-i18n="episodes">Épisodes :</span> <span class="value">${content.episodes || ''}</span></li>
+                        <li><span class="label" data-i18n="duration">Durée :</span> <span class="value">${content.duration || ''}</span></li>
+                        <li><span class="label" data-i18n="year">Année :</span> <span class="value">${content.year || ''}</span></li>
+                        <li><span class="label" data-i18n="season">Saison :</span> <span class="value">${content.season || ''}</span></li>
+                        <li><span class="label" data-i18n="start_date">Date de début :</span> <span class="value">${formatDate(content.aired?.from)}</span></li>
+                        <li><span class="label" data-i18n="end_date">Date de fin :</span> <span class="value">${formatDate(content.aired?.to)}</span></li>
+                        <li><span class="label" data-i18n="broadcast">Broadcast :</span> <span class="value">${content.broadcast?.string || ''}</span></li>
+                        <li><span class="label" data-i18n="source">Source :</span> <span class="value">${content.source || ''}</span></li>
+                        <li><span class="label" data-i18n="studios">Studios :</span> <span class="value">${content.studios ? content.studios.map(studio => studio.name).join(', ') : ''}</span></li>
+                        <li><span class="label" data-i18n="votes">Votes :</span> <span class="value">${content.scored_by ? content.scored_by.toLocaleString() : '0'}</span></li>
+                        <li><span class="label" data-i18n="members">Membres :</span> <span class="value">${content.members ? content.members.toLocaleString() : '0'}</span></li>
+                        <li><span class="label" data-i18n="favorites">Favoris :</span> <span class="value">${content.favorites ? content.favorites.toLocaleString() : '0'}</span></li>
+                        <li><span class="label" data-i18n="popularity">Popularité :</span> <span class="value">${content.popularity ? `#${content.popularity}` : 'N/A'}</span></li>
+                        <li><span class="label" data-i18n="rank">Rang :</span> <span class="value">${content.rank ? `#${content.rank}` : 'N/A'}</span></li>
+                    </ul>
+                </div>
+            `;
+            
+            // Initialiser le système de notation avec un délai pour s'assurer que le DOM est prêt
+            setTimeout(() => {
+                console.log(`Initialisation du système de notation pour ${content.mal_id}`);
+                const starsContainer = document.querySelector('.rating-stars');
+                if (starsContainer) {
+                    console.log('Container d\'étoiles trouvé, initialisation...');
+                    initializeRating(content.mal_id);
+                } else {
+                    console.log('Container d\'étoiles non trouvé, nouvelle tentative dans 200ms...');
+                    setTimeout(() => {
+                        initializeRating(content.mal_id);
+                    }, 200);
+                }
+            }, 200);
+            
+            // Afficher les titres alternatifs
+            if (window.displayAlternativeTitles) {
+                window.displayAlternativeTitles(content, detailsContainer);
+            }
+            
+            // Traduire les labels des informations générales
+            if (window.localization) {
+                window.localization.applyLanguage();
+            }
+            // Mettre à jour le badge de type après l'application de la langue
+            setTimeout(() => {
+                if (typeof updateDetailsTypeBadge === 'function') {
+                    updateDetailsTypeBadge();
+                }
+            }, 100);
+            
+            // Traduire les valeurs des informations générales
+            const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
+            if (currentLanguage !== 'en' && window.translateGeneralInfoValues) {
+                setTimeout(() => {
+                    window.translateGeneralInfoValues(currentLanguage);
+                }, 1000);
+            }
+            
+            // Traduire les genres de manière contrôlée
+            if (currentLanguage !== 'en') {
+                setTimeout(() => {
+                    translateGenresControlled(currentLanguage);
+                }, 500); // Réduit de 1.5s à 0.5s
+            }
+            
+            // Traduire les titres en japonais
+            if (currentLanguage === 'ja') {
+                setTimeout(() => {
+                    translateTitlesControlled(currentLanguage);
+                }, 800); // Réduit de 2s à 0.8s
+            }
+            
+            // Traduire le synopsis
+            if (currentLanguage !== 'en' && content.synopsis) {
+                setTimeout(() => {
+                    translateSynopsis(currentLanguage);
+                }, 1000); // Réduit de 2.5s à 1s
+            }
+        }
+        
+        // Variable globale pour stocker les données du contenu
+        let contentData = null;
+        
+        // Variable globale pour stocker la note actuelle
+        let currentRating = null;
+        let hoveredRating = null; // Variable pour suivre la note survolée
+        
+        // Fonction helper pour obtenir une traduction (accessible globalement dans le script)
+        function getRatingTranslation(key, fallback = key) {
+            if (window.localization) {
+                const translation = window.localization.get(key);
+                return translation !== key ? translation : fallback;
+            }
+            return fallback;
+        }
+        
+        // Fonction pour initialiser le système de notation
+        function initializeRating(animeId) {
+            const starsContainer = document.querySelector('.rating-stars');
+            const ratingText = document.querySelector('.rating-text');
+            const clearBtn = document.querySelector('.clear-rating-btn');
+            
+            console.log('Éléments trouvés:', {
+                starsContainer: !!starsContainer,
+                ratingText: !!ratingText,
+                clearBtn: !!clearBtn
+            });
+            
+            if (!starsContainer) {
+                console.log('Container d\'étoiles non trouvé, arrêt de l\'initialisation');
+                return;
+            }
+            
+            // Si contentData n'est pas encore disponible, on peut quand même chercher la note
+            // en utilisant le contentType de l'URL, et on trouvera la note par ID si elle existe
+            // La recherche par ID garantit qu'on trouvera la note même si le contentType diffère
+            
+            // Détecter le contentType de la même manière que dans saveRating
+            let detectedContentType = contentType; // Utiliser le type de l'URL par défaut
+            
+            if (contentData && contentData.type) {
+                const apiType = contentData.type.toLowerCase();
+                
+                // Mapper les types de l'API vers les types internes (même logique que saveRating)
+                if (apiType === 'doujinshi' || apiType.includes('doujin')) {
+                    detectedContentType = 'doujin';
+                } else if (apiType === 'manhwa' || apiType.includes('manhwa')) {
+                    detectedContentType = 'manhwa';
+                } else if (apiType === 'manhua' || apiType.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                } else if (apiType === 'novel' || apiType === 'light novel' || apiType.includes('novel')) {
+                    detectedContentType = 'roman';
+                } else if (apiType === 'movie') {
+                    detectedContentType = 'film';
+                } else if (apiType === 'manga' || apiType.includes('manga')) {
+                    detectedContentType = 'manga';
+                }
+            }
+            
+            // Détection supplémentaire basée sur le titre et les genres si le type API n'est pas spécifique
+            if (contentData) {
+                const animeTitle = (contentData.title || '').toLowerCase();
+                const genres = contentData.genres?.map(g => g.name) || [];
+                const genresStr = genres.join(' ').toLowerCase();
+                
+                // Si le type détecté est toujours "manga" mais qu'on détecte des indices de doujin
+                if (detectedContentType === 'manga' && (
+                    animeTitle.includes('doujin') ||
+                    animeTitle.includes('totally captivated') ||
+                    animeTitle.includes('hentai') ||
+                    genresStr.includes('erotica') ||
+                    genresStr.includes('adult') ||
+                    genresStr.includes('hentai')
+                )) {
+                    detectedContentType = 'doujin';
+                }
+                // Détection manhwa par titre
+                else if (detectedContentType === 'manga' && (
+                    animeTitle.includes('manhwa') ||
+                    animeTitle.includes('solo leveling') ||
+                    animeTitle.includes('tower of god') ||
+                    animeTitle.includes('noblesse')
+                )) {
+                    detectedContentType = 'manhwa';
+                }
+                // Détection manhua par titre
+                else if (detectedContentType === 'manga' && animeTitle.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                }
+            }
+            
+            
+            // Récupérer la note existante
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            currentRating = null;
+            
+            if (user && user.email) {
+                const notesKey = 'user_content_notes_' + user.email;
+                const deletedNotesKey = 'deleted_content_notes_' + user.email;
+                const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+                const deletedNotes = JSON.parse(localStorage.getItem(deletedNotesKey) || '[]');
+                
+                
+                // Vérifier si cette note est dans la liste des supprimées permanentes (utiliser detectedContentType)
+                const isDeleted = deletedNotes.some(deletedNote => 
+                    String(deletedNote.id) === String(animeId) && deletedNote.contentType === detectedContentType
+                );
+                
+                if (isDeleted) {
+                    // Ne pas bloquer l'affichage, permettre de renoter
+                    currentRating = null;
+                } else {
+                    // Rechercher la note avec le detectedContentType (même logique que saveRating)
+                    // Essayer d'abord avec detectedContentType, puis avec contentType si pas trouvé (pour compatibilité)
+                    let existingNote = notes.find(n => {
+                        const idMatch = String(n.id) === String(animeId);
+                        const typeMatch = n.contentType === detectedContentType;
+                        return idMatch && typeMatch;
+                    });
+                    
+                    // Si pas trouvé avec detectedContentType, essayer avec contentType (pour compatibilité avec anciennes notes)
+                    if (!existingNote && detectedContentType !== contentType) {
+                        existingNote = notes.find(n => {
+                            const idMatch = String(n.id) === String(animeId);
+                            const typeMatch = n.contentType === contentType;
+                            return idMatch && typeMatch;
+                        });
+                    }
+                    
+                    // Si toujours pas trouvé, chercher par ID uniquement (pour trouver la note peu importe le contentType)
+                    // Cela garantit qu'on trouve toujours la note si elle existe
+                    if (!existingNote) {
+                        existingNote = notes.find(n => String(n.id) === String(animeId));
+                        if (existingNote) {
+                            // Mettre à jour le contentType de la note pour qu'il corresponde au type détecté
+                            // Cela évite les problèmes futurs
+                            if (existingNote.contentType !== detectedContentType) {
+                                existingNote.contentType = detectedContentType;
+                                // Sauvegarder la mise à jour
+                                try {
+                                    localStorage.setItem(notesKey, JSON.stringify(notes));
+                                } catch (e) {
+                                    console.error('[ERREUR] Erreur lors de la mise à jour du contentType:', e);
+                                }
+                            }
+                        }
+                    }
+                    
+                if (existingNote) {
+                        currentRating = existingNote.note;
+                    } else {
+                    }
+                }
+            }
+            
+            // Afficher la note existante
+            if (currentRating) {
+                console.log(`Affichage de la note ${currentRating}/10 pour ${animeId}`);
+                updateStars(starsContainer, currentRating);
+                const yourRatingText = getRatingTranslation('your_rating', 'Votre note :');
+                ratingText.textContent = `${yourRatingText} ${currentRating}/10`;
+                clearBtn.classList.remove('hidden');
+            } else {
+                console.log(`Aucune note à afficher pour ${animeId}`);
+                // Réinitialiser l'affichage des étoiles
+                const stars = starsContainer.querySelectorAll('.star');
+                stars.forEach(star => {
+                    star.classList.remove('selected', 'hover');
+                    star.style.color = '';
+                    star.style.transform = '';
+                });
+                ratingText.textContent = getRatingTranslation('click_to_rate', 'Cliquez sur les étoiles pour noter');
+                clearBtn.classList.add('hidden');
+            }
+            
+            // Gestionnaires d'événements pour les étoiles
+            const stars = starsContainer.querySelectorAll('.star');
+            
+            stars.forEach(star => {
+                star.addEventListener('mouseenter', function() {
+                    const value = parseInt(this.dataset.value);
+                    hoveredRating = value;
+                    highlightStars(stars, value);
+                });
+                
+                star.addEventListener('mouseleave', function() {
+                    // Réinitialiser le survol et restaurer l'affichage original
+                    hoveredRating = null;
+                    if (currentRating) {
+                        highlightStars(stars, currentRating);
+                    } else {
+                        clearStars(stars);
+                    }
+                });
+                
+                // Ajouter un événement mousemove pour un meilleur suivi
+                star.addEventListener('mousemove', function() {
+                    const value = parseInt(this.dataset.value);
+                    hoveredRating = value;
+                    highlightStars(stars, value);
+                });
+                
+                star.addEventListener('click', function() {
+                    const value = parseInt(this.dataset.value);
+                    
+                    // Vérifier que contentData est disponible
+                    if (!contentData) {
+                        console.error('[ERREUR] contentData non disponible au clic, attente...');
+                        // Attendre un peu et réessayer
+                        setTimeout(async () => {
+                            if (contentData) {
+                                await saveRating(animeId, value);
+                            } else {
+                                console.error('[ERREUR] contentData toujours non disponible après attente');
+                                alert('Erreur: données du contenu non disponibles. Veuillez recharger la page.');
+                            }
+                        }, 500);
+                        return;
+                    }
+                    
+                    // Sauvegarder la nouvelle note (async)
+                    (async () => {
+                        try {
+                            const result = await saveRating(animeId, value);
+                            if (result) {
+                                console.log('✅ Note sauvegardée avec succès');
+                            } else {
+                                console.error('❌ Échec de la sauvegarde de la note');
+                                alert('Erreur lors de la sauvegarde de la note. Veuillez réessayer.');
+                            }
+                        } catch (error) {
+                            console.error('❌ Erreur lors de la sauvegarde:', error);
+                            alert('Erreur lors de la sauvegarde de la note. Veuillez réessayer.');
+                        }
+                    })();
+                    
+                    // Mettre à jour les variables globales
+                    currentRating = value;
+                    hoveredRating = null;
+                    
+                    // Mettre à jour l'affichage
+                    updateStars(starsContainer, value);
+                    const yourRatingText = getRatingTranslation('your_rating', 'Votre note :');
+                    ratingText.textContent = `${yourRatingText} ${value}/10`;
+                    clearBtn.classList.remove('hidden');
+                    
+                });
+            });
+            
+            // Gestionnaire pour le bouton d'annulation
+            if (clearBtn) {
+                clearBtn.addEventListener('click', function() {
+                    clearRating(animeId);
+                currentRating = null;
+                hoveredRating = null; // Réinitialiser la note survolée
+                
+                // Réinitialiser l'affichage des étoiles
+                const starsContainer = document.querySelector('.rating-stars');
+                if (starsContainer) {
+                    const stars = starsContainer.querySelectorAll('.star');
+                    stars.forEach(star => {
+                        star.classList.remove('selected', 'hover');
+                        star.style.color = '';
+                        star.style.transform = '';
+                    });
+                }
+                
+                    ratingText.textContent = getRatingTranslation('click_to_rate', 'Cliquez sur les étoiles pour noter');
+                    clearBtn.classList.add('hidden');
+                });
+            }
+        }
+        
+        // Fonction pour mettre en surbrillance les étoiles
+        function highlightStars(stars, count) {
+            stars.forEach((star, index) => {
+                if (index < count) {
+                    star.classList.add('hover');
+                    star.style.color = '#00b894';
+                    star.style.transform = 'scale(1.1)';
+                } else {
+                    star.classList.remove('hover');
+                    star.style.color = '';
+                    star.style.transform = '';
+                }
+            });
+            
+            // Afficher la note potentielle au survol
+            const ratingText = document.querySelector('.rating-text');
+            if (ratingText) {
+                if (count > 0) {
+                    const potentialRatingText = getRatingTranslation('potential_rating', 'Note potentielle :');
+                    ratingText.textContent = `${potentialRatingText} ${count}/10`;
+                    ratingText.style.color = '#00b894';
+                    ratingText.style.fontWeight = '600';
+                } else {
+                    // Revenir au texte par défaut si aucune étoile survolée
+                    if (currentRating) {
+                        const yourRatingText = getRatingTranslation('your_rating', 'Votre note :');
+                        ratingText.textContent = `${yourRatingText} ${currentRating}/10`;
+                        ratingText.style.color = '';
+                        ratingText.style.fontWeight = '';
+                    } else {
+                        ratingText.textContent = getRatingTranslation('click_to_rate', 'Cliquez sur les étoiles pour noter');
+                        ratingText.style.color = '';
+                        ratingText.style.fontWeight = '';
+                    }
+                }
+            }
+        }
+        
+        // Fonction pour effacer la surbrillance
+        function clearStars(stars) {
+            stars.forEach(star => {
+                star.classList.remove('hover');
+                star.style.color = '';
+                star.style.transform = '';
+            });
+            
+            // Restaurer le texte de notation original
+            const ratingText = document.querySelector('.rating-text');
+            if (ratingText) {
+                if (currentRating) {
+                    const yourRatingText = getRatingTranslation('your_rating', 'Votre note :');
+                    ratingText.textContent = `${yourRatingText} ${currentRating}/10`;
+                    ratingText.style.color = '';
+                    ratingText.style.fontWeight = '';
+                } else {
+                    ratingText.textContent = getRatingTranslation('click_to_rate', 'Cliquez sur les étoiles pour noter');
+                    ratingText.style.color = '';
+                    ratingText.style.fontWeight = '';
+                }
+            }
+        }
+        
+        // Fonction pour mettre à jour l'affichage des étoiles
+        function updateStars(starsContainer, rating) {
+            console.log(`updateStars appelé avec rating: ${rating}`);
+            const stars = starsContainer.querySelectorAll('.star');
+            console.log(`Nombre d'étoiles trouvées: ${stars.length}`);
+            
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.classList.add('selected');
+                    star.style.color = '#00b894';
+                    star.style.transform = 'scale(1.1)';
+                    console.log(`Étoile ${index + 1} sélectionnée`);
+                } else {
+                    star.classList.remove('selected');
+                    star.style.color = '';
+                    star.style.transform = '';
+                    console.log(`Étoile ${index + 1} non sélectionnée`);
+                }
+            });
+        }
+
+        // Limiter la taille des données stockées pour éviter les erreurs de quota localStorage
+        function normalizeNoteForStorage(note) {
+            const safeGenres = Array.isArray(note.genres) ? note.genres.filter(Boolean).slice(0, 8) : [];
+            return {
+                ...note,
+                titre: (note.titre || '').toString().slice(0, 180),
+                synopsis: (note.synopsis || '').toString().slice(0, 700),
+                image: (note.image || '').toString().slice(0, 350),
+                genres: safeGenres
+            };
+        }
+
+        function persistNotesSafely(notesKey, notes) {
+            const baseList = Array.isArray(notes) ? notes : [];
+            const limitedNotes = baseList.length > 400 ? baseList.slice(baseList.length - 400) : baseList;
+            const sanitizedNotes = limitedNotes.map(normalizeNoteForStorage);
+
+            try {
+                localStorage.setItem(notesKey, JSON.stringify(sanitizedNotes));
+                return sanitizedNotes;
+            } catch (err) {
+                console.error('[ERREUR] Échec de la sauvegarde des notes (tentative 1):', err);
+
+                // Deuxième tentative avec synopsis raccourci au maximum
+                const trimmedNotes = sanitizedNotes.map(n => ({
+                    ...n,
+                    synopsis: (n.synopsis || '').slice(0, 280)
+                }));
+
+                try {
+                    localStorage.setItem(notesKey, JSON.stringify(trimmedNotes));
+                    return trimmedNotes;
+                } catch (err2) {
+                    console.error('[ERREUR] Échec de la sauvegarde des notes après nettoyage:', err2);
+
+                    // Dernier fallback : ne garder que les données minimales pour ne pas bloquer l'utilisateur
+                    const minimalNotes = trimmedNotes.map(n => ({
+                        id: n.id,
+                        note: n.note,
+                        contentType: n.contentType,
+                        addedAt: n.addedAt || Date.now()
+                    }));
+
+                    try {
+                        localStorage.setItem(notesKey, JSON.stringify(minimalNotes));
+                        console.warn('[INFO] Sauvegarde réduite aux données minimales pour éviter le quota.');
+                        return minimalNotes;
+                    } catch (err3) {
+                        console.error('[ERREUR] Impossible de sauvegarder même les données minimales:', err3);
+                        return null;
+                    }
+                }
+            }
+        }
+        
+        // Fonction pour sauvegarder la note (avec Firebase en priorité)
+        async function saveRating(animeId, rating) {
+            
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (!user || !user.email) {
+                console.error('[ERREUR] Utilisateur non connecté');
+                alert('Veuillez vous connecter pour noter.');
+                return;
+            }
+            
+            
+            // Vérifier que contentData est disponible
+            if (!contentData) {
+                console.error('[ERREUR] contentData non disponible, impossible de sauvegarder les données');
+                alert('Erreur: données du contenu non disponibles. Veuillez recharger la page.');
+                return;
+            }
+            
+            
+            // Retirer cette note de la liste des supprimées permanentes si elle y était
+            const deletedNotesKey = 'deleted_content_notes_' + user.email;
+            let deletedNotes = [];
+            try {
+                deletedNotes = JSON.parse(localStorage.getItem(deletedNotesKey) || '[]');
+            } catch (e) {
+                deletedNotes = [];
+            }
+            
+            // Filtrer pour retirer cette note de la liste des supprimées permanentes
+            
+            const updatedDeletedNotes = deletedNotes.filter(deletedNote => {
+                const idMatch = String(deletedNote.id) === String(animeId);
+                const typeMatch = deletedNote.contentType === contentType;
+                const shouldKeep = !(idMatch && typeMatch);
+                return shouldKeep;
+            });
+            
+            
+            if (updatedDeletedNotes.length !== deletedNotes.length) {
+                localStorage.setItem(deletedNotesKey, JSON.stringify(updatedDeletedNotes));
+            } else {
+            }
+            
+            // Utiliser les données de contentData qui sont stockées globalement
+            
+            const animeTitle = contentData.title || 'Titre inconnu';
+            const animeImage = contentData.images?.jpg?.large_image_url || contentData.images?.jpg?.image_url || '';
+            const animeSynopsis = contentData.synopsis || 'Synopsis non renseigné';
+            
+            // Récupérer les genres depuis les données contentData
+            const genres = contentData.genres?.map(g => g.name) || [];
+            
+            
+            // Détecter automatiquement le contentType réel à partir de contentData.type et des genres
+            let detectedContentType = contentType; // Utiliser le type de l'URL par défaut
+            
+            // Vérifier si contentData.type existe et convertir en minuscules
+            if (contentData && contentData.type) {
+                const apiType = contentData.type.toLowerCase();
+                
+                // Mapper les types de l'API vers les types internes
+                if (apiType === 'doujinshi' || apiType.includes('doujin')) {
+                    detectedContentType = 'doujin';
+                } else if (apiType === 'manhwa' || apiType.includes('manhwa')) {
+                    detectedContentType = 'manhwa';
+                } else if (apiType === 'manhua' || apiType.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                } else if (apiType === 'novel' || apiType === 'light novel' || apiType.includes('novel')) {
+                    detectedContentType = 'roman';
+                } else if (apiType === 'movie') {
+                    detectedContentType = 'film';
+                } else if (apiType === 'manga' || apiType.includes('manga')) {
+                    detectedContentType = 'manga';
+                }
+            }
+            
+            // Détection supplémentaire basée sur le titre et les genres si le type API n'est pas spécifique
+            const titleLower = animeTitle.toLowerCase();
+            const genresStr = genres.join(' ').toLowerCase();
+            
+            // Si le type détecté est toujours "manga" mais qu'on détecte des indices de doujin
+            if (detectedContentType === 'manga' && (
+                titleLower.includes('doujin') ||
+                titleLower.includes('totally captivated') ||
+                titleLower.includes('hentai') ||
+                genresStr.includes('erotica') ||
+                genresStr.includes('adult') ||
+                genresStr.includes('hentai')
+            )) {
+                detectedContentType = 'doujin';
+            }
+            // Détection manhwa par titre
+            else if (detectedContentType === 'manga' && (
+                titleLower.includes('manhwa') ||
+                titleLower.includes('solo leveling') ||
+                titleLower.includes('tower of god') ||
+                titleLower.includes('noblesse')
+            )) {
+                detectedContentType = 'manhwa';
+            }
+            // Détection manhua par titre
+            else if (detectedContentType === 'manga' && titleLower.includes('manhua')) {
+                detectedContentType = 'manhua';
+            }
+            
+            // IMPORTANT: Si le type de l'URL est 'anime', forcer contentType à 'anime'
+            // Cela garantit que les anime sont bien sauvegardés avec contentType: 'anime'
+            const urlType = urlParams.get('type');
+            if (urlType === 'anime' && detectedContentType !== 'film') {
+                // Ne pas changer en 'anime' si c'est un film
+                detectedContentType = 'anime';
+            }
+            
+            // Créer l'objet anime complet avec toutes les informations
+            const animeNote = {
+                id: animeId,
+                note: Number(rating),
+                addedAt: Date.now(),
+                titre: animeTitle,
+                image: animeImage,
+                synopsis: animeSynopsis,
+                genres: genres,
+                score: contentData.score || 0,
+                contentType: detectedContentType
+            };
+            
+            
+            // Essayer d'abord de sauvegarder dans Firebase (si disponible)
+            
+            let firebaseSuccess = false;
+            if (typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {
+                try {
+                    const success = await window.firebaseNotesService.saveNote(user.email, animeNote);
+                    
+                    if (success) {
+                        console.log(`✅ Note sauvegardée dans Firebase pour ${detectedContentType} ${animeId}: ${rating}/10`);
+                        firebaseSuccess = true;
+                    } else {
+                        console.warn('[WARN] Échec de la sauvegarde Firebase, fallback vers localStorage');
+                    }
+                } catch (err) {
+                    console.error('[ERREUR] Erreur lors de la sauvegarde Firebase:', err);
+                    console.warn('[WARN] Fallback vers localStorage');
+                }
+            } else {
+                console.warn('[WARN] Firebase non disponible, utilisation de localStorage');
+            }
+            
+            // Sauvegarder aussi dans localStorage pour synchronisation (même si Firebase a réussi)
+            const notesKey = 'user_content_notes_' + user.email;
+            let notes = [];
+            try {
+                notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+            } catch (e) {
+                console.error('Erreur lors de la lecture des notes:', e);
+                notes = [];
+            }
+            
+            // Chercher si l'anime existe déjà avec le contentType détecté
+            const existingIndex = notes.findIndex(n => String(n.id) === String(animeId) && n.contentType === detectedContentType);
+            
+            if (existingIndex !== -1) {
+                const originalAddedAt = notes[existingIndex].addedAt;
+                notes[existingIndex] = { ...notes[existingIndex], ...animeNote, addedAt: originalAddedAt };
+                notes[existingIndex].contentType = detectedContentType;
+                console.log(`✅ Note mise à jour (localStorage) pour ${detectedContentType} ${animeId}: ${rating}/10`);
+            } else {
+                const existingWithDifferentType = notes.findIndex(n => String(n.id) === String(animeId) && n.contentType !== detectedContentType);
+                if (existingWithDifferentType !== -1) {
+                    const originalAddedAt = notes[existingWithDifferentType].addedAt;
+                    notes[existingWithDifferentType] = { ...notes[existingWithDifferentType], ...animeNote, addedAt: originalAddedAt, contentType: detectedContentType };
+                    console.log(`✅ Note existante mise à jour (localStorage) avec nouveau contentType pour ${detectedContentType} ${animeId}: ${rating}/10`);
+                } else {
+                    notes.push(animeNote);
+                    console.log(`✅ Nouvelle note ajoutée (localStorage) pour ${detectedContentType} ${animeId}: ${rating}/10`);
+                }
+            }
+            
+            // Sauvegarder dans localStorage avec limitation de taille
+            const persistedNotes = persistNotesSafely(notesKey, notes);
+            if (!persistedNotes) {
+                alert('Erreur lors de la sauvegarde de la note : stockage local saturé. Supprimez quelques notes puis réessayez.');
+                return false;
+            }
+            notes = persistedNotes;
+            
+            // Synchroniser aussi avec animeRatings pour compatibilité (seulement pour les animes)
+            if (detectedContentType === 'anime') {
+                const animeRatings = JSON.parse(localStorage.getItem('animeRatings') || '{}');
+                animeRatings[animeId] = rating;
+                localStorage.setItem('animeRatings', JSON.stringify(animeRatings));
+            }
+            
+            // Marquer que des notes ont été mises à jour
+            localStorage.setItem('notes_updated', 'true');
+            console.log('📝 Notes sauvegardées (localStorage):', notes.length);
+            
+            // Afficher un message de confirmation
+            const ratingText = document.querySelector('.rating-text');
+            if (ratingText) {
+                const yourRatingText = getRatingTranslation('your_rating', 'Votre note :');
+                ratingText.textContent = `${yourRatingText} ${rating}/10`;
+                ratingText.style.color = '#00b894';
+            }
+            
+            return firebaseSuccess ? true : notes;
+        }
+        
+        // Fonction pour supprimer la note
+        function clearRating(animeId) {
+            
+            // Détecter le contentType réel de la même manière que dans saveRating
+            let detectedContentType = contentType; // Utiliser le type de l'URL par défaut
+            
+            if (contentData && contentData.type) {
+                const apiType = contentData.type.toLowerCase();
+                
+                // Mapper les types de l'API vers les types internes (même logique que saveRating)
+                if (apiType === 'doujinshi' || apiType.includes('doujin')) {
+                    detectedContentType = 'doujin';
+                } else if (apiType === 'manhwa' || apiType.includes('manhwa')) {
+                    detectedContentType = 'manhwa';
+                } else if (apiType === 'manhua' || apiType.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                } else if (apiType === 'novel' || apiType === 'light novel' || apiType.includes('novel')) {
+                    detectedContentType = 'roman';
+                } else if (apiType === 'movie') {
+                    detectedContentType = 'film';
+                } else if (apiType === 'manga' || apiType.includes('manga')) {
+                    detectedContentType = 'manga';
+                }
+            }
+            
+            // Détection supplémentaire par titre et genres si nécessaire
+            if (contentData && detectedContentType === 'manga') {
+                const titleLower = (contentData.title || '').toLowerCase();
+                const genresStr = (contentData.genres?.map(g => g.name).join(' ') || '').toLowerCase();
+                
+                if (titleLower.includes('doujin') || 
+                    titleLower.includes('totally captivated') ||
+                    titleLower.includes('hentai') ||
+                    genresStr.includes('erotica') ||
+                    genresStr.includes('adult') ||
+                    genresStr.includes('hentai')) {
+                    detectedContentType = 'doujin';
+                } else if (titleLower.includes('manhwa') ||
+                           titleLower.includes('solo leveling') ||
+                           titleLower.includes('tower of god') ||
+                           titleLower.includes('noblesse')) {
+                    detectedContentType = 'manhwa';
+                } else if (titleLower.includes('manhua')) {
+                    detectedContentType = 'manhua';
+                }
+            }
+            
+            
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (!user || !user.email) {
+                alert('Veuillez vous connecter pour modifier votre note.');
+                return;
+            }
+            
+            const notesKey = 'user_content_notes_' + user.email;
+            let notes = [];
+            try {
+                notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+            } catch (e) {
+                console.error('Erreur lors de la lecture des notes:', e);
+                notes = [];
+            }
+            
+            // Chercher la note avec le contentType détecté
+            const noteToDelete = notes.find(n => String(n.id) === String(animeId) && n.contentType === detectedContentType);
+            
+            // Créer une clé pour les notes supprimées permanentes (clé unifiée)
+            const deletedNotesKey = 'deleted_content_notes_' + user.email;
+            let deletedNotes = [];
+            try {
+                deletedNotes = JSON.parse(localStorage.getItem(deletedNotesKey) || '[]');
+            } catch (e) {
+                deletedNotes = [];
+            }
+            
+            // Si on trouve une note avec un contentType différent, utiliser celui de la note trouvée
+            if (!noteToDelete) {
+                const noteWithDifferentType = notes.find(n => String(n.id) === String(animeId));
+                if (noteWithDifferentType) {
+                    detectedContentType = noteWithDifferentType.contentType;
+                }
+            }
+            
+            // Ajouter cette note à la liste des notes supprimées permanentes
+            const deletedNote = {
+                id: animeId,
+                contentType: detectedContentType,
+                deletedAt: Date.now()
+            };
+            
+            // Vérifier si cette note n'est pas déjà dans la liste des supprimées
+            const alreadyDeleted = deletedNotes.some(n => 
+                String(n.id) === String(animeId) && n.contentType === detectedContentType
+            );
+            
+            if (!alreadyDeleted) {
+                deletedNotes.push(deletedNote);
+                localStorage.setItem(deletedNotesKey, JSON.stringify(deletedNotes));
+            }
+            
+            // Supprimer la note existante avec le contentType détecté
+            
+            const filteredNotes = notes.filter(n => {
+                const idMatch = String(n.id) === String(animeId);
+                const typeMatch = n.contentType === detectedContentType;
+                const shouldKeep = !(idMatch && typeMatch);
+                if (!shouldKeep) {
+                }
+                return shouldKeep;
+            });
+            
+            try {
+                localStorage.setItem(notesKey, JSON.stringify(filteredNotes));
+                console.log(`Note supprimée pour l'anime ${animeId}`);
+                
+                // Supprimer aussi de animeRatings pour nettoyer complètement
+                const animeRatings = JSON.parse(localStorage.getItem('animeRatings') || '{}');
+                if (animeRatings[animeId]) {
+                    delete animeRatings[animeId];
+                    localStorage.setItem('animeRatings', JSON.stringify(animeRatings));
+                }
+                
+                // Marquer que des notes ont été supprimées pour forcer le rechargement du profil
+                localStorage.setItem('notes_updated', 'true');
+                
+                // Déclencher le nettoyage du top 10 via un événement personnalisé
+                const event = new CustomEvent('noteDeleted', {
+                    detail: { contentId: animeId, contentType: detectedContentType, user: user }
+                });
+                window.dispatchEvent(event);
+                console.log('🔄 [anime-details] Événement noteDeleted déclenché pour', animeId, detectedContentType);
+                
+                // Appel direct à la fonction de nettoyage si elle existe (avec window. pour être sûr)
+                if (typeof window.cleanTop10FromSpecificNote === 'function') {
+                    console.log('✅ [anime-details] Appel direct à cleanTop10FromSpecificNote pour', animeId, detectedContentType);
+                    window.cleanTop10FromSpecificNote(animeId, detectedContentType, user).catch(err => {
+                        console.error('❌ [anime-details] Erreur lors du nettoyage du top 10:', err);
+                    });
+                } else {
+                    console.warn('⚠️ [anime-details] cleanTop10FromSpecificNote non disponible, l\'intercepteur devrait gérer le nettoyage');
+                }
+                
+                // Réinitialiser l'affichage des étoiles sur cette page
+                const starsContainer = document.querySelector('.rating-stars');
+                if (starsContainer) {
+                    const stars = starsContainer.querySelectorAll('.star');
+                    stars.forEach(star => {
+                        star.classList.remove('selected', 'hover');
+                        star.style.color = '';
+                        star.style.transform = '';
+                    });
+                }
+                
+                // Réinitialiser le texte de notation
+                const ratingText = document.querySelector('.rating-text');
+                if (ratingText) {
+                    ratingText.textContent = getRatingTranslation('click_to_rate', 'Cliquez sur les étoiles pour noter');
+                }
+                
+                // Cacher le bouton d'annulation
+                const clearBtn = document.querySelector('.clear-rating-btn');
+                if (clearBtn) {
+                    clearBtn.classList.add('hidden');
+                }
+                
+                // Réinitialiser les variables globales
+                currentRating = 0;
+                hoveredRating = null;
+                
+                console.log(`[SUCCÈS FINAL] La note pour ${animeId} a été définitivement supprimée et marquée comme supprimée permanente`);
+                
+            } catch (e) {
+                console.error('Erreur lors de la suppression de la note:', e);
+                alert('Erreur lors de la suppression de la note.');
+            }
+        }
+        
+        // Fonction pour supprimer un anime de tous les containers (étoiles, genres et Top 10)
+        function removeAnimeFromAllContainers(animeId, isManga) {
+            
+            // 1. Supprimer des containers d'étoiles (1 à 10 étoiles)
+            for (let rating = 1; rating <= 10; rating++) {
+                const starContainers = document.querySelectorAll(`#star-containers-${rating}, #star-containers`);
+                starContainers.forEach(container => {
+                    const card = container.querySelector(`[data-anime-id="${animeId}"]`);
+                    if (card) {
+                        card.remove();
+                    }
+                });
+            }
+            
+            // 2. Supprimer des containers de genres
+            const genreContainers = document.querySelectorAll('.genre-container');
+            genreContainers.forEach(container => {
+                        const card = container.querySelector(`[data-anime-id="${animeId}"]`);
+                        if (card) {
+                            card.remove();
+                }
+            });
+            
+            // 3. Supprimer du Top 10 (tous les types et genres)
+            const top10Slots = document.querySelectorAll('.catalogue-card');
+            top10Slots.forEach(slot => {
+                const card = slot.querySelector(`[data-anime-id="${animeId}"]`);
+                if (card) {
+                    card.remove();
+                }
+            });
+            
+            // 4. Supprimer des Top 10 spécifiques par type et genre
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (user && user.email) {
+                // Supprimer de tous les Top 10 possibles
+                const allTypes = ['anime', 'manga', 'roman', 'doujin', 'manhwa', 'manhua'];
+                const allGenres = ['action', 'aventure', 'comedie', 'drame', 'fantasy', 'horreur', 'mystere', 'romance', 'sci-fi', 'slice-of-life', 'sport', 'thriller'];
+                
+                allTypes.forEach(type => {
+                    allGenres.forEach(genre => {
+                        const top10Key = `user_top10_${user.email}_${type}_${genre}`;
+                        let top10 = JSON.parse(localStorage.getItem(top10Key) || '[]');
+                        const filteredTop10 = top10.filter(item => item && item.id !== animeId);
+                        if (filteredTop10.length !== top10.length) {
+                            localStorage.setItem(top10Key, JSON.stringify(filteredTop10));
+                        }
+                    });
+                    
+                    // Top 10 par type seulement (sans genre)
+                    const top10KeyType = `user_top10_${user.email}_${type}`;
+                    let top10Type = JSON.parse(localStorage.getItem(top10KeyType) || '[]');
+                    const filteredTop10Type = top10Type.filter(item => item && item.id !== animeId);
+                    if (filteredTop10Type.length !== top10Type.length) {
+                        localStorage.setItem(top10KeyType, JSON.stringify(filteredTop10Type));
+                    }
+                });
+                
+                // Supprimer aussi du Top 10 global (sans type ni genre)
+                const top10KeyGlobal = `user_top10_${user.email}`;
+                let top10Global = JSON.parse(localStorage.getItem(top10KeyGlobal) || '[]');
+                const filteredTop10Global = top10Global.filter(item => item && item.id !== animeId);
+                if (filteredTop10Global.length !== top10Global.length) {
+                    localStorage.setItem(top10KeyGlobal, JSON.stringify(filteredTop10Global));
+                }
+            }
+            
+            // 5. Mettre à jour l'affichage si on est sur le profil
+            if (typeof displayUserAnimeNotes === 'function') {
+                displayUserAnimeNotes();
+            }
+            if (typeof applyTypeFilter === 'function') {
+                applyTypeFilter();
+            }
+            if (typeof applyGenreFilter === 'function') {
+                applyGenreFilter();
+                }
+                if (typeof renderTop10Slots === 'function') {
+                    renderTop10Slots();
+                }
+            if (typeof refreshAllCardMoreButtons === 'function') {
+                refreshAllCardMoreButtons();
+            }
+            
+        }
+        
+        // Fonction pour ajouter un anime aux containers d'étoiles et au top 10
+        function addAnimeToContainers(animeId, rating) {
+            // Récupérer les informations de l'anime depuis la page
+            const animeTitle = document.querySelector('.anime-title')?.textContent || 'Anime inconnu';
+            const animeImage = document.querySelector('.anime-image-large')?.src || '';
+            const animeSynopsis = document.querySelector('.synopsis')?.textContent || '';
+            
+            // Créer la carte pour le container d'étoiles correspondant
+            const starContainer = document.querySelector(`.star-rating-group[data-rating="${rating}"] .star-cards-container`);
+            if (starContainer) {
+                const card = createAnimeCard(animeId, animeTitle, animeImage, animeSynopsis, rating);
+                starContainer.appendChild(card);
+                console.log(`Carte ajoutée au container ${rating} étoiles`);
+            }
+            
+            // Ajouter au top 10 si nécessaire
+            updateTop10WithAnime(animeId, animeTitle, animeImage, animeSynopsis, rating);
+            
+            // Mettre à jour les compteurs et l'affichage
+            if (typeof updateStarContainersDisplay === 'function') {
+                updateStarContainersDisplay();
+            }
+            if (typeof renderTop10Slots === 'function') {
+                renderTop10Slots();
+            }
+        }
+        
+        // Fonction pour créer une carte d'anime (non utilisée sur les pages de détail)
+        function createAnimeCard(animeId, title, image, synopsis, rating) {
+            const card = document.createElement('div');
+            card.className = 'catalogue-card';
+            card.setAttribute('data-anime-id', animeId);
+            card.innerHTML = `
+                <img src="${image}" alt="${title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+                <h3 style="margin: 10px 0; color: #00b894;">${title}</h3>
+                <p style="font-size: 0.9em; color: #ccc; margin-bottom: 10px;">${synopsis.substring(0, 100)}...</p>
+                <div style="color: #00b894; font-weight: bold;">Note: ${rating}/10</div>
+            `;
+            return card;
+        }
+        
+        // Fonction pour mettre à jour le top 10 avec un anime (non utilisée sur les pages de détail)
+        function updateTop10WithAnime(animeId, title, image, synopsis, rating) {
+            const top10Container = document.querySelector('.top-10-container');
+            if (top10Container) {
+                // Vérifier si l'anime est déjà dans le top 10
+                const existingCard = top10Container.querySelector(`[data-anime-id="${animeId}"]`);
+                if (!existingCard) {
+                    const card = createAnimeCard(animeId, title, image, synopsis, rating);
+                    top10Container.appendChild(card);
+                    console.log(`Carte ajoutée au top 10`);
+                }
+            }
+        }
+        
+        // Fonction pour retourner au catalogue avec restauration de l'état
+        function returnToCatalogue(event) {
+            event.preventDefault();
+            
+            // Forcer la synchronisation des containers d'étoiles et du top 10
+            forceSyncContainers();
+            
+            // Vérifier s'il y a un état sauvegardé
+            const savedState = localStorage.getItem('mangaDatabaseState');
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    // Vérifier si l'état n'est pas trop ancien (plus de 30 minutes)
+                    if (Date.now() - state.timestamp < 30 * 60 * 1000) {
+                        // Naviguer vers le catalogue avec un paramètre pour indiquer qu'il faut restaurer l'état
+                        window.location.href = 'manga-database.html?restore=true';
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Erreur lors de la lecture de l\'état sauvegardé:', e);
+                }
+            }
+            
+            // Si pas d'état sauvegardé ou état trop ancien, navigation normale
+            window.location.href = 'manga-database.html';
+        }
+        
+        // Fonction pour forcer la synchronisation des containers
+        function forceSyncContainers() {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (!user || !user.email) return;
+            
+            const notesKey = 'user_content_notes_' + user.email;
+            const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+            
+            // Marquer qu'une synchronisation est nécessaire
+            localStorage.setItem('forceSyncContainers', 'true');
+            console.log('Synchronisation forcée des containers au prochain chargement du profil');
+        }
+        
+        // Fonction pour traduire les genres de manière contrôlée (utilise une table de traductions)
+        function translateGenresControlled(targetLanguage) {
+            const genreElements = document.querySelectorAll('.genre-tag');
+            console.log(`🏷️ Traduction contrôlée de ${genreElements.length} genres (table de traductions)`);
+            
+            // Table de traductions des genres (identique à celle de acceuil.html)
+            const genreTranslations = {
+                'Action': { en: 'Action', fr: 'Action', de: 'Action', es: 'Acción', it: 'Azione', ja: 'アクション' },
+                'Aventure': { en: 'Adventure', fr: 'Aventure', de: 'Abenteuer', es: 'Aventura', it: 'Avventura', ja: '冒険' },
+                'Adventure': { en: 'Adventure', fr: 'Aventure', de: 'Abenteuer', es: 'Aventura', it: 'Avventura', ja: '冒険' },
+                'Avant-garde': { en: 'Avant Garde', fr: 'Avant-garde', de: 'Avantgarde', es: 'Vanguardia', it: 'Avanguardia', ja: '前衛' },
+                'Avant Garde': { en: 'Avant Garde', fr: 'Avant-garde', de: 'Avantgarde', es: 'Vanguardia', it: 'Avanguardia', ja: '前衛' },
+                'Prix': { en: 'Award Winning', fr: 'Prix', de: 'Preisgekrönt', es: 'Ganador de Premios', it: 'Vincitore di Premi', ja: '受賞作' },
+                'Award Winning': { en: 'Award Winning', fr: 'Prix', de: 'Preisgekrönt', es: 'Ganador de Premios', it: 'Vincitore di Premi', ja: '受賞作' },
+                'Boys Love': { en: 'Boys Love', fr: 'Boys Love', de: 'Boys Love', es: 'Boys Love', it: 'Boys Love', ja: 'ボーイズラブ' },
+                'Comédie': { en: 'Comedy', fr: 'Comédie', de: 'Komödie', es: 'Comedia', it: 'Commedia', ja: 'コメディ' },
+                'Comedy': { en: 'Comedy', fr: 'Comédie', de: 'Komödie', es: 'Comedia', it: 'Commedia', ja: 'コメディ' },
+                'Drame': { en: 'Drama', fr: 'Drame', de: 'Drama', es: 'Drama', it: 'Dramma', ja: 'ドラマ' },
+                'Drama': { en: 'Drama', fr: 'Drame', de: 'Drama', es: 'Drama', it: 'Dramma', ja: 'ドラマ' },
+                'Fantasy': { en: 'Fantasy', fr: 'Fantasy', de: 'Fantasy', es: 'Fantasía', it: 'Fantasy', ja: 'ファンタジー' },
+                'Girls Love': { en: 'Girls Love', fr: 'Girls Love', de: 'Girls Love', es: 'Girls Love', it: 'Girls Love', ja: 'ガールズラブ' },
+                'Gastronomie': { en: 'Gourmet', fr: 'Gastronomie', de: 'Gourmet', es: 'Gastronomía', it: 'Gastronomia', ja: 'グルメ' },
+                'Gourmet': { en: 'Gourmet', fr: 'Gastronomie', de: 'Gourmet', es: 'Gastronomía', it: 'Gastronomia', ja: 'グルメ' },
+                'Horreur': { en: 'Horror', fr: 'Horreur', de: 'Horror', es: 'Terror', it: 'Horror', ja: 'ホラー' },
+                'Horror': { en: 'Horror', fr: 'Horreur', de: 'Horror', es: 'Terror', it: 'Horror', ja: 'ホラー' },
+                'Mystère': { en: 'Mystery', fr: 'Mystère', de: 'Mystery', es: 'Misterio', it: 'Mistero', ja: 'ミステリー' },
+                'Mystery': { en: 'Mystery', fr: 'Mystère', de: 'Mystery', es: 'Misterio', it: 'Mistero', ja: 'ミステリー' },
+                'Romance': { en: 'Romance', fr: 'Romance', de: 'Romance', es: 'Romance', it: 'Romance', ja: 'ロマンス' },
+                'Science-Fiction': { en: 'Sci-Fi', fr: 'Science-Fiction', de: 'Science Fiction', es: 'Ciencia Ficción', it: 'Sci-Fi', ja: 'SF' },
+                'Sci-Fi': { en: 'Sci-Fi', fr: 'Science-Fiction', de: 'Science Fiction', es: 'Ciencia Ficción', it: 'Sci-Fi', ja: 'SF' },
+                'Tranche de vie': { en: 'Slice of Life', fr: 'Tranche de vie', de: 'Slice of Life', es: 'Recuentos de la Vida', it: 'Slice of Life', ja: '日常' },
+                'Slice of Life': { en: 'Slice of Life', fr: 'Tranche de vie', de: 'Slice of Life', es: 'Recuentos de la Vida', it: 'Slice of Life', ja: '日常' },
+                'Sport': { en: 'Sports', fr: 'Sport', de: 'Sport', es: 'Deportes', it: 'Sport', ja: 'スポーツ' },
+                'Sports': { en: 'Sports', fr: 'Sport', de: 'Sport', es: 'Deportes', it: 'Sport', ja: 'スポーツ' },
+                'Surnaturel': { en: 'Supernatural', fr: 'Surnaturel', de: 'Übernatürlich', es: 'Sobrenatural', it: 'Soprannaturale', ja: '超自然' },
+                'Supernatural': { en: 'Supernatural', fr: 'Surnaturel', de: 'Übernatürlich', es: 'Sobrenatural', it: 'Soprannaturale', ja: '超自然' },
+                'Suspense': { en: 'Suspense', fr: 'Suspense', de: 'Spannung', es: 'Suspenso', it: 'Suspense', ja: 'サスペンス' },
+                'Thriller': { en: 'Thriller', fr: 'Thriller', de: 'Thriller', es: 'Thriller', it: 'Thriller', ja: 'スリラー' },
+                'Ecchi': { en: 'Ecchi', fr: 'Ecchi', de: 'Ecchi', es: 'Ecchi', it: 'Ecchi', ja: 'エッチ' },
+                'Érotique': { en: 'Erotica', fr: 'Érotique', de: 'Erotik', es: 'Erótica', it: 'Erotica', ja: 'エロ' },
+                'Erotica': { en: 'Erotica', fr: 'Érotique', de: 'Erotik', es: 'Erótica', it: 'Erotica', ja: 'エロ' },
+                'Hentai': { en: 'Hentai', fr: 'Hentai', de: 'Hentai', es: 'Hentai', it: 'Hentai', ja: '変態' },
+                'Casting adulte': { en: 'Adult Cast', fr: 'Casting adulte', de: 'Erwachsenenbesetzung', es: 'Reparto Adulto', it: 'Cast Adulto', ja: '大人向け' },
+                'Adult Cast': { en: 'Adult Cast', fr: 'Casting adulte', de: 'Erwachsenenbesetzung', es: 'Reparto Adulto', it: 'Cast Adulto', ja: '大人向け' },
+                'Psychologique': { en: 'Psychological', fr: 'Psychologique', de: 'Psychologisch', es: 'Psicológico', it: 'Psicologico', ja: '心理' },
+                'Psychological': { en: 'Psychological', fr: 'Psychologique', de: 'Psychologisch', es: 'Psicológico', it: 'Psicologico', ja: '心理' },
+                'Mecha': { en: 'Mecha', fr: 'Mecha', de: 'Mecha', es: 'Mecha', it: 'Mecha', ja: 'メカ' },
+                'Historique': { en: 'Historical', fr: 'Historique', de: 'Historisch', es: 'Histórico', it: 'Storico', ja: '歴史' },
+                'Historical': { en: 'Historical', fr: 'Historique', de: 'Historisch', es: 'Histórico', it: 'Storico', ja: '歴史' },
+                'Isekai': { en: 'Isekai', fr: 'Isekai', de: 'Isekai', es: 'Isekai', it: 'Isekai', ja: '異世界' },
+                'Harem': { en: 'Harem', fr: 'Harem', de: 'Harem', es: 'Harem', it: 'Harem', ja: 'ハーレム' },
+                'Martial Arts': { en: 'Martial Arts', fr: 'Arts martiaux', de: 'Kampfkunst', es: 'Artes Marciales', it: 'Arti Marziali', ja: '武術' },
+                'School': { en: 'School', fr: 'École', de: 'Schule', es: 'Escuela', it: 'Scuola', ja: '学校' },
+                'École': { en: 'School', fr: 'École', de: 'Schule', es: 'Escuela', it: 'Scuola', ja: '学校' },
+                'Superhéros': { en: 'Superhero', fr: 'Superhéros', de: 'Superheld', es: 'Superhéroe', it: 'Supereroe', ja: 'スーパーヒーロー' },
+                'Superhero': { en: 'Superhero', fr: 'Superhéros', de: 'Superheld', es: 'Superhéroe', it: 'Supereroe', ja: 'スーパーヒーロー' }
+            };
+            
+            // Mapper les codes de langue
+            const langMap = {
+                'fr': 'fr',
+                'en': 'en',
+                'de': 'de',
+                'es': 'es',
+                'it': 'it',
+                'ja': 'ja'
+            };
+            
+            const langCode = langMap[targetLanguage] || 'en';
+            
+            // Normaliser le genre (gérer les genres avec plusieurs mots)
+            const normalizeGenre = (g) => {
+                if (!g || typeof g !== 'string') return '';
+                return g.toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            };
+            
+            // Liste des mots à exclure (ne sont pas des genres)
+            const excludedWords = ['titre', 'synopsis', 'title', 'description', 'le', 'la', 'les', 'un', 'une', 'des', 'et', 'ou', 'avec', 'pour', 'dans', 'sur', 'par', 'de', 'du'];
+            
+            // Traduire tous les genres
+            Array.from(genreElements).forEach((element) => {
+                const originalText = element.textContent.trim();
+                if (!originalText || originalText.length < 2 || originalText.length > 50) {
+                    return; // Ignorer les textes trop courts ou trop longs
+                }
+                
+                // Vérifier que ce n'est pas un mot exclu (titre, synopsis, etc.)
+                const normalizedExcluded = originalText.toLowerCase().trim();
+                if (excludedWords.includes(normalizedExcluded)) {
+                    console.warn(`⚠️ Texte exclu détecté dans genre-tag: "${originalText}" - ignoré`);
+                    return;
+                }
+                
+                // Normaliser le genre
+                const normalizedGenre = normalizeGenre(originalText);
+                
+                // Chercher la traduction dans la table
+                let translatedText = null;
+                
+                // Essayer différentes variantes
+                const variants = [
+                    normalizedGenre,
+                    originalText,
+                    originalText.replace(/-/g, ' '),
+                    originalText.replace(/ /g, '-'),
+                    originalText.toLowerCase(),
+                    originalText.toUpperCase()
+                ];
+                
+                for (const variant of variants) {
+                    if (genreTranslations[variant] && genreTranslations[variant][langCode]) {
+                        translatedText = genreTranslations[variant][langCode];
+                        break;
+                    }
+                }
+                
+                // Si une traduction est trouvée et différente de l'original, l'appliquer
+                if (translatedText && translatedText.trim() !== '' && translatedText !== originalText) {
+                    element.textContent = translatedText;
+                    console.log(`✅ Genre traduit: "${originalText}" -> "${translatedText}"`);
+                } else {
+                    // Si aucune traduction trouvée, garder l'original (pas de traduction automatique)
+                    console.log(`ℹ️ Genre non traduit (pas dans la table): "${originalText}" - conservé tel quel`);
+                }
+            });
+            
+            console.log(`✅ Traduction des genres terminée (table de traductions)`);
+        }
+        
+        // Fonction pour traduire les titres de manière contrôlée
+        async function translateTitlesControlled(targetLanguage) {
+            // Ne traduire que si la langue cible est le japonais
+            if (targetLanguage !== 'ja') {
+                return;
+            }
+            
+            const titleElements = document.querySelectorAll('.manga-title, .anime-title');
+            console.log(`📖 Traduction contrôlée de ${titleElements.length} titres en japonais`);
+            
+            for (const element of titleElements) {
+                const originalText = element.textContent.trim();
+                if (originalText && originalText.length > 0) {
+                    try {
+                        const translatedText = await translateWithCache(originalText, targetLanguage);
+                        if (translatedText && translatedText.trim() !== '' && translatedText !== originalText) {
+                            element.textContent = translatedText;
+                            console.log(`✅ Titre traduit: "${originalText}" -> "${translatedText}"`);
+                        }
+                    } catch (error) {
+                        console.warn('Erreur lors de la traduction du titre:', error);
+                    }
+                }
+            }
+        }
+        
+        // Fonction pour traduire le synopsis
+        async function translateSynopsis(targetLanguage) {
+            const synopsisElement = document.querySelector('.synopsis-text');
+            if (!synopsisElement) {
+                console.log('❌ Élément synopsis non trouvé');
+                return;
+            }
+            
+            const originalSynopsis = synopsisElement.getAttribute('data-synopsis');
+            if (!originalSynopsis || originalSynopsis.trim() === '') {
+                console.log('❌ Synopsis original vide ou manquant');
+                return;
+            }
+            
+            // Nettoyer le synopsis avant traduction (supprime seulement les mentions MAL rewrite)
+            const cleanedSynopsis = cleanSynopsis(originalSynopsis);
+            if (!cleanedSynopsis) {
+                console.log('❌ Synopsis nettoyé vide');
+                return;
+            }
+            
+            // Vérifier si le synopsis est long (nécessitera une division en segments)
+            const isLongSynopsis = cleanedSynopsis.length > 4500;
+            console.log(`📝 Traduction du synopsis en ${targetLanguage} (${cleanedSynopsis.length} caractères${isLongSynopsis ? ' - sera divisé en segments' : ''})`);
+            
+            try {
+                // Afficher un indicateur de chargement adapté
+                const loadingMessage = isLongSynopsis 
+                    ? '<br><small style="color: #666;">🔄 Traduction en cours... (synopsis long, cela peut prendre quelques instants)</small>'
+                    : '<br><small style="color: #666;">🔄 Traduction en cours...</small>';
+                synopsisElement.innerHTML += loadingMessage;
+                
+                // translateWithCache gère maintenant automatiquement la division en segments pour les longs textes
+                const translatedSynopsis = await translateWithCache(cleanedSynopsis, targetLanguage);
+                
+                if (translatedSynopsis && translatedSynopsis.trim() !== '' && translatedSynopsis !== cleanedSynopsis) {
+                    // Appliquer le nettoyage HTML
+                    const processedSynopsis = translatedSynopsis
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    
+                    synopsisElement.innerHTML = processedSynopsis;
+                    console.log(`✅ Synopsis traduit en ${targetLanguage} (${translatedSynopsis.length} caractères)`);
+                } else {
+                    // Retirer l'indicateur de chargement
+                    synopsisElement.innerHTML = synopsisElement.innerHTML.replace(/<br><small style="color: #666;">.*?<\/small>/, '');
+                    console.log('⚠️ Traduction du synopsis identique à l\'original ou vide');
+                }
+            } catch (error) {
+                // Retirer l'indicateur de chargement en cas d'erreur
+                synopsisElement.innerHTML = synopsisElement.innerHTML.replace(/<br><small style="color: #666;">.*?<\/small>/, '');
+                console.error('❌ Erreur lors de la traduction du synopsis:', error);
+            }
+        }
+        
+        // Charger les détails au chargement de la page
+        document.addEventListener('DOMContentLoaded', () => {
+            // La fonction loadContentDetails est déjà appelée dans le script principal
+            // Pas besoin de l'appeler ici
+            console.log('✅ Page de détails chargée');
+        });
+    </script>
+    
+    <script>
+        // Fonction helper pour obtenir une traduction
+        function getTranslation(key, fallback = key) {
+            if (window.localization) {
+                const translation = window.localization.get(key);
+                return translation !== key ? translation : fallback;
+            }
+            return fallback;
+        }
+
+        // Fonction pour obtenir le placeholder traduit selon le type
+        function getPlaceholderForType(type) {
+            const placeholderKey = `search.placeholder.${type}`;
+            const translation = getTranslation(placeholderKey);
+            
+            // Si la traduction n'existe pas, utiliser la clé générique
+            if (translation === placeholderKey) {
+                return getTranslation('search.placeholder.generic', 'Rechercher...');
+            }
+            
+            return translation;
+        }
+
+        // Fonction pour mettre à jour les options du select
+        function updateSelectOptions() {
+            const searchType = document.getElementById('searchType');
+            if (!searchType) return;
+            
+            const options = searchType.querySelectorAll('option');
+            options.forEach(option => {
+                const value = option.value;
+                option.textContent = getTranslation('search.type.' + value);
+            });
+        }
+
+        // Fonction pour mettre à jour le badge de type dans les détails
+        function updateDetailsTypeBadge() {
+            const typeBadge = document.querySelector('.details-type');
+            if (typeBadge) {
+                const originalType = typeBadge.getAttribute('data-original-type');
+                const contentType = typeBadge.getAttribute('data-content-type') || 'anime';
+                
+                if (originalType) {
+                    typeBadge.textContent = getTranslatedType(contentType, originalType);
+                }
+            }
+        }
+
+        // Gestion du sélecteur de recherche
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchType = document.getElementById('searchType');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchType && searchInput) {
+                // Mettre à jour les options du select au chargement
+                updateSelectOptions();
+                
+                const placeholders = {
+                    'anime': getPlaceholderForType('anime'),
+                    'manga': getPlaceholderForType('manga'),
+                    'movie': getPlaceholderForType('movie'),
+                    'manhwa': getPlaceholderForType('manhwa'),
+                    'manhua': getPlaceholderForType('manhua'),
+                    'user': getPlaceholderForType('user')
+                };
+                
+                // Changer le placeholder selon le type sélectionné
+                searchType.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    searchInput.placeholder = placeholders[selectedType] || getTranslation('search.placeholder.generic', 'Rechercher...');
+                });
+                
+                // Initialiser le placeholder au chargement
+                searchInput.placeholder = placeholders[searchType.value] || getTranslation('search.placeholder.generic', 'Rechercher...');
+                
+                // Mettre à jour le placeholder et les options quand la langue change
+                document.addEventListener('languageChanged', function() {
+                    updateSelectOptions();
+                    const updatedPlaceholders = {
+                        'anime': getPlaceholderForType('anime'),
+                        'manga': getPlaceholderForType('manga'),
+                        'movie': getPlaceholderForType('movie'),
+                        'manhwa': getPlaceholderForType('manhwa'),
+                        'manhua': getPlaceholderForType('manhua'),
+                        'user': getPlaceholderForType('user')
+                    };
+                    searchInput.placeholder = updatedPlaceholders[searchType.value] || getTranslation('search.placeholder.generic', 'Rechercher...');
+                    updateDetailsTypeBadge();
+                });
+            }
+        });
+    </script>
+    
+    <script src="/js/hamburger-menu.js"></script>
+    <!-- Charger profile-anime-cards.js pour le nettoyage du top 10 lors de la suppression de notes -->
+    <script src="/js/profile-anime-cards.js?v=2.0"></script>
+    <!-- Charger les modules Firebase à la fin pour ne pas bloquer le chargement -->
+    <script type="module">
+        // Charger les modules Firebase de manière asynchrone
+        try {
+            await import('/js/firebase-config.js');
+            await import('/js/firebase-service.js');
+            await import('/js/firebaseNotesService.js');
+            console.log('[Firebase] Modules chargés avec succès');
+        } catch (err) {
+            console.warn('[Firebase] Erreur lors du chargement des modules (fallback vers localStorage):', err);
+        }
+    </script>
+    
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright">&copy;</span>2025
+                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
+                        <!-- Triangle rouge à gauche -->
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <!-- Bande noire en haut -->
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <!-- Bande blanche au milieu -->
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <!-- Bande verte en bas -->
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket><i class="fas fa-circle-question"></i></a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+    <script src="/js/help-ticket.js"></script>
+</body>
+</html> 

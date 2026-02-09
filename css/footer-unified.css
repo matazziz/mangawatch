@@ -1,0 +1,236 @@
+/* ============================================
+   BARRE DE DÉFILEMENT STYLÉE (GLOBAL)
+   ============================================ */
+
+/* Style global pour toutes les barres de défilement */
+/* Webkit (Chrome, Safari, Edge, Opera) */
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 196, 93, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #00c45d 0%, #00e06d 50%, #00ff88 100%);
+    border-radius: 10px;
+    border: 2px solid rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.1),
+        0 2px 8px rgba(0, 196, 93, 0.4);
+    transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #00e06d 0%, #00ff88 50%, #00ffaa 100%);
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.15),
+        0 4px 12px rgba(0, 196, 93, 0.6);
+    transform: scale(1.05);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(135deg, #00ff88 0%, #00ffaa 100%);
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.2),
+        0 2px 6px rgba(0, 196, 93, 0.5);
+}
+
+::-webkit-scrollbar-corner {
+    background: #0a0a0a;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #00c45d #1a1a1a;
+}
+
+/* ============================================
+   FOOTER UNIFIÉ
+   ============================================ */
+
+/* Footer unifié pour toutes les pages MangaWatch */
+.footer-unified {
+    background: #181a20;
+    color: #00c45d;
+    padding: 2rem 0;
+    margin-top: 3rem;
+    font-size: 1.1rem;
+    position: relative;
+    z-index: 100;
+    width: 100%;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+}
+
+.footer-unified .footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 2.2rem;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    width: 100%;
+    min-height: 100px;
+}
+
+.footer-unified .footer-copyright {
+    color: #00ffb0;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+    text-shadow: 0 0 6px #00c45d88;
+    display: inline-block;
+}
+
+.footer-unified .footer-social-links {
+    display: flex;
+    gap: 2.2rem;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.footer-unified .footer-social-icon {
+    color: #00c45d;
+    text-decoration: none;
+    font-size: 2rem;
+    transition: color 0.2s, transform 0.18s, box-shadow 0.18s;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.footer-unified .footer-social-icon:hover {
+    color: #00ffb0;
+    transform: scale(1.18) rotate(-6deg);
+    box-shadow: 0 0 12px #00c45d88, 0 2px 8px #0002;
+    background: linear-gradient(90deg, #00c45d22 0%, #00ffb022 100%);
+    border-radius: 8px;
+}
+
+.footer-unified .footer-copyright-text {
+    font-size: 1rem;
+    color: #fff;
+    white-space: nowrap;
+    min-width: 220px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    margin-left: -10px; /* Décalage vers la gauche */
+}
+
+.footer-unified .palestine-flag {
+    width: 32px;
+    height: 22px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    border-radius: 3px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+    display: block;
+}
+
+.footer-unified .palestine-flag-link:hover .palestine-flag {
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+.footer-unified .footer-authors {
+    margin-left: auto;
+    font-size: 1rem;
+    color: #fff;
+    white-space: nowrap;
+    min-width: 220px;
+    text-align: right;
+    padding-right: 90px; /* Espace pour le bouton messagerie flottant (éviter le chevauchement) */
+}
+
+.footer-unified .footer-brand {
+    color: #00c45d;
+    font-weight: 600;
+}
+
+/* Lien pseudo (matazziz) dans le footer : garder la couleur verte */
+.footer-unified .footer-authors a.footer-brand {
+    color: #00c45d !important;
+    text-decoration: none;
+}
+.footer-unified .footer-authors a.footer-brand:hover {
+    color: #00ffb0 !important;
+}
+
+/* Amélioration de la visibilité du footer */
+.footer-unified {
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    border-top: 1px solid #333;
+    padding-bottom: 2rem; /* Espace supplémentaire pour éviter la barre des tâches */
+    margin-bottom: 1rem; /* Marge supplémentaire */
+}
+
+.footer-unified .footer-copyright-text,
+.footer-unified .footer-authors {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.footer-unified .footer-social-icon {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Styles pour s'assurer que le footer soit visible */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+    min-height: calc(100vh - 240px); /* Hauteur minimale pour laisser de la place au footer agrandi */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .footer-unified .footer-container {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .footer-unified .footer-copyright-text,
+    .footer-unified .footer-authors {
+        min-width: auto;
+        text-align: center;
+    }
+    
+    .footer-unified .footer-social-links {
+        order: -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-unified {
+        padding: 1rem 0;
+        font-size: 1rem;
+    }
+    
+    .footer-unified .footer-social-icon {
+        font-size: 1.5rem;
+    }
+    
+    .footer-unified .footer-copyright {
+        font-size: 1.2rem;
+    }
+} 

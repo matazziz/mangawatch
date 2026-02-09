@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MangaWatch - Profil Utilisateur</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/anime-card.css">
+    <link rel="stylesheet" href="/css/messaging.css">
+    <link rel="stylesheet" href="/css/list.css">
+    <script src="/js/localization.js"></script>
+    <!-- Import Firebase Service pour charger la bannière (image/vidéo) sur le profil public -->
+    <script type="module">
+        import { bannerService, profileSettingsService } from '/js/firebase-service.js';
+        window.bannerService = bannerService;
+        window.profileSettingsService = profileSettingsService;
+        window.dispatchEvent(new CustomEvent('bannerServiceReady'));
+    </script>
+    <style>
+        body {
+            background: #181a20;
+            color: #f5f6fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .profile-container {
+            max-width: 2000px;
+            margin: 0 auto 4rem auto;
+            padding: 0.75rem 2rem 2rem 2rem;
+            background-color: #23262f;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+        }
+        
+        #profile-content {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .profile-header {
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 2rem;
+            margin-top: 0;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            border-radius: 12px;
+            overflow: hidden;
+            min-height: 410px;
+            border-bottom: 1px solid #2f3542;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1d29 0%, #2a2d3a 100%);
+            z-index: 0;
+        }
+        
+        .profile-header-banner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            object-fit: cover;
+            width: 100%;
+            height: 100%;
+            display: none;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: high-quality;
+        }
+        
+        .profile-header-banner img,
+        .profile-header-banner video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: high-quality;
+        }
+        
+        .profile-header-banner.active {
+            display: block;
+        }
+        
+        .profile-header-banner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.6) 100%);
+            z-index: 2;
+        }
+        
+        .profile-header-content {
+            position: relative;
+            z-index: 3;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+            width: 100%;
+        }
+        
+        .profile-avatar-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #00b894;
+            transition: transform 0.3s;
+            position: relative;
+            z-index: 4;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: block;
+        }
+        
+        .profile-avatar:hover {
+            transform: scale(1.05);
+        }
+        
+        .profile-info {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        /* Badge du continent dans la bannière */
+        .profile-continent-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.9rem;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            color: #f5f6fa;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
+            width: fit-content;
+            margin-top: 0.5rem;
+        }
+        
+        .profile-continent-badge:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.35);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .profile-continent-badge i {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        /* Description du profil dans la bannière */
+        .profile-description-wrapper {
+            position: absolute;
+            bottom: 1.5rem;
+            left: 2rem;
+            width: calc(100% - 4rem);
+            max-width: 600px;
+            z-index: 4;
+            pointer-events: none;
+        }
+        
+        .profile-description-wrapper > * {
+            pointer-events: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-description-wrapper {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+        }
+        
+        .profile-description {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: #f5f6fa;
+            font-size: 0.9rem;
+            font-weight: 400;
+            font-style: italic;
+            font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            letter-spacing: 0.2px;
+            line-height: 1.5;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
+            transition: none;
+            min-height: 50px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .profile-description.empty {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            opacity: 0.5;
+        }
+        
+        .profile-description.empty:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            opacity: 0.7;
+        }
+        
+        .profile-description.empty #profile-description-text {
+            opacity: 0.6;
+            font-style: italic;
+        }
+        
+        .profile-description:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+        
+        .profile-description #profile-description-text {
+            flex: 1;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            font-style: italic;
+        }
+        
+        .profile-info h1 {
+            margin: 0;
+            color: #f5f6fa;
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            letter-spacing: 0.5px;
+            text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 184, 148, 0.3);
+            margin-bottom: 0.75rem;
+            line-height: 1.2;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        
+        .profile-info h1 #user-name-text {
+            line-height: 1;
+        }
+        
+        /* Badge certifié - même couleur que la barre de recherche (vert du site) */
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.8rem;
+            height: 1.8rem;
+            background: linear-gradient(135deg, #00a84d 0%, #00c45d 100%);
+            border-radius: 50%;
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-weight: 900;
+            box-shadow: 0 2px 10px rgba(0, 168, 77, 0.5), 0 0 20px rgba(0, 168, 77, 0.3),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 5;
+            align-self: center;
+            transform: translateY(0.22em);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .verified-badge:hover {
+            transform: scale(1.12) translateY(0.22em);
+            box-shadow: 0 4px 16px rgba(0, 168, 77, 0.7), 0 0 30px rgba(0, 168, 77, 0.5),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+        
+        .verified-badge i {
+            font-size: 0.85rem;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Système d'abonnements */
+        .profile-follow-section {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 1rem;
+            margin-left: auto;
+        }
+        
+        .profile-follow-stats {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        
+        .follow-stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .follow-stat-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        .follow-stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f5f6fa;
+            line-height: 1.2;
+        }
+        
+        .follow-stat-label {
+            font-size: 0.85rem;
+            color: rgba(245, 246, 250, 0.8);
+            font-weight: 500;
+            margin-top: 0.2rem;
+        }
+        
+        .profile-follow-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.5rem;
+            background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
+            border: none;
+            border-radius: 25px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
+            margin-top: 0.5rem;
+        }
+        
+        .profile-follow-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 184, 148, 0.5);
+            background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+        }
+        
+        .profile-follow-btn:active {
+            transform: translateY(0);
+        }
+        
+        .profile-follow-btn.following {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #f5f6fa;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .profile-follow-btn.following:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .profile-follow-btn i {
+            font-size: 0.9rem;
+        }
+        
+        /* Bouton de signalement */
+        .profile-report-btn {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.35rem 0.75rem;
+            background: linear-gradient(135deg, rgba(225, 112, 85, 0.15) 0%, rgba(225, 112, 85, 0.1) 100%);
+            border: 1px solid rgba(225, 112, 85, 0.35);
+            border-radius: 18px;
+            color: #e17055;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(12px);
+            z-index: 5;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .profile-report-btn:hover {
+            background: linear-gradient(135deg, rgba(225, 112, 85, 0.25) 0%, rgba(225, 112, 85, 0.2) 100%);
+            border-color: rgba(225, 112, 85, 0.55);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 4px 20px rgba(225, 112, 85, 0.4);
+        }
+        
+        .profile-report-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .profile-report-btn i {
+            font-size: 0.7rem;
+        }
+        
+        .profile-report-btn span {
+            font-size: 0.7rem;
+            letter-spacing: 0.3px;
+        }
+        
+        /* Modal de signalement */
+        .report-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .report-modal-content {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d3436 100%);
+            border-radius: 20px;
+            padding: 0;
+            max-width: 550px;
+            width: 90%;
+            max-height: 90vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            animation: slideIn 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .report-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+        }
+        
+        .report-modal-header h3 {
+            color: var(--light, #fff);
+            font-size: 1.4rem;
+            margin: 0;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .report-modal-header h3::before {
+            content: '🚩';
+            font-size: 1.5rem;
+        }
+        
+        .report-modal-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: var(--light-gray, #aaa);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 0;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border-radius: 50%;
+        }
+        
+        .report-modal-close:hover {
+            color: var(--light, #fff);
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
+        }
+        
+        .report-modal-body {
+            padding: 30px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .report-modal-subtitle {
+            color: var(--light-gray, #aaa);
+            margin-bottom: 25px;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        
+        .report-reasons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .report-reason-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .report-reason-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .report-reason-item input[type="radio"]:checked + span {
+            color: #e17055;
+            font-weight: 600;
+        }
+        
+        .report-reason-item input[type="radio"]:checked ~ .report-reason-item {
+            border-color: #e17055;
+        }
+        
+        .report-reason-item:has(input[type="radio"]:checked) {
+            border-color: rgba(225, 112, 85, 0.5);
+            background: rgba(225, 112, 85, 0.1);
+        }
+        
+        .report-reason-item input[type="radio"] {
+            margin-right: 15px;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            accent-color: #e17055;
+        }
+        
+        .report-reason-item span {
+            color: var(--light, #fff);
+            font-size: 1rem;
+            flex: 1;
+            transition: color 0.3s ease;
+        }
+        
+        .report-comment {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .report-comment label {
+            display: block;
+            color: var(--light, #fff);
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .report-comment textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: var(--light, #fff);
+            font-family: inherit;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+        
+        .report-comment textarea:focus {
+            outline: none;
+            border-color: rgba(225, 112, 85, 0.5);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .report-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+        
+        .report-block-btn,
+        .report-submit-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .report-block-btn {
+            background: linear-gradient(135deg, rgba(225, 112, 85, 0.2) 0%, rgba(225, 112, 85, 0.15) 100%);
+            border: 2px solid rgba(225, 112, 85, 0.4);
+            color: #e17055;
+        }
+        
+        .report-block-btn:hover {
+            background: linear-gradient(135deg, rgba(225, 112, 85, 0.3) 0%, rgba(225, 112, 85, 0.25) 100%);
+            border-color: rgba(225, 112, 85, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(225, 112, 85, 0.3);
+        }
+        
+        .report-submit-btn {
+            background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+        }
+        
+        .report-submit-btn:hover {
+            background: linear-gradient(135deg, #00a085 0%, #008f73 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(0, 184, 148, 0.4);
+        }
+        
+        .report-submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .profile-follow-stats {
+                gap: 1rem;
+                margin-top: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+            
+            .follow-stat-number {
+                font-size: 1.3rem;
+            }
+            
+            .follow-stat-label {
+                font-size: 0.8rem;
+            }
+            
+            .profile-follow-btn {
+                padding: 0.5rem 1.2rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        .profile-tabs {
+            display: flex;
+            border-bottom: 1px solid #2f3542;
+            margin-bottom: 2rem;
+        }
+        
+        .profile-tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            color: #a5b1c2;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .profile-tab.active {
+            color: #00b894;
+            border-bottom-color: #00b894;
+            font-weight: 600;
+        }
+        
+        .profile-tab:hover:not(.active) {
+            color: #f5f6fa;
+        }
+        
+        .profile-section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+            min-height: 600px;
+            padding: 2rem 0;
+        }
+        
+        .profile-section.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Popup modal pour les abonnés/abonnements */
+        .follow-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            z-index: 10000;
+        }
+        
+        .follow-modal-overlay.active {
+            display: block;
+        }
+        
+        .follow-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #23262f;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
+            display: none;
+            flex-direction: column;
+            z-index: 10001;
+            border: 2px solid rgba(0, 184, 148, 0.3);
+        }
+        
+        .follow-modal.active {
+            display: flex;
+        }
+        
+        .follow-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .follow-modal-header h3 {
+            margin: 0;
+            color: #f5f6fa;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .follow-modal-close {
+            background: transparent;
+            border: none;
+            color: #f5f6fa;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background 0.2s;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .follow-modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .follow-modal-content {
+            padding: 1.5rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex: 1;
+            max-height: calc(85vh - 80px);
+        }
+        
+        .follow-modal-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .follow-modal-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        .follow-modal-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
+            border-radius: 10px;
+        }
+        
+        .follow-modal-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #00d4aa 0%, #00b894 100%);
+        }
+        
+        .follow-list-item {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            padding: 1.25rem;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .follow-list-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .follow-list-item-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #00b894;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 184, 148, 0.3);
+        }
+        
+        .follow-list-item-avatar:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.5);
+        }
+        
+        .follow-list-item-info {
+            flex: 1;
+            min-width: 0;
+            cursor: pointer;
+            padding-left: 0.5rem;
+        }
+        
+        .follow-list-item-name {
+            color: #f5f6fa;
+            font-weight: 600;
+            font-size: 1.15rem;
+            margin-bottom: 0.35rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .follow-list-item-email {
+            color: rgba(245, 246, 250, 0.6);
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .follow-list-item-action {
+            flex-shrink: 0;
+        }
+        
+        .follow-list-item-btn {
+            padding: 0.65rem 1.25rem;
+            border: none;
+            border-radius: 22px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            min-width: 120px;
+        }
+        
+        .follow-list-item-btn.follow {
+            background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
+            color: #fff;
+        }
+        
+        .follow-list-item-btn.follow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.4);
+        }
+        
+        .follow-list-item-btn.following {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #f5f6fa;
+        }
+        
+        .follow-list-item-btn.following:hover {
+            background: rgba(255, 0, 0, 0.2);
+            border-color: rgba(255, 0, 0, 0.4);
+            color: #ff6b6b;
+        }
+        
+        .follow-list-empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: rgba(245, 246, 250, 0.6);
+        }
+        
+        .follow-list-empty i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .profile-follow-section {
+                width: 100%;
+                align-items: flex-start;
+            }
+            
+            .profile-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .profile-tab {
+                padding: 1rem;
+                white-space: nowrap;
+            }
+        }
+
+        .star-pagination button {
+            background: #181a20;
+            color: #fff;
+            border: 2px solid #23262f;
+            border-radius: 8px;
+            margin: 0 2px;
+            padding: 8px 18px;
+            font-size: 1.18em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border 0.2s;
+            outline: none;
+        }
+        .star-pagination button.active,
+        .star-pagination button.selected,
+        .star-pagination button:focus {
+            background: #232f3e;
+            color: #39ff14;
+            border: 2px solid #39ff14;
+        }
+        .star-pagination button:hover {
+            background: #23262f;
+            color: #39ff14;
+            border: 2px solid #39ff14;
+        }
+
+        .card-list {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            justify-content: flex-start;
+        }
+        .catalogue-card {
+            flex: 0 0 calc(20% - 1.6rem);
+            max-width: calc(20% - 1.6rem);
+            min-width: 180px;
+            box-sizing: border-box;
+            margin: 0 0 2rem 0;
+        }
+
+        @media (max-width: 1100px) {
+            .catalogue-card {
+                flex: 0 0 calc(33.333% - 1.6rem);
+                max-width: calc(33.333% - 1.6rem);
+            }
+        }
+        @media (max-width: 700px) {
+            .catalogue-card {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+            .card-list {
+                gap: 1rem;
+            }
+        }
+
+        .error-message {
+            text-align: center;
+            padding: 3rem;
+            color: #ff6b6b;
+        }
+
+        /* Même taille et disposition que la collection perso (list.css / list.html) */
+        .collection-section {
+            padding: 20px;
+            max-width: 2000px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .collection-section .list-grid {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            margin-bottom: 40px;
+            align-items: stretch;
+        }
+        
+        .collection-section .list-item {
+            min-height: 450px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .collection-section .item-image {
+            width: 100%;
+            height: 300px;
+            flex-shrink: 0;
+        }
+        
+        .collection-section .item-content {
+            padding: 20px;
+            min-height: 200px;
+            flex: 1;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+        
+        .collection-section .item-synopsis {
+            flex: 1;
+            min-height: 60px;
+        }
+        
+        @media (max-width: 1100px) {
+            .collection-section .list-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .collection-section .list-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        /* Annuler les overrides de list.css pour le footer - même placement que profil perso */
+        body .footer-unified {
+            margin-bottom: 1rem;
+            padding-bottom: 2rem;
+            padding-left: 0;
+            padding-right: 0;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        body .footer-unified .footer-container {
+            padding: 0 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+  <!-- En-tête unifié -->
+  <header class="main-header">
+    <a href="acceuil.html" class="logo-link">
+      <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+      <span>MangaWatch</span>
+    </a>
+    
+    <div class="search-wrapper">
+      <form class="search-bar" id="searchForm">
+        <select id="searchType" class="search-type-selector">
+          <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+          <option value="anime" data-i18n="search.type.anime">Anime</option>
+          <option value="movie" data-i18n="search.type.movie">Film</option>
+          <option value="user" data-i18n="search.type.user">Utilisateur</option>
+        </select>
+        <input type="text" placeholder="Rechercher un manga..." id="searchInput" autocomplete="new-password" name="profile-search" spellcheck="false">
+        <button type="submit" aria-label="Rechercher">
+          <i class="fas fa-search"></i>
+        </button>
+      </form>
+      <!-- Résultats de recherche -->
+      <div id="search-results" class="search-results-dropdown"></div>
+    </div>
+    
+    <!-- Navigation desktop (visible sur grand écran) -->
+    <nav class="nav-links">
+        <a href="acceuil.html">Accueil</a>
+        <a href="manga-database.html">Mangas & Anime</a>
+        <a href="list.html">Collection</a>
+        <a href="profil.html">Profil</a>
+    </nav>
+    
+    <!-- Conteneur pour les éléments de droite -->
+    <div class="header-right">
+      <!-- Bouton hamburger pour mobile -->
+      <button class="hamburger-btn" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      
+      <!-- Avatar utilisateur -->
+      <a href="profil.html" class="avatar-link">
+        <img id="user-avatar" src="/images/logo.png" alt="Avatar utilisateur" class="user-avatar" onerror="this.src='/images/logo.png'">
+      </a>
+    </div>
+  </header>
+
+  <!-- Menu mobile -->
+  <div class="mobile-menu">
+    <nav class="nav-links">
+      <a href="acceuil.html">
+        <i class="fas fa-home"></i>
+        Accueil
+      </a>
+      <a href="manga-database.html">
+        <i class="fas fa-tv"></i>
+        Manga Anime
+      </a>
+      <a href="list.html">
+        <i class="fas fa-bookmark"></i>
+        Collection
+      </a>
+      <a href="profil.html">
+        <i class="fas fa-user"></i>
+        Profil
+      </a>
+    </nav>
+  </div>
+
+    <main class="profile-container">
+        <div id="profile-content">
+            <div class="profile-header">
+                <!-- Bannière en arrière-plan -->
+                <img id="banner-image" class="profile-header-banner" alt="Bannière du profil" loading="eager">
+                <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="auto" muted></video>
+                <div class="profile-header-banner-overlay"></div>
+                
+                <!-- Bouton signaler en bas à droite de la bannière -->
+                <button class="profile-report-btn" id="profile-report-btn" style="display: none;" title="Signaler cet utilisateur">
+                    <i class="fas fa-flag"></i>
+                    <span data-i18n="profile.report">Signaler</span>
+                </button>
+                
+                <!-- Contenu du header (avatar et pseudo) -->
+                <div class="profile-header-content">
+                    <div class="profile-avatar-wrapper">
+                        <img src="/images/logo.png" alt="Avatar utilisateur" id="profile-avatar" class="profile-avatar" onerror="this.src='/images/logo.png'">
+                    </div>
+                    <div class="profile-info">
+                        <h1 id="user-name">
+                            <span id="user-name-text">Chargement...</span>
+                            <span id="verified-badge" class="verified-badge" style="display: none;" title="Compte certifié">
+                                <i class="fas fa-check"></i>
+                            </span>
+                        </h1>
+                        <div class="profile-continent-badge" id="profile-continent-badge">
+                            <i class="fas fa-globe"></i>
+                            <span id="profile-continent-text">Non renseigné</span>
+                        </div>
+                    </div>
+                    <!-- Système d'abonnements à droite -->
+                    <div class="profile-follow-section" id="profile-follow-section">
+                        <div class="profile-follow-stats" id="profile-follow-stats">
+                            <div class="follow-stat-item" id="followers-stat">
+                                <span class="follow-stat-number" id="followers-count">0</span>
+                                <span class="follow-stat-label">Abonnés</span>
+                            </div>
+                            <div class="follow-stat-item" id="following-stat">
+                                <span class="follow-stat-number" id="following-count">0</span>
+                                <span class="follow-stat-label">Abonnements</span>
+                            </div>
+                        </div>
+                        <button class="profile-follow-btn" id="profile-follow-btn" style="display: none;">
+                            <i class="fas fa-user-plus"></i>
+                            <span id="follow-btn-text">S'abonner</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Description en bas de la bannière -->
+                <div class="profile-description-wrapper" id="profile-description-wrapper">
+                    <div class="profile-description" id="profile-description">
+                        <span id="profile-description-text">Aucune description</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Popup pour afficher les abonnés/abonnements -->
+            <div class="follow-modal-overlay" id="follow-modal-overlay"></div>
+            <div class="follow-modal" id="follow-modal">
+                <div class="follow-modal-header">
+                    <h3 id="follow-modal-title">Abonnés</h3>
+                    <button class="follow-modal-close" id="follow-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="follow-modal-content" id="follow-modal-content">
+                    <!-- Le contenu sera rempli dynamiquement -->
+                </div>
+            </div>
+
+            <div class="profile-tabs">
+                <div class="profile-tab active" data-tab="reviews">Anime & Manga</div>
+                <div class="profile-tab" data-tab="collection">Collection</div>
+            </div>
+
+            <div class="profile-content">
+                <!-- Section Collection -->
+                <div class="profile-section collection-section" id="collection-section" style="display: none;">
+                    <!-- Filtres par statut -->
+                    <div class="status-filters">
+                        <button class="status-filter active" data-status="all">
+                            <i class="fas fa-list"></i>
+                            <span>Tous</span>
+                        </button>
+                        <button class="status-filter" data-status="watching">
+                            <i class="fas fa-play"></i>
+                            <span>En cours</span>
+                        </button>
+                        <button class="status-filter" data-status="completed">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Terminé</span>
+                        </button>
+                        <button class="status-filter" data-status="on-hold">
+                            <i class="fas fa-pause"></i>
+                            <span>En pause</span>
+                        </button>
+                        <button class="status-filter" data-status="dropped">
+                            <i class="fas fa-times-circle"></i>
+                            <span>Abandonné</span>
+                        </button>
+                        <button class="status-filter" data-status="plan-to-watch">
+                            <i class="fas fa-eye"></i>
+                            <span>À voir</span>
+                        </button>
+                    </div>
+
+                    <!-- Filtres par type d'œuvre -->
+                    <div class="type-filters">
+                        <button class="type-filter active" data-type="all">
+                            <i class="fas fa-th-large"></i>
+                            <span>Tous les types</span>
+                        </button>
+                        <button class="type-filter" data-type="anime">
+                            <i class="fas fa-tv"></i>
+                            <span>Anime</span>
+                        </button>
+                        <button class="type-filter" data-type="manga">
+                            <i class="fas fa-book"></i>
+                            <span>Manga</span>
+                        </button>
+                        <button class="type-filter" data-type="roman">
+                            <i class="fas fa-scroll"></i>
+                            <span>Roman</span>
+                        </button>
+                        <button class="type-filter" data-type="doujin">
+                            <i class="fas fa-pen-fancy"></i>
+                            <span>Doujin</span>
+                        </button>
+                        <button class="type-filter" data-type="manhwa">
+                            <i class="fas fa-book-open"></i>
+                            <span>Manhwa</span>
+                        </button>
+                        <button class="type-filter" data-type="manhua">
+                            <i class="fas fa-bookmark"></i>
+                            <span>Manhua</span>
+                        </button>
+                        <button class="type-filter" data-type="film">
+                            <i class="fas fa-film"></i>
+                            <span>Film</span>
+                        </button>
+                    </div>
+
+                    <!-- Statistiques -->
+                    <div class="list-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon watching">
+                                <i class="fas fa-play"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="watching-count">0</span>
+                                <span class="stat-label">En cours</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon completed">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="completed-count">0</span>
+                                <span class="stat-label">Terminé</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon on-hold">
+                                <i class="fas fa-pause"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="on-hold-count">0</span>
+                                <span class="stat-label">En pause</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon dropped">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="dropped-count">0</span>
+                                <span class="stat-label">Abandonné</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon plan-to-watch">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-number" id="plan-to-watch-count">0</span>
+                                <span class="stat-label">À voir</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Liste des items -->
+                    <div class="list-content">
+                        <div id="collection-items" class="list-grid"></div>
+
+                        <!-- Message si la liste est vide -->
+                        <div id="empty-collection" class="empty-list" style="display: none; max-width: 2000px; margin: 0 auto; padding: 20px; width: 100%; box-sizing: border-box;">
+                            <div class="empty-icon">
+                                <i class="fas fa-heart-broken"></i>
+                            </div>
+                            <h3>Aucun élément dans cette collection</h3>
+                            <p>Commencez à ajouter des animes et mangas à votre collection !</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Avis (Anime & Manga : affichée par défaut) -->
+                <div class="profile-section active" id="reviews-section">
+                    <!-- Garder uniquement le séparateur et les boutons de tri -->
+                    <div style="width:100%;height:12px;background:#23262f;margin:2.5rem 0 2.5rem 0;border-radius:6px;"></div>
+                    <div style="width:100%;display:flex;justify-content:center;">
+                        <div style="background:transparent;border-radius:14px;box-shadow:none;display:flex;flex-direction:row;align-items:center;justify-content:center;min-width:320px;max-width:600px;padding:2.2rem 1.2rem 2rem 1.2rem;gap:1.5rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Tier List - Masquée temporairement -->
+                <div class="profile-section" id="tierlist-section" style="display: none;">
+                    <!-- Section désactivée -->
+                </div>
+            </div>
+        </div>
+        <div id="error-message" class="error-message" style="display: none;">
+            <h2>Utilisateur introuvable</h2>
+            <p>L'utilisateur que vous recherchez n'existe pas.</p>
+            <a href="acceuil.html" style="color: #00b894; text-decoration: underline;">Retour à l'accueil</a>
+        </div>
+    </main>
+
+    <script src="/js/user-profile.js"></script>
+    <script src="/js/search.js"></script>
+    <script src="/js/hamburger-menu.js"></script>
+    <script src="/js/messaging.js" type="module"></script>
+    <script>
+        // Gestion de l'en-tête unifié
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestion du sélecteur de recherche
+            const searchType = document.getElementById('searchType');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchType && searchInput) {
+                const placeholders = {
+                    'anime': 'Rechercher un anime...',
+                    'manga': 'Rechercher un manga...',
+                    'movie': 'Rechercher un film...',
+                    'manhwa': 'Rechercher un manhwa...',
+                    'manhua': 'Rechercher un manhua...',
+                    'user': 'Rechercher un utilisateur...'
+                };
+                
+                searchType.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    searchInput.placeholder = placeholders[selectedType] || 'Rechercher...';
+                });
+                
+                searchInput.placeholder = placeholders[searchType.value] || 'Rechercher...';
+            }
+            
+            // Mettre à jour l'avatar de l'utilisateur connecté dans le header
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (user && user.email && userAvatar) {
+                const avatarKey = 'avatar_' + user.email;
+                const storedAvatar = localStorage.getItem(avatarKey);
+                if (storedAvatar) {
+                    userAvatar.src = storedAvatar;
+                } else if (user.picture) {
+                    userAvatar.src = user.picture;
+                }
+            }
+            
+            // Gestionnaire de recherche
+            const searchForm = document.getElementById('searchForm');
+            if (searchForm) {
+                searchForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const query = document.getElementById('searchInput').value.trim();
+                    if (query) {
+                        const selectedType = searchType.value;
+                        if (selectedType === 'user') {
+                            window.location.href = `manga-database.html?search=${encodeURIComponent(query)}&type=user`;
+                        } else {
+                            window.location.href = `manga-database.html?search=${encodeURIComponent(query)}`;
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
+                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières">
+                    <img src="/images/Flag_of_Palestine.png" alt="Drapeau Palestine - Faire un don MSF" class="palestine-flag">
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.localization && typeof window.localization.applyLanguage === 'function') {
+                window.localization.applyLanguage();
+            }
+        });
+    </script>
+    
+    <!-- Modal de signalement -->
+    <div id="report-modal" class="report-modal" style="display: none;">
+        <div class="report-modal-content">
+            <div class="report-modal-header">
+                <h3 data-i18n="profile.report.title">Signaler cet utilisateur</h3>
+                <button class="report-modal-close" id="report-modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="report-modal-body">
+                <p class="report-modal-subtitle" data-i18n="profile.report.subtitle">Pourquoi signalez-vous cet utilisateur ?</p>
+                <div class="report-reasons">
+                    <label class="report-reason-item">
+                        <input type="radio" name="report-reason" value="harassment">
+                        <span data-i18n="profile.report.reason.harassment">Harcèlement ou comportement toxique</span>
+                    </label>
+                    <label class="report-reason-item">
+                        <input type="radio" name="report-reason" value="spam">
+                        <span data-i18n="profile.report.reason.spam">Spam ou publicité non sollicitée</span>
+                    </label>
+                    <label class="report-reason-item">
+                        <input type="radio" name="report-reason" value="inappropriate">
+                        <span data-i18n="profile.report.reason.inappropriate">Contenu offensant ou inapproprié</span>
+                    </label>
+                    <label class="report-reason-item">
+                        <input type="radio" name="report-reason" value="fake">
+                        <span data-i18n="profile.report.reason.fake">Compte impersonnant quelqu'un d'autre</span>
+                    </label>
+                    <label class="report-reason-item">
+                        <input type="radio" name="report-reason" value="other">
+                        <span data-i18n="profile.report.reason.other">Autre raison</span>
+                    </label>
+                </div>
+                <div class="report-comment" id="report-comment" style="display: none; margin-top: 15px;">
+                    <label data-i18n="profile.report.comment.label">Détails (optionnel)</label>
+                    <textarea id="report-comment-text" placeholder="Décrivez le problème..." rows="4" style="
+                        width: 100%;
+                        padding: 10px;
+                        background: rgba(255, 255, 255, 0.1);
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                        border-radius: 8px;
+                        color: var(--light, #fff);
+                        font-family: inherit;
+                        resize: vertical;
+                        margin-top: 8px;
+                    "></textarea>
+                </div>
+                <div class="report-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                    <button class="report-block-btn" id="report-block-btn" data-i18n="profile.report.block">Bloquer</button>
+                    <button class="report-submit-btn" id="report-submit-btn" data-i18n="profile.report.submit">Signaler</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

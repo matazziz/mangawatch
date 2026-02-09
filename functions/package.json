@@ -1,0 +1,14 @@
+{
+  "name": "mangawatch-functions",
+  "description": "Cloud Functions pour MangaWatch - notification email ticket d'aide",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^11.11.0",
+    "firebase-functions": "^4.5.0",
+    "@sendgrid/mail": "^7.7.0"
+  },
+  "private": true
+}

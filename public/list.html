@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MangaWatch - Ma Collection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/list.css">
+    <link rel="stylesheet" href="/css/messaging.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    if (user.customAvatar) avatarUrl = user.customAvatar;
+                    else if (user.avatar) avatarUrl = user.avatar;
+                    else if (user.originalAvatar) avatarUrl = user.originalAvatar;
+                    else if (user.picture) avatarUrl = user.picture;
+                    else {
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) avatarUrl = storedAvatar;
+                    }
+                    if (avatarUrl && avatarUrl !== '/images/logo.png') {
+                        const img = new Image();
+                        img.src = avatarUrl;
+                        function updateAvatarSrc() {
+                            const avatarElement = document.getElementById('user-avatar');
+                            if (avatarElement) avatarElement.src = avatarUrl;
+                            else setTimeout(updateAvatarSrc, 10);
+                        }
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', updateAvatarSrc);
+                        } else {
+                            updateAvatarSrc();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Erreur lors du préchargement de l\'avatar:', e);
+            }
+        })();
+    </script>
+    <script src="/js/localization.js"></script>
+</head>
+<body>
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+            <select id="searchType" class="search-type-selector">
+                <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                <option value="anime" data-i18n="search.type.anime">Anime</option>
+                <option value="movie" data-i18n="search.type.movie">Film</option>
+                <option value="user" data-i18n="search.type.user">Utilisateur</option>
+            </select>
+                <input type="text" placeholder="Rechercher un manga..." id="searchInput" autocomplete="new-password" name="collection-search" spellcheck="false">
+                <button type="submit" aria-label="Rechercher">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <!-- Résultats de recherche -->
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="list.html" class="active" data-i18n="nav.collection">Collection</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+        
+        <!-- Conteneur pour les éléments de droite -->
+        <div class="header-right">
+            <!-- Bouton hamburger pour mobile -->
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <!-- Avatar utilisateur -->
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="/images/logo.png" alt="Avatar utilisateur" class="user-avatar" onerror="this.src='/images/logo.png'">
+            </a>
+        </div>
+    </header>
+
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html" class="active">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+        </nav>
+    </div>
+
+    <main class="list-container">
+        <div class="container">
+            <div class="list-header">
+                <h1 class="page-title">
+                    <i class="fas fa-bookmark"></i>
+                    <span data-i18n="collection.title">Ma Collection</span>
+                </h1>
+                <p class="list-subtitle" data-i18n="collection.subtitle">Gérez vos mangas et animes préférés</p>
+            </div>
+
+            <!-- Filtres par statut -->
+            <div class="status-filters">
+                <button class="status-filter active" data-status="all">
+                    <i class="fas fa-list"></i>
+                    <span data-i18n="collection.filter.all">Tous</span>
+                </button>
+                <button class="status-filter" data-status="watching">
+                    <i class="fas fa-play"></i>
+                    <span data-i18n="collection.filter.watching">En cours</span>
+                </button>
+                <button class="status-filter" data-status="completed">
+                    <i class="fas fa-check-circle"></i>
+                    <span data-i18n="collection.filter.completed">Terminé</span>
+                </button>
+                <button class="status-filter" data-status="on-hold">
+                    <i class="fas fa-pause"></i>
+                    <span data-i18n="collection.filter.on_hold">En pause</span>
+                </button>
+                <button class="status-filter" data-status="dropped">
+                    <i class="fas fa-times-circle"></i>
+                    <span data-i18n="collection.filter.dropped">Abandonné</span>
+                </button>
+                <button class="status-filter" data-status="plan-to-watch">
+                    <i class="fas fa-eye"></i>
+                    <span data-i18n="collection.filter.plan_to_watch">À voir</span>
+                </button>
+            </div>
+
+            <!-- Filtres par type d'œuvre -->
+            <div class="type-filters">
+                <button class="type-filter active" data-type="all">
+                    <i class="fas fa-th-large"></i>
+                    <span data-i18n="collection.type.all">Tous les types</span>
+                </button>
+                <button class="type-filter" data-type="anime">
+                    <i class="fas fa-tv"></i>
+                    <span data-i18n="collection.type.anime">Anime</span>
+                </button>
+                <button class="type-filter" data-type="manga">
+                    <i class="fas fa-book"></i>
+                    <span data-i18n="collection.type.manga">Manga</span>
+                </button>
+                <button class="type-filter" data-type="roman">
+                    <i class="fas fa-scroll"></i>
+                    <span data-i18n="collection.type.roman">Roman</span>
+                </button>
+                <button class="type-filter" data-type="doujin">
+                    <i class="fas fa-pen-fancy"></i>
+                    <span data-i18n="collection.type.doujin">Doujin</span>
+                </button>
+                <button class="type-filter" data-type="manhwa">
+                    <i class="fas fa-book-open"></i>
+                    <span data-i18n="collection.type.manhwa">Manhwa</span>
+                </button>
+                <button class="type-filter" data-type="manhua">
+                    <i class="fas fa-bookmark"></i>
+                    <span data-i18n="collection.type.manhua">Manhua</span>
+                </button>
+                <button class="type-filter" data-type="film">
+                    <i class="fas fa-film"></i>
+                    <span data-i18n="collection.type.film">Film</span>
+                </button>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="list-stats">
+                <div class="stat-card">
+                    <div class="stat-icon watching">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="watching-count">0</span>
+                        <span class="stat-label" data-i18n="collection.stats.watching">En cours</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon completed">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="completed-count">0</span>
+                        <span class="stat-label" data-i18n="collection.stats.completed">Terminé</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon on-hold">
+                        <i class="fas fa-pause"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="on-hold-count">0</span>
+                        <span class="stat-label" data-i18n="collection.stats.on_hold">En pause</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon dropped">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="dropped-count">0</span>
+                        <span class="stat-label" data-i18n="collection.stats.dropped">Abandonné</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon plan-to-watch">
+                        <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number" id="plan-to-watch-count">0</span>
+                        <span class="stat-label" data-i18n="collection.stats.plan_to_watch">À voir</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Liste des items -->
+            <div class="list-content">
+                <div id="list-items" class="list-grid">
+                    <!-- Les items seront chargés ici par JavaScript -->
+                </div>
+
+                <!-- Pagination -->
+                <div id="pagination-container" class="pagination-container" style="display: none;">
+                    <div class="pagination-info">
+                        <span id="pagination-text">Affichage de 1-120 sur 0 items</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button id="prev-page" class="pagination-btn" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                            <span data-i18n="collection.pagination.previous">Précédent</span>
+                        </button>
+                        <div class="page-numbers" id="page-numbers">
+                            <!-- Les numéros de page seront générés ici -->
+                        </div>
+                        <button id="next-page" class="pagination-btn">
+                            <span data-i18n="collection.pagination.next">Suivant</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Message si la liste est vide -->
+                <div id="empty-list" class="empty-list" style="display: none;">
+                    <div class="empty-icon">
+                        <i class="fas fa-heart-broken"></i>
+                    </div>
+                    <h3 data-i18n="collection.empty.title">Votre liste est vide</h3>
+                    <p data-i18n="collection.empty.subtitle">Commencez à ajouter des mangas et animes à votre liste !</p>
+                    <a href="manga-database.html" class="cta-button">
+                        <i class="fas fa-search"></i>
+                        <span data-i18n="collection.empty.cta">Découvrir des mangas</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal pour changer le statut -->
+    <div id="status-modal" class="status-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="collection.status_modal.title">Changer le statut</h3>
+                <button class="close-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="status-options">
+                    <button class="status-option" data-status="watching">
+                        <div class="status-icon watching">
+                            <i class="fas fa-play"></i>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-name" data-i18n="collection.status.watching">En cours</span>
+                            <span class="status-desc" data-i18n="collection.status.watching_desc">Vous regardez actuellement</span>
+                        </div>
+                    </button>
+                    <button class="status-option" data-status="completed">
+                        <div class="status-icon completed">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-name" data-i18n="collection.status.completed">Terminé</span>
+                            <span class="status-desc" data-i18n="collection.status.completed_desc">Vous avez terminé</span>
+                        </div>
+                    </button>
+                    <button class="status-option" data-status="on-hold">
+                        <div class="status-icon on-hold">
+                            <i class="fas fa-pause"></i>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-name" data-i18n="collection.status.on_hold">En pause</span>
+                            <span class="status-desc" data-i18n="collection.status.on_hold_desc">Vous avez mis en pause</span>
+                        </div>
+                    </button>
+                    <button class="status-option" data-status="dropped">
+                        <div class="status-icon dropped">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-name" data-i18n="collection.status.dropped">Abandonné</span>
+                            <span class="status-desc" data-i18n="collection.status.dropped_desc">Vous avez abandonné</span>
+                        </div>
+                    </button>
+                    <button class="status-option" data-status="plan-to-watch">
+                        <div class="status-icon plan-to-watch">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="status-info">
+                            <span class="status-name" data-i18n="collection.status.plan_to_watch">À voir</span>
+                            <span class="status-desc" data-i18n="collection.status.plan_to_watch_desc">Vous voulez regarder</span>
+                        </div>
+                    </button>
+                </div>
+                <!-- Champ pour indiquer où l'utilisateur s'est arrêté (visible uniquement pour on-hold et dropped) -->
+                <div id="stopped-at-container" class="stopped-at-container" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <label for="stopped-at-input" style="display: block; color: var(--light); margin-bottom: 10px; font-weight: 600;" data-i18n="collection.stopped_at.label">
+                        Où vous êtes-vous arrêté ?
+                    </label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input 
+                            type="number" 
+                            id="stopped-at-input" 
+                            min="1" 
+                            placeholder="0" 
+                            style="
+                                flex: 1;
+                                padding: 12px;
+                                background: rgba(255, 255, 255, 0.1);
+                                border: 1px solid rgba(255, 255, 255, 0.2);
+                                border-radius: 8px;
+                                color: var(--light);
+                                font-size: 16px;
+                            "
+                        >
+                        <span id="stopped-at-label" style="color: var(--light-gray); min-width: 80px;" data-i18n="collection.stopped_at.episode">épisode</span>
+                    </div>
+                    <p style="color: var(--light-gray); font-size: 0.85rem; margin-top: 8px;" data-i18n="collection.stopped_at.hint">
+                        Indiquez le numéro d'épisode ou de chapitre où vous vous êtes arrêté
+                    </p>
+                    <button id="confirm-status-btn" class="confirm-status-btn" style="
+                        display: none;
+                        margin-top: 15px;
+                        width: 100%;
+                        padding: 12px;
+                        background: #00b894;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    " data-i18n="collection.confirm_status" onmouseover="this.style.background='#00a085'" onmouseout="this.style.background='#00b894'">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright">&copy;</span>2025
+                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières">
+                    <img src="/images/Flag_of_Palestine.png" alt="Drapeau Palestine - Faire un don MSF" class="palestine-flag">
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/list.js"></script>
+    <script src="/js/search.js"></script>
+    <script src="/js/hamburger-menu.js"></script>
+    <!-- Système de messagerie -->
+    <script src="/js/messaging.js" type="module"></script>
+    <script>
+        // Gestion du sélecteur de recherche
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchType = document.getElementById('searchType');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchType && searchInput) {
+                const placeholders = {
+                    'anime': 'Rechercher un anime...',
+                    'manga': 'Rechercher un manga...',
+                    'movie': 'Rechercher un film...',
+                    'manhwa': 'Rechercher un manhwa...',
+                    'manhua': 'Rechercher un manhua...',
+                    'user': 'Rechercher un utilisateur...'
+                };
+                
+                // Changer le placeholder selon le type sélectionné
+                searchType.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    searchInput.placeholder = placeholders[selectedType] || 'Rechercher...';
+                });
+                
+                // Initialiser le placeholder au chargement
+                searchInput.placeholder = placeholders[searchType.value] || 'Rechercher...';
+            }
+            
+            // Charger l'avatar utilisateur
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (user && user.email && userAvatar) {
+                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé
+                const avatarKey = 'avatar_' + user.email;
+                const storedAvatar = localStorage.getItem(avatarKey);
+                
+                if (storedAvatar) {
+                    userAvatar.src = storedAvatar;
+                } else if (user.avatar) {
+                    userAvatar.src = user.avatar;
+                } else if (user.picture) {
+                    userAvatar.src = user.picture;
+                } else {
+                    userAvatar.src = '/images/logo.png';
+                }
+            } else if (userAvatar) {
+                userAvatar.src = '/images/logo.png';
+            }
+            
+            // Initialiser la localisation
+            if (window.localization) {
+                window.localization.init();
+                window.localization.applyLanguage();
+            }
+            
+            // Test de la traduction automatique après un délai
+            setTimeout(() => {
+                const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
+                console.log('🔄 Test de traduction automatique de la page collection...');
+                if (window.translateCollectionPage) {
+                    window.translateCollectionPage(currentLanguage);
+                }
+            }, 300);
+        });
+    </script>
+</body>
+</html> 

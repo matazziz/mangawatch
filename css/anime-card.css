@@ -1,0 +1,54 @@
+/* Styles pour l'affichage horizontal des anime cards (style-plus-anime-card) */
+
+[id^="star-containers"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  flex-direction: row !important;
+  gap: 2rem !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+  max-width: 1100px !important;
+  margin: 0 auto !important;
+}
+
+.catalogue-card[data-anime-id] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 0 0 calc(33.333% - 2rem) !important;
+  width: calc(33.333% - 2rem) !important;
+  max-width: 340px !important;
+  box-sizing: border-box !important;
+}
+
+/* Animation slide/fade pour le container de genres */
+#genre-sort-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 20px auto 48px auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+  padding: 48px 48px;
+  background: #2a2d36;
+  border-radius: 24px;
+  border: 2px solid #00b89433;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(.4,2,.6,1), opacity 0.35s;
+}
+#genre-sort-container.open {
+  max-height: 10000px !important;
+  opacity: 1 !important;
+}
+#genre-sort-container button {
+  font-size: 1.15rem;
+  padding: 14px 28px;
+  border-radius: 12px;
+}
+
+#sort-by-genre-btn.genre-open {
+  margin-bottom: 24px !important;
+} 

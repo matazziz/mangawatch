@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion confirmée - {{appName}}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #00b894, #00a085);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .greeting {
+            font-size: 1.5rem;
+            color: #00b894;
+            margin-bottom: 20px;
+        }
+        .message {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            color: #555;
+        }
+        .login-info {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 4px solid #00b894;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .info-value {
+            color: #6c757d;
+        }
+        .security-tip {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        .security-tip h4 {
+            color: #856404;
+            margin-top: 0;
+        }
+        .security-tip p {
+            color: #856404;
+            margin-bottom: 0;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #00b894, #00a085);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 20px 0;
+            transition: transform 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .unsubscribe {
+            font-size: 0.9rem;
+            color: #95a5a6;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">{{appName}}</div>
+            <div class="subtitle">Connexion sécurisée confirmée</div>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">🔐 Connexion confirmée, {{username}} !</div>
+            
+            <div class="message">
+                Votre connexion à MangaWatch a été confirmée avec succès. 
+                Vous pouvez maintenant profiter de toutes les fonctionnalités de la plateforme.
+            </div>
+            
+            <div class="login-info">
+                <h3 style="color: #00b894; margin-top: 0;">📋 Détails de la connexion :</h3>
+                
+                <div class="info-row">
+                    <span class="info-label">Utilisateur :</span>
+                    <span class="info-value">{{username}}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Date et heure :</span>
+                    <span class="info-value">{{loginTime}}</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Plateforme :</span>
+                    <span class="info-value">Web</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Statut :</span>
+                    <span class="info-value" style="color: #00b894;">✅ Connexion réussie</span>
+                </div>
+            </div>
+            
+            <div class="security-tip">
+                <h4>🔒 Conseils de sécurité :</h4>
+                <p>
+                    • Ne partagez jamais vos identifiants de connexion<br>
+                    • Déconnectez-vous après chaque session sur un ordinateur public<br>
+                    • Utilisez un mot de passe fort et unique<br>
+                    • Activez l'authentification à deux facteurs si disponible
+                </p>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{appUrl}}" class="cta-button">🚀 Continuer l'exploration</a>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 20px; background-color: #e8f5e8; border-radius: 10px; border-left: 4px solid #00b894;">
+                <strong>💡 Rappel :</strong> Vous pouvez modifier vos paramètres de sécurité et préférences dans votre profil à tout moment.
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div style="margin: 20px 0;">
+                <strong>{{appName}}</strong><br>
+                Votre passion, notre mission
+            </div>
+            
+            <div class="unsubscribe">
+                <a href="{{appUrl}}/unsubscribe" style="color: #95a5a6;">Se désabonner</a> | 
+                <a href="{{appUrl}}/contact" style="color: #95a5a6;">Nous contacter</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MangaWatch - Manga</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/header-unified-new.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/manga-database.css">
+    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    if (user.customAvatar) avatarUrl = user.customAvatar;
+                    else if (user.avatar) avatarUrl = user.avatar;
+                    else if (user.originalAvatar) avatarUrl = user.originalAvatar;
+                    else if (user.picture) avatarUrl = user.picture;
+                    else {
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) avatarUrl = storedAvatar;
+                    }
+                    if (avatarUrl && avatarUrl !== '') {
+                        const img = new Image();
+                        img.src = avatarUrl;
+                        function updateAvatarSrc() {
+                            const avatarElement = document.getElementById('user-avatar');
+                            if (avatarElement) avatarElement.src = avatarUrl;
+                            else setTimeout(updateAvatarSrc, 10);
+                        }
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', updateAvatarSrc);
+                        } else {
+                            updateAvatarSrc();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Erreur lors du préchargement de l\'avatar:', e);
+            }
+        })();
+    </script>
+    <script src="/js/localization.js"></script>
+    <style>
+        /* Masquer le contenu par défaut pour éviter le flash */
+        #manga-grid {
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body data-page="manga-database">
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+            <select id="searchType" class="search-type-selector">
+                <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                <option value="anime" data-i18n="search.type.anime">Anime</option>
+                <option value="movie" data-i18n="search.type.movie">Film</option>
+                <option value="user" data-i18n="search.type.user">Utilisateur</option>
+            </select>
+                <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="database-search" spellcheck="false">
+                <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <!-- Résultats de recherche -->
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" class="active" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="list.html" data-i18n="nav.collection">Collection</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+        
+        <!-- Conteneur pour les éléments de droite -->
+        <div class="header-right">
+            <!-- Bouton hamburger pour mobile -->
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <!-- Avatar utilisateur -->
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
+
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html" class="active">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+        </nav>
+    </div>
+
+    <main class="manga-database">
+        <div class="container">
+            <h1 class="page-title" data-i18n="catalogue.title.manga">Mangas</h1>
+            
+            <!-- Barre de recherche et filtres -->
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="" autocomplete="off" data-i18n-placeholder="search.placeholder.manga">
+                    <button id="search-button"><i class="fas fa-search"></i></button>
+                </div>
+                
+                <!-- Affichage du terme de recherche avec croix -->
+                <div id="search-term-display" class="search-term-display" style="display: none;">
+                    <span id="search-term-text"></span>
+                    <button id="clear-search-btn" class="clear-search-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="filters">
+                    <div class="filter-group">
+                        <label for="type-filter" data-i18n="type">Type</label>
+                        <select id="type-filter">
+                            <option value="manga" data-i18n="manga">Manga</option>
+<option value="anime" data-i18n="anime">Anime</option>
+<option value="novel" data-i18n="novel">Roman</option>
+<option value="doujin" data-i18n="doujin">Doujin</option>
+<option value="manhwa" data-i18n="manhwa">Manhwa</option>
+<option value="manhua" data-i18n="manhua">Manhua</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group" id="anime-type-filter" style="display: none;">
+                        <label for="anime-type-filter" data-i18n="anime_type">Type d'anime</label>
+                        <select id="anime-type-specific-filter">
+                            <option value="" data-i18n="all_anime_types">Tous les types d'anime</option>
+<option value="tv" data-i18n="tv">Anime</option>
+<option value="movie" data-i18n="movie">Film</option>
+<option value="ova" data-i18n="ova">OVA</option>
+<option value="special" data-i18n="special">Spécial</option>
+<option value="ona" data-i18n="ona">ONA</option>
+<option value="music" data-i18n="music">Vidéo musicale</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="status-filter" data-i18n="status">Statut</label>
+                        <select id="status-filter">
+                            <option value="" data-i18n="all_status">Tous les statuts</option>
+<option value="watching" data-i18n="watching">En cours</option>
+<option value="completed" data-i18n="completed">Terminé</option>
+<option value="on-hold" data-i18n="on_hold">En pause</option>
+<option value="dropped" data-i18n="dropped">Abandonné</option>
+<option value="plan-to-watch" data-i18n="plan_to_watch">À voir</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="rating-filter" data-i18n="rating">Note minimale</label>
+                        <select id="rating-filter">
+                <option value="0" data-i18n="all_ratings">Toutes notes</option>
+<option value="10" data-i18n="min_score_10">Note minimale 10</option>
+<option value="9" data-i18n="min_score_9">Note minimale 9</option>
+<option value="8" data-i18n="min_score_8">Note minimale 8</option>
+<option value="7" data-i18n="min_score_7">Note minimale 7</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="order-filter" data-i18n="sort">Trier par</label>
+                        <select id="order-filter">
+                            <option value="relevance" data-i18n="relevance">Pertinence</option>
+<option value="score" data-i18n="score">Meilleure note</option>
+<option value="popularity" data-i18n="popularity">Plus populaires</option>
+<option value="title" data-i18n="title">Ordre alphabétique</option>
+<option value="start_date" data-i18n="start_date">Date de sortie</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <button id="genre-sort-btn" class="genre-sort-btn" type="button">
+                            <i class="fas fa-tags"></i> <span data-i18n="genre_sort">Trier par genre</span>
+                        </button>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <button id="reset-filters-btn" class="reset-filters-btn" type="button">
+                            <i class="fas fa-undo"></i> <span data-i18n="reset">Réinitialiser</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Container des genres (caché par défaut) -->
+                <div id="genre-container" class="genre-container" style="display: none;">
+                    <div class="genre-grid">
+                        <!-- Les genres seront ajoutés ici par JavaScript -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Résultats de la recherche -->
+            <div id="manga-results">
+                <div class="manga-grid" id="manga-grid">
+                    <!-- Les cartes de mangas seront insérées ici par JavaScript -->
+                </div>
+                
+                <!-- Indicateur de chargement -->
+                <div id="loading" class="loading">
+                    <div class="loading-spinner"></div>
+                    <p data-i18n="message.loading">Chargement des mangas...</p>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <button id="prev-page" class="pagination-button" disabled>
+                        <i class="fas fa-chevron-left"></i> <span data-i18n="pagination.previous">Précédent</span>
+                    </button>
+                    <div id="page-numbers" class="page-numbers"></div>
+                    <button id="next-page" class="pagination-button">
+                        <span data-i18n="pagination.next">Suivant</span> <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Modal de détails du manga -->
+    <div id="manga-modal" class="manga-modal">
+        <div class="manga-modal-content">
+            <span class="close">&times;</span>
+            <div id="manga-details">
+                <!-- Les détails du manga seront insérés ici par JavaScript -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal pour le choix du statut -->
+    <div id="statusModal" class="status-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="collection.status_modal.title">Choisir un statut</h3>
+                <button class="close-modal" onclick="closeStatusModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="status-options">
+                    <div class="status-option" data-status="watching" onclick="updateItemStatus('watching')">
+                        <i class="fas fa-play-circle"></i>
+                        <span data-i18n="collection.status.watching">En cours</span>
+                    </div>
+                    <div class="status-option" data-status="completed" onclick="updateItemStatus('completed')">
+                        <i class="fas fa-check-circle"></i>
+                        <span data-i18n="collection.status.completed">Terminé</span>
+                    </div>
+                    <div class="status-option" data-status="on-hold" onclick="updateItemStatus('on-hold')">
+                        <i class="fas fa-pause-circle"></i>
+                        <span data-i18n="collection.status.on_hold">En pause</span>
+                    </div>
+                    <div class="status-option" data-status="dropped" onclick="updateItemStatus('dropped')">
+                        <i class="fas fa-times-circle"></i>
+                        <span data-i18n="collection.status.dropped">Abandonné</span>
+                    </div>
+                    <div class="status-option" data-status="plan-to-watch" onclick="updateItemStatus('plan-to-watch')">
+                        <i class="fas fa-eye"></i>
+                        <span data-i18n="collection.status.plan_to_watch">À voir</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pied de page -->
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright">&copy;</span>2025
+                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
+                        <!-- Triangle rouge à gauche -->
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <!-- Bande noire en haut -->
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <!-- Bande blanche au milieu -->
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <!-- Bande verte en bas -->
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket><i class="fas fa-circle-question"></i></a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    if (user.customAvatar) avatarUrl = user.customAvatar;
+                    else if (user.avatar) avatarUrl = user.avatar;
+                    else if (user.originalAvatar) avatarUrl = user.originalAvatar;
+                    else if (user.picture) avatarUrl = user.picture;
+                    else {
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) avatarUrl = storedAvatar;
+                    }
+                    if (avatarUrl && avatarUrl !== '') {
+                        const img = new Image();
+                        img.src = avatarUrl;
+                        function updateAvatarSrc() {
+                            const avatarElement = document.getElementById('user-avatar');
+                            if (avatarElement) avatarElement.src = avatarUrl;
+                            else setTimeout(updateAvatarSrc, 10);
+                        }
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', updateAvatarSrc);
+                        } else {
+                            updateAvatarSrc();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Erreur lors du préchargement de l\'avatar:', e);
+            }
+        })();
+    </script>
+    <script src="/js/localization.js"></script>
+    <script src="/js/fake-users-generator.js"></script>
+    <script src="/js/minorContentFilter.js"></script>
+    <script src="/js/search.js"></script>
+    <script src="/js/manga-database.js"></script>
+    <script src="/js/list.js"></script>
+    <script src="/js/hamburger-menu.js"></script>
+    <script src="/js/help-ticket.js"></script>
+    <!-- Système de messagerie -->
+    <link rel="stylesheet" href="/css/messaging.css">
+    <script src="/js/messaging.js" type="module"></script>
+    <script>
+        // Gestion du sélecteur de recherche
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchType = document.getElementById('searchType');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchType && searchInput) {
+                // Fonction pour obtenir la traduction
+                function t(key) {
+                    return window.localization ? window.localization.get(key) : key;
+                }
+                
+                // Fonction pour mettre à jour les options du select
+                function updateSelectOptions() {
+                    const options = searchType.querySelectorAll('option');
+                    options.forEach(option => {
+                        const value = option.value;
+                        option.textContent = t('search.type.' + value);
+                    });
+                }
+                
+                const placeholders = {
+                    'anime': t('search.placeholder.anime'),
+                    'manga': t('search.placeholder.manga'),
+                    'movie': t('search.placeholder.movie'),
+                    'manhwa': t('search.placeholder.manhwa'),
+                    'manhua': t('search.placeholder.manhua'),
+                    'user': t('search.placeholder.user')
+                };
+                
+                // Mettre à jour les options du select au chargement
+                updateSelectOptions();
+                
+                // Changer le placeholder selon le type sélectionné
+                searchType.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    searchInput.placeholder = placeholders[selectedType] || t('search.placeholder.generic');
+                });
+                
+                // Initialiser le placeholder au chargement
+                searchInput.placeholder = placeholders[searchType.value] || t('search.placeholder.generic');
+                
+                // Mettre à jour le placeholder et les options quand la langue change
+                document.addEventListener('languageChanged', function() {
+                    updateSelectOptions();
+                    const updatedPlaceholders = {
+                        'anime': t('search.placeholder.anime'),
+                        'manga': t('search.placeholder.manga'),
+                        'movie': t('search.placeholder.movie'),
+                        'manhwa': t('search.placeholder.manhwa'),
+                        'manhua': t('search.placeholder.manhua'),
+                        'user': t('search.placeholder.user')
+                    };
+                    searchInput.placeholder = updatedPlaceholders[searchType.value] || t('search.placeholder.generic');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

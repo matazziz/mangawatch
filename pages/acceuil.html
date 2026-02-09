@@ -1,0 +1,3104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MangaWatch - Accueil</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/header-unified-new.css">
+    <link rel="stylesheet" href="../css/home-deathnote.css">
+    <link rel="stylesheet" href="../css/footer-unified.css">
+    <link rel="stylesheet" href="../css/messaging.css">
+    <link rel="stylesheet" href="../css/firebase-popup-fix.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <script>
+        (function() {
+            // Charger l'avatar avant que la page ne s'affiche
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    
+                    // Prioriser l'avatar personnalisé (le plus récent)
+                    if (user.customAvatar) {
+                        avatarUrl = user.customAvatar;
+                    } else if (user.avatar) {
+                        avatarUrl = user.avatar;
+                    } else if (user.originalAvatar) {
+                        avatarUrl = user.originalAvatar;
+                    } else if (user.picture) {
+                        avatarUrl = user.picture;
+                    } else {
+                        // En dernier recours, vérifier le localStorage
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) {
+                            avatarUrl = storedAvatar;
+                        }
+                    }
+                    
+                    // Si on a trouvé un avatar, le précharger et mettre à jour le src par défaut
+                    if (avatarUrl && avatarUrl !== '') {
+                        // Précharger l'image
+                        const img = new Image();
+                        img.src = avatarUrl;
+                        
+                        // Mettre à jour le src de l'image dans le DOM dès qu'il est disponible
+                        function updateAvatarSrc() {
+                            const avatarElement = document.getElementById('user-avatar');
+                            if (avatarElement) {
+                                avatarElement.src = avatarUrl;
+                            } else {
+                                // Si l'élément n'existe pas encore, réessayer
+                                setTimeout(updateAvatarSrc, 10);
+                            }
+                        }
+                        
+                        // Démarrer la mise à jour immédiatement
+                        if (document.readyState === 'loading') {
+                            document.addEventListener('DOMContentLoaded', updateAvatarSrc);
+                        } else {
+                            updateAvatarSrc();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Erreur lors du préchargement de l\'avatar:', e);
+            }
+        })();
+    </script>
+    
+    <style>
+        /* Modals d'authentification - Erreur et Succès */
+        .auth-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 10500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .auth-modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        /* Style pour le bouton de déconnexion - Retiré du header, maintenant uniquement dans les paramètres du profil */
+        
+        .auth-modal {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            transform: scale(0.9) translateY(20px);
+            transition: transform 0.3s ease;
+            animation: modalSlideIn 0.3s ease forwards;
+        }
+        
+        .auth-modal-overlay.active .auth-modal {
+            transform: scale(1) translateY(0);
+        }
+        
+        @keyframes modalSlideIn {
+            from {
+                transform: scale(0.9) translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .auth-modal-header {
+            padding: 2rem 2rem 1rem 2rem;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .auth-modal-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            animation: iconPulse 0.6s ease;
+        }
+        
+        @keyframes iconPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+        }
+        
+        .auth-modal-icon.error-icon {
+            background: #2a2d36;
+            color: #f5f6fa;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .auth-modal-icon.success-icon {
+            background: #2a2d36;
+            color: #f5f6fa;
+            border: 3px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .auth-modal-title {
+            color: #f5f6fa;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+            letter-spacing: 0.5px;
+        }
+        
+        .auth-modal-body {
+            padding: 1.5rem 2rem;
+            text-align: center;
+        }
+        
+        .auth-modal-message {
+            color: #e0e0e0;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin: 0;
+            font-weight: 400;
+        }
+        
+        .auth-modal-actions {
+            padding: 1.5rem 2rem 2rem 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .auth-modal-btn {
+            padding: 0.9rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-modal-btn-primary {
+            background: #2a2d36;
+            color: #f5f6fa;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        
+        .auth-modal-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            background: #3d4048;
+        }
+        
+        .auth-modal-btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .auth-modal-btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .auth-modal-btn-primary:hover::before {
+            left: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- En-tête unifié -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+                <select id="searchType" class="search-type-selector">
+                    <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                    <option value="anime" data-i18n="search.type.anime">Anime</option>
+                    <option value="movie" data-i18n="search.type.movie">Film</option>
+                    <option value="user" data-i18n="search.type.user">Utilisateur</option>
+                </select>
+                <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="manga-search" spellcheck="false">
+                <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <!-- Résultats de recherche -->
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
+            <a href="acceuil.html" class="active" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="list.html" data-i18n="nav.collection">Collection</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+        
+        <!-- Conteneur pour les éléments de droite -->
+        <div class="header-right">
+            <!-- Bouton hamburger pour mobile -->
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <!-- Avatar utilisateur -->
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="" data-i18n-alt="common.avatar_user" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
+
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html" class="active">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Contenu principal -->
+    <main class="main-container">
+        <!-- Section héro -->
+        <section class="hero-section">
+            <h1 class="hero-title glow-text">MangaWatch</h1>
+            <p class="hero-subtitle" data-i18n="home.hero_subtitle">Votre destination ultime pour suivre et noter vos animes et mangas préférés</p>
+            <div class="cta-buttons">
+                <a href="manga-database.html" class="cta-button" data-i18n="home.explore">Explorer la collection</a>
+                <a href="list.html" class="cta-button secondary" data-i18n="nav.collection">Ma collection</a>
+            </div>
+        </section>
+
+        <!-- Section fonctionnalités -->
+        <section class="section">
+            <h2 class="section-title" data-i18n="home.why_choose">Pourquoi choisir MangaWatch ?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h3 class="feature-title" data-i18n="home.feature_catalogue_title">Catalogue Complet</h3>
+                    <p class="feature-description" data-i18n="home.feature_catalogue_desc">Accédez à une vaste collection d'animes et de mangas, des classiques intemporels aux dernières sorties.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h3 class="feature-title" data-i18n="home.feature_rating_title">Notation Intelligente</h3>
+                    <p class="feature-description" data-i18n="home.feature_rating_desc">Notez et évaluez vos œuvres préférées pour aider la communauté à découvrir des pépites.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bookmark"></i>
+                    </div>
+                    <h3 class="feature-title" data-i18n="nav.collection">Collection Personnalisée</h3>
+                    <p class="feature-description">Organisez et suivez vos animes et mangas préférés dans votre collection personnelle.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Auteur de la semaine -->
+        <section class="section">
+            <h2 class="section-title" data-i18n="home.author_of_week">Auteur de la Semaine</h2>
+            <div class="author-of-week-container" id="authorOfWeekContainer">
+                <!-- Le contenu sera chargé dynamiquement depuis la base de données -->
+            </div>
+        </section>
+
+        <!-- Quiz du jour -->
+        <section class="section">
+            <h2 class="section-title" data-i18n="home.quiz_title">Quiz du Jour</h2>
+            <div class="quiz-container" id="quizContainer">
+                <!-- Le contenu sera chargé dynamiquement depuis la base de données -->
+            </div>
+        </section>
+
+        <!-- Nouveaux utilisateurs -->
+        <section class="section">
+            <h2 class="section-title" data-i18n="home.new_users">Nouveaux utilisateurs</h2>
+            <div class="new-users-container" id="newUsersContainer">
+                <!-- Le contenu sera chargé dynamiquement -->
+            </div>
+        </section>
+
+        <!-- Vote du jour -->
+        <section class="section vote-section">
+            <h2 class="section-title" data-i18n="home.vote_of_day">Vote du Jour</h2>
+            <p class="vote-description" id="voteDescription">Chargement...</p>
+            <div class="vote-type-indicator" id="voteTypeIndicator" style="display: none;">
+                <!-- Le badge de type sera affiché ici -->
+            </div>
+            <div class="vote-container" id="voteContainer">
+                <!-- Loading state -->
+                <div class="vote-loading" id="voteLoading">
+                    <div class="loading-spinner"></div>
+                    <p data-i18n="common.loading_vote_options">Chargement des options de vote...</p>
+                </div>
+                
+                <!-- Vote options will be loaded dynamically -->
+                <div class="vote-options" id="voteOptions" style="display: none;">
+                    <!-- Les options de vote seront chargées dynamiquement depuis l'API -->
+                </div>
+                
+                <!-- Vote results -->
+                <div class="vote-results" id="voteResults" style="display: none;">
+                    <h3 class="results-title" data-i18n="home.vote_results">Résultats du vote</h3>
+                    <div class="results-chart" id="resultsChart">
+                        <!-- Les résultats seront générés dynamiquement -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Popup élégant pour les messages -->
+        <div class="elegant-popup" id="elegantPopup">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <div class="popup-icon" id="popupIcon">⚠️</div>
+                    <button class="popup-close" id="popupClose">&times;</button>
+                </div>
+                <div class="popup-body">
+                    <h3 class="popup-title" id="popupTitle" data-i18n="common.message">Message</h3>
+                    <p class="popup-message" id="popupMessage" data-i18n="common.message_content">Contenu du message</p>
+                </div>
+                <div class="popup-footer">
+                    <button class="popup-button" id="popupButton" data-i18n="common.understood">Compris</button>
+                </div>
+            </div>
+        </div>
+
+
+
+
+    </main>
+
+    <!-- Footer unifié MangaWatch -->
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <!-- Copyright à gauche -->
+            <div class="footer-copyright-text">
+                <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
+                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
+                        <!-- Triangle rouge à gauche -->
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <!-- Bande noire en haut -->
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <!-- Bande blanche au milieu -->
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <!-- Bande verte en bas -->
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            
+            <!-- Réseaux sociaux au centre -->
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket data-i18n-title="help.title">
+                    <i class="fas fa-circle-question"></i>
+                </a>
+            </div>
+            
+            <!-- Pseudos à droite -->
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=katty-perry" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="../js/session.js"></script>
+    <script>
+        // Fonction de traduction (utilise le système de localisation)
+        // Note: La fonction t() globale est définie dans localization.js
+        // Cette fonction locale sert de fallback si localization.js n'est pas encore chargé
+        function tLocal(key) {
+            if (window.localization) {
+                return window.localization.get(key);
+            }
+            // Fallback en français si la traduction n'est pas disponible
+            const translations = {
+                'home.vote_already_voted_today': 'Vous avez déjà voté aujourd\'hui !',
+                'home.vote_reset_tomorrow': 'Vous pouvez réinitialiser le vote demain !'
+            };
+            return translations[key] || key;
+        }
+        
+        // Utiliser la fonction globale t() si disponible, sinon utiliser la locale
+        function t(key) {
+            return window.t ? window.t(key) : tLocal(key);
+        }
+        
+        // Gestion du sélecteur de recherche
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchType = document.getElementById('searchType');
+            const searchInput = document.getElementById('searchInput');
+            
+            if (searchType && searchInput) {
+          const placeholders = {
+            'anime': t('search.placeholder.anime'),
+            'manga': t('search.placeholder.manga'),
+            'movie': t('search.placeholder.movie'),
+            'user': t('search.placeholder.user')
+          };
+                
+                // Changer le placeholder selon le type sélectionné
+                searchType.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    searchInput.placeholder = placeholders[selectedType] || t('search.placeholder.generic');
+                });
+                
+                // Initialiser le placeholder au chargement
+                searchInput.placeholder = placeholders[searchType.value] || t('search.placeholder.generic');
+                
+                // Mettre à jour le placeholder quand la langue change
+                document.addEventListener('languageChanged', function() {
+                    const updatedPlaceholders = {
+                        'anime': t('search.placeholder.anime'),
+                        'manga': t('search.placeholder.manga'),
+                        'movie': t('search.placeholder.movie'),
+                        'user': t('search.placeholder.user')
+                    };
+                    searchInput.placeholder = updatedPlaceholders[searchType.value] || t('search.placeholder.generic');
+                });
+            }
+        });
+        
+        // Gestion du menu mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (menuToggle && navLinks) {
+                menuToggle.addEventListener('click', function() {
+                    navLinks.classList.toggle('active');
+                    this.classList.toggle('active');
+                });
+            }
+            
+            // Fonction pour charger l'avatar depuis Firebase
+            async function loadAvatarFromFirebase(userEmail) {
+                if (window.avatarService && typeof window.avatarService.getAvatar === 'function') {
+                    try {
+                        const avatarUrl = await window.avatarService.getAvatar(userEmail);
+                        if (avatarUrl) {
+                            console.log('✅ Avatar chargé depuis Firebase:', avatarUrl);
+                            return avatarUrl;
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Erreur lors du chargement de l\'avatar depuis Firebase:', error);
+                    }
+                }
+                return null;
+            }
+            
+            // Vérification de l'état de connexion
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (user && user.email) {
+                // Utilisateur connecté
+                
+                // Charger l'avatar depuis Firebase en priorité
+                loadAvatarFromFirebase(user.email).then(firebaseAvatar => {
+                    let avatarUrl = null;
+                    
+                    // Prioriser l'avatar depuis Firebase
+                    if (firebaseAvatar) {
+                        avatarUrl = firebaseAvatar;
+                        // Mettre à jour l'objet user avec l'avatar Firebase
+                        user.customAvatar = avatarUrl;
+                        user.avatar = avatarUrl;
+                        localStorage.setItem('user', JSON.stringify(user));
+                    } else {
+                        // Fallback vers localStorage
+                        const avatarKey = 'avatar_' + user.email;
+                        
+                        // Prioriser l'avatar personnalisé (le plus récent)
+                        if (user.customAvatar) {
+                            avatarUrl = user.customAvatar;
+                        } else if (user.avatar) {
+                            avatarUrl = user.avatar;
+                        } else if (user.originalAvatar) {
+                            avatarUrl = user.originalAvatar;
+                        } else if (user.picture) {
+                            avatarUrl = user.picture;
+                        } else {
+                            // En dernier recours, vérifier le localStorage
+                            const storedAvatar = localStorage.getItem(avatarKey);
+                            if (storedAvatar) {
+                                avatarUrl = storedAvatar;
+                            } else {
+                                avatarUrl = '';
+                            }
+                        }
+                    }
+                    
+                    // Mettre à jour l'avatar
+                    if (userAvatar && avatarUrl) {
+                        userAvatar.src = avatarUrl;
+                    }
+                });
+            } else if (window.location.pathname.includes('profil.html')) {
+                // Rediriger vers la page de connexion si non connecté et sur la page de profil
+                window.location.href = 'connexion.html';
+            }
+            
+            // Le bouton de déconnexion est maintenant uniquement dans les paramètres du profil
+            
+            // Le bouton Google Sign-In est maintenant géré dans js/acceuil.js
+            // Il apparaît dans le popup d'authentification
+        });
+        
+        // Gestionnaire de réponse Google Sign-In
+        function handleCredentialResponse(response) {
+            const responsePayload = parseJwt(response.credential);
+            
+            const user = {
+                name: responsePayload.name,
+                email: responsePayload.email,
+                picture: responsePayload.picture,
+                token: response.credential
+            };
+            
+            localStorage.setItem('user', JSON.stringify(user));
+            window.location.reload();
+        }
+        
+        // Décoder le token JWT
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error('Erreur lors du décodage du token JWT:', e);
+                return null;
+            }
+        }
+
+        // Affichage en temps réel de la note utilisateur pour Death Note
+        function updateDeathNoteRating() {
+            var deathNoteCard = document.querySelector('.release-card[data-anime="Death Note"]');
+            if (deathNoteCard) {
+                var rating = localStorage.getItem('note_deathnote');
+                var ratingValue = deathNoteCard.querySelector('.user-rating-value');
+                if (ratingValue) {
+                    ratingValue.textContent = rating ? rating : '-';
+                }
+            }
+        }
+        updateDeathNoteRating();
+
+        // Pour affichage en temps réel si la note change sur la page deathnote.html
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'note_deathnote') {
+                updateDeathNoteRating();
+            }
+        });
+
+        // ===== SYSTÈME DE VOTE DU JOUR =====
+        
+        // Variables globales pour le vote du jour
+        let currentVotes = {};
+        let voteOptions = [];
+        let userHasVoted = false;
+        let currentDayContent = null;
+        const API_BASE_URL = 'https://api.jikan.moe/v4';
+        let voteSyncInterval = null;
+        let lastVoteTimestamp = null;
+
+        // Déterminer le type de contenu pour un jour donné (anime/manga)
+        function getContentTypeForDay(dateString) {
+            const date = new Date(dateString);
+            const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            return dayOfYear % 2 === 0 ? 'anime' : 'manga';
+        }
+
+        // Déterminer le genre pour un jour donné
+        function getGenreForDay(dateString) {
+            const date = new Date(dateString);
+            const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            
+            const genres = [
+                'action', 'adventure', 'comedy', 'drama', 'fantasy', 'horror', 
+                'mystery', 'romance', 'sci-fi', 'slice of life', 'sports', 'supernatural'
+            ];
+            
+            // Changer de genre tous les 3 jours
+            const genreIndex = Math.floor(dayOfYear / 3) % genres.length;
+            return genres[genreIndex];
+        }
+
+        // Fonction pour nettoyer et vérifier les données de vote
+        function validateVoteContent(content) {
+            // Vérifier que toutes les propriétés nécessaires sont présentes
+            if (!content || typeof content !== 'object') {
+                return false;
+            }
+            
+            const requiredFields = ['id', 'title', 'image', 'type'];
+            for (const field of requiredFields) {
+                if (!content[field] || content[field] === 'undefined' || content[field] === 'null') {
+                    console.warn(`⚠️ Contenu invalide: champ ${field} manquant ou invalide`, content);
+                    return false;
+                }
+            }
+            
+            // Vérifier que l'ID est un nombre valide
+            if (isNaN(parseInt(content.id))) {
+                console.warn(`⚠️ Contenu invalide: ID n'est pas un nombre`, content);
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Charger les options de vote depuis l'API
+        async function loadVoteOptions() {
+            try {
+                // Afficher le loading
+                document.getElementById('voteLoading').style.display = 'block';
+                document.getElementById('voteOptions').style.display = 'none';
+                
+                const today = new Date().toDateString();
+                const savedContent = localStorage.getItem('dailyVoteContent');
+                
+                // Vérifier si on a déjà des contenus pour aujourd'hui
+                if (savedContent) {
+                    const saved = JSON.parse(savedContent);
+                    if (saved.date === today) {
+                        console.log('✅ Utilisation des contenus sauvegardés pour aujourd\'hui');
+                        
+                        // Filtrer et valider les contenus sauvegardés
+                        const validSavedContent = saved.content.filter(validateVoteContent);
+                        
+                        if (validSavedContent.length !== saved.content.length) {
+                            console.warn(`⚠️ ${saved.content.length - validSavedContent.length} contenu(s) invalide(s) détecté(s) et supprimé(s)`);
+                        }
+                        
+                        // Re-vérifier et corriger les données depuis l'API pour garantir la correspondance
+                        voteOptions = await Promise.all(
+                            validSavedContent.map(async (savedContent) => {
+                                try {
+                                    // Re-vérifier depuis l'API pour garantir la correspondance titre/image
+                                    const response = await fetch(`${API_BASE_URL}/${savedContent.type}/${savedContent.id}/full`);
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        const apiContent = data.data;
+                                        
+                                        // Vérifier que l'ID de l'API correspond bien à celui sauvegardé
+                                        if (apiContent.mal_id !== parseInt(savedContent.id)) {
+                                            console.error(`❌ ERREUR: ID API (${apiContent.mal_id}) ne correspond pas à l'ID sauvegardé (${savedContent.id})`);
+                                            return null; // Ignorer ce contenu
+                                        }
+                                        
+                                        // Utiliser les données de l'API pour garantir la correspondance
+                                        const verifiedImage = apiContent.images?.jpg?.large_image_url || 
+                                                           apiContent.images?.jpg?.image_url || 
+                                                           '../images/default-anime.svg';
+                                        
+                                        const verifiedContent = {
+                                            id: apiContent.mal_id,
+                                            title: apiContent.title,
+                                            titleEnglish: apiContent.title_english || apiContent.title,
+                                            genres: apiContent.genres ? apiContent.genres.map(g => g.name || g) : (savedContent.genres || []),
+                                            image: verifiedImage,
+                                            score: apiContent.score || savedContent.score || 0,
+                                            type: savedContent.type
+                                        };
+                                        
+                                        // Validation finale
+                                        if (!validateVoteContent(verifiedContent)) {
+                                            console.error(`❌ Contenu vérifié invalide:`, verifiedContent);
+                                            return null;
+                                        }
+                                        
+                                        console.log(`✅ Contenu vérifié - ID: ${verifiedContent.id}, Titre: "${verifiedContent.title}", Image: ${verifiedImage.substring(0, 50)}...`);
+                                        return verifiedContent;
+                                    } else {
+                                        console.warn(`⚠️ Impossible de vérifier le contenu ID ${savedContent.id}, utilisation des données sauvegardées`);
+                                        // Valider quand même les données sauvegardées
+                                        if (validateVoteContent(savedContent)) {
+                                            return savedContent;
+                                        }
+                                        return null;
+                                    }
+                                } catch (error) {
+                                    console.warn(`⚠️ Erreur lors de la vérification du contenu ID ${savedContent.id}:`, error);
+                                    // Valider quand même les données sauvegardées
+                                    if (validateVoteContent(savedContent)) {
+                                        return savedContent;
+                                    }
+                                    return null;
+                                }
+                            })
+                        );
+                        
+                        // Filtrer les valeurs null (contenus invalides)
+                        voteOptions = voteOptions.filter(content => content !== null);
+                        
+                        // Si on a assez de contenus valides, les utiliser
+                        if (voteOptions.length >= 3) {
+                            // Sauvegarder les données vérifiées
+                            currentDayContent = {
+                                date: today,
+                                contentType: saved.contentType,
+                                genre: saved.genre,
+                                content: voteOptions
+                            };
+                            localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+                            
+                            // Initialiser les votes
+                            voteOptions.forEach(content => {
+                                currentVotes[content.id] = 0;
+                            });
+                            
+                            loadSavedVotes();
+                            await renderVoteOptions();
+                            
+                            document.getElementById('voteLoading').style.display = 'none';
+                            document.getElementById('voteOptions').style.display = 'grid';
+                            
+                            if (userHasVoted) {
+                                showVoteResults();
+                            }
+                            
+                            startFakeVotes();
+                            return;
+                        } else {
+                            console.warn(`⚠️ Pas assez de contenus valides (${voteOptions.length}/3), rechargement depuis l'API...`);
+                            // Nettoyer les données corrompues
+                            localStorage.removeItem('dailyVoteContent');
+                            // Continuer avec le chargement depuis l'API ci-dessous
+                        }
+                    }
+                }
+                
+                // Nouveau jour, charger de nouveaux contenus
+                console.log('🔄 Nouveau jour, chargement de nouveaux contenus');
+                
+                const contentType = getContentTypeForDay(today);
+                const genre = getGenreForDay(today);
+                
+                // Récupérer des contenus par genre
+                let response, data;
+                
+                try {
+                    response = await fetch(`${API_BASE_URL}/top/${contentType}?genre=${genre}&limit=10&filter=bypopularity`);
+                    if (response.ok) {
+                        data = await response.json();
+                        if (data.data && data.data.length > 0) {
+                            data.data = data.data.sort(() => Math.random() - 0.5);
+                        }
+                    } else {
+                        throw new Error('Genre non trouvé');
+                    }
+                } catch (error) {
+                    console.log('Utilisation de la popularité générale');
+                    response = await fetch(`${API_BASE_URL}/top/${contentType}?limit=20&filter=bypopularity`);
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    data = await response.json();
+                    if (data.data && data.data.length > 0) {
+                        data.data = data.data.sort(() => Math.random() - 0.5);
+                    }
+                }
+                
+                // Sélectionner 3 contenus uniques
+                const selectedContents = [];
+                const usedIds = new Set();
+                
+                for (let i = 0; i < data.data.length && selectedContents.length < 3; i++) {
+                    const content = data.data[i];
+                    
+                    // Vérifier que le contenu a bien un ID et un titre
+                    if (!content.mal_id || !content.title) {
+                        console.warn(`⚠️ Contenu sans ID ou titre, ignoré:`, content);
+                        continue;
+                    }
+                    
+                    // Utiliser la même logique que les pages de détails
+                    const imageUrl = content.images?.jpg?.large_image_url || 
+                                   content.images?.jpg?.image_url || 
+                                   null;
+                    
+                    if (!usedIds.has(content.mal_id) && 
+                        imageUrl && 
+                        imageUrl !== 'https://cdn.myanimelist.net/images/anime/1749/128927.jpg' &&
+                        imageUrl !== 'https://cdn.myanimelist.net/images/manga/1749/128927.jpg' &&
+                        content.title && 
+                        content.genres && 
+                        content.genres.length > 0) {
+                        
+                        // Créer l'objet en s'assurant que toutes les propriétés viennent du MÊME contenu
+                        // Utiliser directement les valeurs de l'objet content pour garantir la cohérence
+                        const contentData = {
+                            id: content.mal_id,  // ID du contenu
+                            title: content.title,  // Titre principal
+                            titleEnglish: content.title_english || content.title,  // Titre anglais ou principal
+                            genres: Array.isArray(content.genres) ? content.genres.map(g => g.name || g) : [],
+                            image: imageUrl,  // Image du même contenu
+                            score: content.score || 0,
+                            type: contentType
+                        };
+                        
+                        // Vérification finale : s'assurer que l'ID correspond bien au contenu
+                        if (contentData.id !== content.mal_id) {
+                            console.error(`❌ ERREUR: ID incohérent! contentData.id=${contentData.id}, content.mal_id=${content.mal_id}`);
+                            continue;
+                        }
+                        
+                        // Log détaillé pour vérifier la correspondance
+                        console.log(`✅ Contenu ajouté - ID: ${contentData.id}, Titre: "${contentData.title}", Titre EN: "${contentData.titleEnglish}", Image: ${contentData.image.substring(0, 50)}...`);
+                        
+                        selectedContents.push(contentData);
+                        usedIds.add(content.mal_id);
+                    }
+                }
+                
+                // Vérifier que tous les contenus ont une image valide
+                voteOptions = selectedContents.map(content => {
+                    if (!content.image || content.image === '' || content.image === 'undefined' || content.image === 'null') {
+                        content.image = '../images/default-anime.svg';
+                    }
+                    return content;
+                });
+                
+                // Sauvegarder les contenus du jour
+                currentDayContent = {
+                    date: today,
+                    contentType: contentType,
+                    genre: genre,
+                    content: voteOptions
+                };
+                localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+                
+                // Initialiser les votes
+                voteOptions.forEach(content => {
+                    currentVotes[content.id] = 0;
+                });
+                
+                loadSavedVotes();
+                await renderVoteOptions();
+                
+                document.getElementById('voteLoading').style.display = 'none';
+                document.getElementById('voteOptions').style.display = 'grid';
+                
+                // Démarrer les faux votes automatiques (une seule fois par jour)
+                startFakeVotes();
+                
+            } catch (error) {
+                console.error('❌ Erreur lors du chargement des options de vote:', error);
+                await loadFallbackOptions();
+            }
+        }
+
+        // Fallback avec des contenus par défaut
+        async function loadFallbackOptions() {
+            const today = new Date().toDateString();
+            const contentType = getContentTypeForDay(today);
+            const genre = getGenreForDay(today);
+            
+            // IDs de fallback populaires
+            const fallbackIds = {
+                anime: {
+                    action: [16498, 20, 30276],
+                    comedy: [30276, 30831, 37105],
+                    drama: [1535, 5114, 1575],
+                    fantasy: [11757, 31240, 29893]
+                },
+                manga: {
+                    action: [13, 42, 3],
+                    comedy: [918, 37105, 44307],
+                    drama: [1, 656, 12],
+                    fantasy: [701, 71040, 70345]
+                }
+            };
+            
+            const ids = fallbackIds[contentType]?.[genre] || fallbackIds[contentType]?.action || [];
+            const fallbackContents = [];
+            
+            for (const id of ids.slice(0, 3)) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${contentType}/${id}/full`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const content = data.data;
+                        
+                        // Utiliser la même logique que les pages de détails
+                        const imageUrl = content.images?.jpg?.large_image_url || 
+                                       content.images?.jpg?.image_url || 
+                                       null;
+                        
+                        if (imageUrl && imageUrl !== 'https://cdn.myanimelist.net/images/anime/1749/128927.jpg' &&
+                            imageUrl !== 'https://cdn.myanimelist.net/images/manga/1749/128927.jpg') {
+                            
+                            // Vérifier que l'ID et le titre correspondent
+                            if (!content.mal_id || !content.title) {
+                                console.warn(`⚠️ Contenu fallback sans ID ou titre, ignoré:`, content);
+                                continue;
+                            }
+                            
+                            const fallbackData = {
+                                id: content.mal_id,
+                                title: content.title,
+                                titleEnglish: content.title_english || content.title,
+                                genres: content.genres ? content.genres.map(g => g.name) : [],
+                                image: imageUrl,
+                                score: content.score || 0,
+                                type: contentType
+                            };
+                            
+                            // Log pour vérifier la correspondance
+                            console.log(`✅ Contenu fallback ajouté - ID: ${fallbackData.id}, Titre: ${fallbackData.title}, Image: ${imageUrl}`);
+                            
+                            fallbackContents.push(fallbackData);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Erreur lors du chargement du contenu fallback ID ${id}:`, error);
+                }
+            }
+            
+            voteOptions = fallbackContents.slice(0, 3).map(content => {
+                if (!content.image || content.image === '' || content.image === 'undefined' || content.image === 'null') {
+                    content.image = '../images/default-anime.svg';
+                }
+                return content;
+            });
+            
+            currentDayContent = {
+                date: today,
+                contentType: contentType,
+                genre: genre,
+                content: voteOptions
+            };
+            localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+            
+            voteOptions.forEach(content => {
+                currentVotes[content.id] = 0;
+            });
+            
+            loadSavedVotes();
+            await renderVoteOptions();
+            
+            document.getElementById('voteLoading').style.display = 'none';
+            document.getElementById('voteOptions').style.display = 'grid';
+            
+            startFakeVotes();
+        }
+
+        // Charger les votes sauvegardés depuis le localStorage
+        function loadSavedVotes() {
+            const savedVotes = localStorage.getItem('dailyVotes');
+            if (savedVotes) {
+                const saved = JSON.parse(savedVotes);
+                // Charger tous les votes sauvegardés (y compris les faux votes)
+                Object.keys(saved).forEach(id => {
+                    const contentId = parseInt(id);
+                    // Initialiser si nécessaire et charger la valeur
+                    if (!currentVotes.hasOwnProperty(contentId)) {
+                        currentVotes[contentId] = 0;
+                    }
+                    currentVotes[contentId] = saved[id] || 0;
+                });
+                console.log('✅ Votes chargés depuis localStorage:', currentVotes);
+            }
+            
+            // Vérifier si l'utilisateur a déjà voté aujourd'hui
+            const lastVoteDate = localStorage.getItem('lastVoteDate');
+            const today = new Date().toDateString();
+            if (lastVoteDate === today) {
+                userHasVoted = true;
+                
+                document.querySelectorAll('.vote-stats').forEach(stats => {
+                    stats.style.display = 'block';
+                });
+                
+                showVoteResults();
+                updateVoteDisplay();
+                
+                document.querySelectorAll('.vote-button').forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                });
+            }
+        }
+
+        // Rendre les options de vote
+        async function renderVoteOptions() {
+            const container = document.getElementById('voteOptions');
+            if (!container) {
+                console.error('❌ Container voteOptions non trouvé');
+                return;
+            }
+            container.innerHTML = '';
+            
+            const currentLang = localStorage.getItem('mangaWatchLanguage') || 'fr';
+            
+            // Mettre à jour la description
+            if (voteOptions.length > 0) {
+                const contentType = voteOptions[0].type;
+                
+                const voteDescription = document.getElementById('voteDescription');
+                const voteTypeIndicator = document.getElementById('voteTypeIndicator');
+                
+                if (voteDescription) {
+                    const typeText = contentType === 'anime' ? 
+                        (window.t ? window.t('search.type.anime') : 'anime') : 
+                        (window.t ? window.t('search.type.manga') : 'manga');
+                    const template = window.t ? window.t('home.vote_description_template') : `Quel ${typeText.toLowerCase()} préférez-vous aujourd'hui ?`;
+                    voteDescription.textContent = template.replace('{type}', typeText.toLowerCase()).replace(/\s*\{genre\}\s*/g, '');
+                }
+                
+                if (voteTypeIndicator) {
+                    const typeBadge = contentType === 'anime' ? 
+                        `<span class="global-type-badge anime-badge"><i class="fas fa-tv"></i> ${window.t ? window.t('home.vote_type_badge_anime') : 'Vote du jour : Anime'}</span>` : 
+                        `<span class="global-type-badge manga-badge"><i class="fas fa-book"></i> ${window.t ? window.t('home.vote_type_badge_manga') : 'Vote du jour : Manga'}</span>`;
+                    
+                    voteTypeIndicator.innerHTML = typeBadge;
+                    voteTypeIndicator.style.display = 'block';
+                }
+            }
+            
+            // Créer les cartes de vote
+            voteOptions.forEach((content, index) => {
+                // Vérifier que le contenu a bien un ID et un titre
+                if (!content.id || !content.title) {
+                    console.error(`❌ Contenu invalide dans voteOptions à l'index ${index}:`, content);
+                    return;
+                }
+                
+                // Vérification supplémentaire : s'assurer que l'image existe et correspond au contenu
+                if (!content.image || content.image === 'undefined' || content.image === 'null') {
+                    console.warn(`⚠️ Contenu ${content.id} (${content.title}) sans image valide, utilisation de l'image par défaut`);
+                    content.image = '../images/default-anime.svg';
+                }
+                
+                const voteOption = document.createElement('div');
+                voteOption.className = 'vote-option';
+                voteOption.setAttribute('data-content', content.id);
+                voteOption.setAttribute('data-content-title', content.title);
+                
+                // Utiliser la même logique que les pages de détails pour l'image
+                const imageUrl = content.image || '../images/default-anime.svg';
+                const shouldShowStats = userHasVoted || (localStorage.getItem('lastVoteDate') === new Date().toDateString());
+                const statsDisplay = shouldShowStats ? 'block' : 'none';
+                
+                // Traduire les genres en filtrant les genres invalides
+                const validGenres = content.genres ? content.genres.filter(g => {
+                    // Si c'est un objet avec une propriété name, extraire le nom
+                    const genreName = typeof g === 'string' ? g : (g?.name || '');
+                    const isValid = isValidGenre(genreName);
+                    if (!isValid && genreName) {
+                        console.warn(`⚠️ Genre invalide filtré: "${genreName}" pour "${content.title || content.id}"`);
+                    }
+                    return isValid;
+                }).slice(0, 3).map(g => {
+                    // Extraire le nom si c'est un objet
+                    return typeof g === 'string' ? g : (g?.name || '');
+                }) : [];
+                
+                const translatedGenres = validGenres.map(genre => translateGenre(genre, currentLang)).filter(g => g !== null && g !== undefined);
+                const genresDisplay = translatedGenres.length > 0 ? translatedGenres.join(', ') : '';
+                
+                // Utiliser le titre anglais si disponible, sinon le titre principal
+                const displayTitle = content.titleEnglish || content.title || 'Titre inconnu';
+                
+                // Log détaillé pour vérifier la correspondance
+                console.log(`🎨 Rendu carte vote #${index + 1} - ID: ${content.id}, Titre: "${displayTitle}", Image: ${imageUrl.substring(0, 60)}...`);
+                
+                voteOption.innerHTML = `
+                    <div class="vote-image" style="width: 100%; height: 320px; overflow: hidden; border-radius: 16px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
+                        <img src="${imageUrl}" 
+                             alt="${displayTitle}" 
+                             class="anime-cover" 
+                             data-content-id="${content.id}"
+                             data-content-title="${displayTitle}"
+                             onerror="(function(img, contentId, title) { console.error('❌ Erreur chargement image pour ID:', contentId, 'Titre:', title); img.onerror=null; img.src='../images/default-anime.svg'; })(this, '${content.id}', '${displayTitle.replace(/'/g, "\\'")}');"
+                             style="width: 100%; height: 100%; object-fit: cover; display: block;"
+                             loading="lazy">
+                    </div>
+                    <h3 class="anime-title" onclick="goToContentDetails('${content.id}', '${content.type}')" style="cursor: pointer;" data-content-id="${content.id}">
+                        ${displayTitle}
+                    </h3>
+                    <p class="anime-genre">${genresDisplay}</p>
+                    <button class="vote-button" onclick="voteForContent('${content.id}')" ${shouldShowStats ? 'disabled style="opacity: 0.5;"' : ''}>
+                        <i class="fas fa-vote-yea"></i> ${window.t ? window.t('home.vote_button_text') : 'Voter'}
+                    </button>
+                    <div class="vote-stats" style="display: ${statsDisplay};">
+                        <span class="vote-count">${currentVotes[content.id] || 0}</span> ${window.t ? window.t('home.vote_count') : 'votes'}
+                    </div>
+                `;
+                
+                container.appendChild(voteOption);
+            });
+        }
+
+        // Fonction de vote
+        function voteForContent(contentId) {
+            if (userHasVoted) {
+                if (typeof showElegantPopup === 'function') {
+                    showElegantPopup(
+                        'Vote déjà effectué',
+                        'Vous avez déjà voté aujourd\'hui ! Vous pourrez voter à nouveau demain.',
+                        '🗳️'
+                    );
+                }
+                return;
+            }
+
+            currentVotes[contentId]++;
+            userHasVoted = true;
+            
+            // Sauvegarder les votes dans localStorage
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            localStorage.setItem('lastVoteDate', new Date().toDateString());
+            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            
+            // Mettre à jour l'affichage
+            updateVoteDisplay();
+            showVoteResults();
+            
+            // Afficher les votes sur toutes les cartes
+            document.querySelectorAll('.vote-stats').forEach(stats => {
+                stats.style.display = 'block';
+            });
+            
+            updateVoteDisplay();
+            
+            // Désactiver tous les boutons de vote
+            document.querySelectorAll('.vote-button').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            });
+        }
+
+        // Mettre à jour l'affichage des votes
+        function updateVoteDisplay() {
+            voteOptions.forEach(content => {
+                const voteCount = document.querySelector(`[data-content="${content.id}"] .vote-count`);
+                if (voteCount) {
+                    voteCount.textContent = currentVotes[content.id] || 0;
+                }
+            });
+        }
+
+        // Afficher les résultats avec barres de progression
+        function showVoteResults() {
+            const totalVotes = Object.values(currentVotes).reduce((sum, votes) => sum + votes, 0);
+            
+            if (totalVotes === 0) return;
+            
+            const resultsChart = document.getElementById('resultsChart');
+            if (!resultsChart) return;
+            
+            resultsChart.innerHTML = '';
+            
+            voteOptions.forEach(content => {
+                const percentage = totalVotes > 0 ? Math.round((currentVotes[content.id] / totalVotes) * 100) : 0;
+                
+                const resultBar = document.createElement('div');
+                resultBar.className = 'result-bar';
+                resultBar.id = `${content.id}-bar`;
+                
+                resultBar.innerHTML = `
+                    <span class="anime-name">${content.titleEnglish || content.title}</span>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 0%"></div>
+                    </div>
+                    <span class="percentage">0%</span>
+                `;
+                
+                resultsChart.appendChild(resultBar);
+                
+                // Animer la barre
+                setTimeout(() => {
+                    const barFill = resultBar.querySelector('.bar-fill');
+                    const percentageText = resultBar.querySelector('.percentage');
+                    if (barFill && percentageText) {
+                        barFill.style.width = percentage + '%';
+                        percentageText.textContent = percentage + '%';
+                    }
+                }, 100);
+            });
+            
+            document.getElementById('voteResults').style.display = 'block';
+        }
+
+        // Générer des faux votes automatiques (une seule fois par jour)
+        function startFakeVotes() {
+            const today = new Date().toDateString();
+            const fakeVotesKey = 'fakeVotesDate';
+            const lastFakeVotesDate = localStorage.getItem(fakeVotesKey);
+            
+            // Si les faux votes ont déjà été générés aujourd'hui, charger les votes sauvegardés
+            if (lastFakeVotesDate === today) {
+                console.log('Faux votes déjà générés aujourd\'hui, chargement des votes sauvegardés...');
+                
+                // Charger les votes sauvegardés pour s'assurer qu'ils sont dans currentVotes
+                const savedVotes = localStorage.getItem('dailyVotes');
+                if (savedVotes) {
+                    const saved = JSON.parse(savedVotes);
+                    // Charger tous les votes sauvegardés dans currentVotes
+                    Object.keys(saved).forEach(id => {
+                        const contentId = parseInt(id);
+                        currentVotes[contentId] = saved[id] || 0;
+                    });
+                    console.log('✅ Votes sauvegardés chargés:', currentVotes);
+                }
+                
+                // Afficher les résultats si l'utilisateur a déjà voté
+                if (userHasVoted) {
+                    updateVoteDisplay();
+                    showVoteResults();
+                }
+                return;
+            }
+            
+            // Générer environ 20 faux votes aléatoirement répartis
+            const totalFakeVotes = 20;
+            const voteOptionsCount = voteOptions.length;
+            
+            // Initialiser currentVotes pour chaque contenu si ce n'est pas déjà fait
+            voteOptions.forEach(content => {
+                if (!currentVotes.hasOwnProperty(content.id)) {
+                    currentVotes[content.id] = 0;
+                }
+            });
+            
+            for (let i = 0; i < totalFakeVotes; i++) {
+                const randomContentId = voteOptions[Math.floor(Math.random() * voteOptionsCount)].id;
+                currentVotes[randomContentId]++;
+            }
+            
+            localStorage.setItem(fakeVotesKey, today);
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            
+            // Masquer les statistiques si l'utilisateur n'a pas encore voté
+            if (!userHasVoted) {
+                document.querySelectorAll('.vote-stats').forEach(stats => {
+                    stats.style.display = 'none';
+                });
+            }
+            
+            // Afficher les résultats si l'utilisateur a déjà voté
+            if (userHasVoted) {
+                updateVoteDisplay();
+                showVoteResults();
+            }
+            
+            console.log('✅ Faux votes générés pour aujourd\'hui:', currentVotes);
+        }
+
+        // Démarrer la synchronisation des votes en temps réel
+        function startVoteSync() {
+            if (voteSyncInterval) {
+                clearInterval(voteSyncInterval);
+            }
+            
+            // Vérifier les votes toutes les 30 secondes
+            voteSyncInterval = setInterval(checkForNewVotes, 30000);
+            
+            // Vérifier aussi après certaines actions utilisateur
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    checkForNewVotes();
+                }
+            });
+            
+            document.addEventListener('click', () => {
+                checkForNewVotes();
+            });
+            
+            console.log('✅ Synchronisation des votes démarrée');
+        }
+
+        // Arrêter la synchronisation des votes
+        function stopVoteSync() {
+            if (voteSyncInterval) {
+                clearInterval(voteSyncInterval);
+                voteSyncInterval = null;
+                console.log('Synchronisation des votes arrêtée');
+            }
+        }
+
+        // Vérifier s'il y a de nouveaux votes
+        function checkForNewVotes() {
+            const savedVotes = localStorage.getItem('dailyVotes');
+            const savedTimestamp = localStorage.getItem('lastVoteUpdate');
+            
+            if (!savedVotes || !savedTimestamp) return;
+            
+            const currentTimestamp = Date.now();
+            const savedVoteData = JSON.parse(savedVotes);
+            
+            let votesChanged = false;
+            let totalNewVotes = 0;
+            
+            Object.keys(savedVoteData).forEach(id => {
+                if (currentVotes.hasOwnProperty(id)) {
+                    const oldVote = currentVotes[id] || 0;
+                    const newVote = savedVoteData[id] || 0;
+                    
+                    if (newVote > oldVote) {
+                        votesChanged = true;
+                        totalNewVotes += (newVote - oldVote);
+                        currentVotes[id] = newVote;
+                    }
+                }
+            });
+            
+            if (votesChanged) {
+                console.log(`🔄 Nouveaux votes détectés : +${totalNewVotes} votes`);
+                
+                updateVoteDisplay();
+                
+                if (userHasVoted) {
+                    showVoteResults();
+                }
+                
+                lastVoteTimestamp = currentTimestamp;
+            }
+        }
+
+        // Fonction pour rediriger vers les détails d'une œuvre
+        function goToContentDetails(contentId, contentType) {
+            if (contentType === 'anime') {
+                const animeUrl = `anime-details.html?id=${contentId}&season=1`;
+                window.location.href = animeUrl;
+            } else if (contentType === 'manga') {
+                const mangaUrl = `anime-details.html?id=${contentId}&type=manga`;
+                window.location.href = mangaUrl;
+            }
+        }
+
+        // Initialiser le système de vote au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVoteOptions();
+            
+            // Écouter les changements de langue
+            document.addEventListener('languageChanged', async function() {
+                console.log('🔄 Langue changée, retraduction du vote...');
+                if (voteOptions && voteOptions.length > 0) {
+                    await renderVoteOptions();
+                }
+            });
+            
+            // Démarrer la synchronisation des votes en temps réel
+            startVoteSync();
+        });
+
+        // ===== SYSTÈME D'AUTHENTIFICATION =====
+        
+        // Initialiser le popup d'authentification existant
+        function initializeAuthModals() {
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            // MAIS ne pas l'appeler si le popup est déjà géré par acceuil.js
+            // (pour éviter les appels multiples)
+            if (!user || !user.email || !isLoggedIn) {
+                console.log('🔓 initializeAuthModals : Utilisateur non connecté détecté');
+                // Ne pas appeler showAuthPopup ici car acceuil.js le gère déjà
+                // Le popup sera affiché par acceuil.js après le chargement
+            } else {
+                console.log('🔒 initializeAuthModals : Popup non affiché (utilisateur connecté)');
+            }
+        }
+        
+        // Vérifier l'état d'authentification
+        function checkAuthState() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            
+            updateAuthUI(isLoggedIn, user);
+        }
+        
+        // Mettre à jour l'interface utilisateur selon l'état d'authentification
+        function updateAuthUI(isLoggedIn, user = null) {
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (isLoggedIn && user) {
+                // Utilisateur connecté
+                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé (le plus récent)
+                if (userAvatar) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    
+                    // Prioriser l'avatar personnalisé (le plus récent)
+                    if (user.customAvatar) {
+                        avatarUrl = user.customAvatar;
+                    } else if (user.avatar) {
+                        avatarUrl = user.avatar;
+                    } else if (user.originalAvatar) {
+                        avatarUrl = user.originalAvatar;
+                    } else if (user.picture) {
+                        avatarUrl = user.picture;
+                    } else {
+                        // En dernier recours, vérifier le localStorage
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) {
+                            avatarUrl = storedAvatar;
+                        } else {
+                            avatarUrl = '';
+                        }
+                    }
+                    
+                    // Mettre à jour l'avatar et le localStorage avec la valeur la plus récente
+                    if (avatarUrl) {
+                        userAvatar.src = avatarUrl;
+                        // Mettre à jour le localStorage avec l'avatar le plus récent
+                        if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
+                            localStorage.setItem(avatarKey, avatarUrl);
+                        }
+                    }
+                }
+                
+                const logoLink = document.querySelector('.logo-link span');
+                if (logoLink) {
+                    logoLink.textContent = 'MangaWatch';
+                }
+            } else {
+                // Utilisateur non connecté
+                if (userAvatar) {
+                    userAvatar.src = '';
+                }
+                
+                const logoLink = document.querySelector('.logo-link span');
+                if (logoLink) {
+                    logoLink.textContent = 'MangaWatch';
+                }
+            }
+        }
+        
+        // Gérer la déconnexion
+        function handleLogout() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('rememberMe');
+            
+            updateAuthUI(false);
+            
+            // Afficher un message de déconnexion
+            if (typeof showElegantPopup === 'function') {
+                showElegantPopup(
+                    window.t ? window.t('home.logout_title') : '👋 Déconnexion', 
+                    window.t ? window.t('home.logout_message') : 'Vous avez été déconnecté avec succès', 
+                    'info'
+                );
+            }
+        }
+
+        // ===== SYSTÈME D'AUTHENTIFICATION =====
+        
+        // Initialiser le popup d'authentification existant
+        function initializeAuthModals() {
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            // MAIS ne pas l'appeler si le popup est déjà géré par acceuil.js
+            // (pour éviter les appels multiples)
+            if (!user || !user.email || !isLoggedIn) {
+                console.log('🔓 initializeAuthModals : Utilisateur non connecté détecté');
+                // Ne pas appeler showAuthPopup ici car acceuil.js le gère déjà
+                // Le popup sera affiché par acceuil.js après le chargement
+            } else {
+                console.log('🔒 initializeAuthModals : Popup non affiché (utilisateur connecté)');
+            }
+        }
+        
+        // Vérifier l'état d'authentification
+        function checkAuthState() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            
+            updateAuthUI(isLoggedIn, user);
+        }
+        
+        // Mettre à jour l'interface utilisateur selon l'état d'authentification
+        function updateAuthUI(isLoggedIn, user = null) {
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (isLoggedIn && user) {
+                // Utilisateur connecté
+                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé (le plus récent)
+                if (userAvatar) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    
+                    // Prioriser l'avatar personnalisé (le plus récent)
+                    if (user.customAvatar) {
+                        avatarUrl = user.customAvatar;
+                    } else if (user.avatar) {
+                        avatarUrl = user.avatar;
+                    } else if (user.originalAvatar) {
+                        avatarUrl = user.originalAvatar;
+                    } else if (user.picture) {
+                        avatarUrl = user.picture;
+                    } else {
+                        // En dernier recours, vérifier le localStorage
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) {
+                            avatarUrl = storedAvatar;
+                        } else {
+                            avatarUrl = '';
+                        }
+                    }
+                    
+                    // Mettre à jour l'avatar et le localStorage avec la valeur la plus récente
+                    if (avatarUrl) {
+                        userAvatar.src = avatarUrl;
+                        // Mettre à jour le localStorage avec l'avatar le plus récent
+                        if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
+                            localStorage.setItem(avatarKey, avatarUrl);
+                        }
+                    }
+                }
+                
+                const logoLink = document.querySelector('.logo-link span');
+                if (logoLink) {
+                    logoLink.textContent = 'MangaWatch';
+                }
+            } else {
+                // Utilisateur non connecté
+                if (userAvatar) {
+                    userAvatar.src = '';
+                }
+                
+                const logoLink = document.querySelector('.logo-link span');
+                if (logoLink) {
+                    logoLink.textContent = 'MangaWatch';
+                }
+            }
+        }
+        
+        // Gérer la déconnexion
+        function handleLogout() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('rememberMe');
+            
+            updateAuthUI(false);
+            
+            // Afficher un message de déconnexion
+            if (typeof showElegantPopup === 'function') {
+                showElegantPopup(
+                    window.t ? window.t('home.logout_title') : '👋 Déconnexion', 
+                    window.t ? window.t('home.logout_message') : 'Vous avez été déconnecté avec succès', 
+                    'info'
+                );
+            }
+        }
+        
+        // Fonction pour générer des faux votes aléatoires (une seule fois par jour)
+        function startFakeVotes() {
+            const today = new Date().toDateString();
+            const fakeVotesKey = 'fakeVotesDate';
+            const lastFakeVotesDate = localStorage.getItem(fakeVotesKey);
+            
+            // Si les faux votes ont déjà été générés aujourd'hui, charger les votes sauvegardés
+            if (lastFakeVotesDate === today) {
+                console.log('Faux votes déjà générés aujourd\'hui, chargement des votes sauvegardés...');
+                
+                // Charger les votes sauvegardés pour s'assurer qu'ils sont dans currentVotes
+                const savedVotes = localStorage.getItem('dailyVotes');
+                if (savedVotes) {
+                    const saved = JSON.parse(savedVotes);
+                    // Charger tous les votes sauvegardés dans currentVotes
+                    Object.keys(saved).forEach(id => {
+                        const contentId = parseInt(id);
+                        currentVotes[contentId] = saved[id] || 0;
+                    });
+                    console.log('✅ Votes sauvegardés chargés:', currentVotes);
+                }
+                
+                // Afficher les résultats si l'utilisateur a déjà voté
+                if (userHasVoted) {
+                    updateVoteDisplay();
+                    showVoteResults();
+                }
+                return;
+            }
+            
+            // Générer environ 20 faux votes aléatoirement répartis (une seule fois par jour)
+            const totalFakeVotes = 20;
+            
+            // Initialiser currentVotes pour chaque contenu si ce n'est pas déjà fait
+            voteOptions.forEach(content => {
+                if (!currentVotes.hasOwnProperty(content.id)) {
+                    currentVotes[content.id] = 0;
+                }
+            });
+            const voteOptionsCount = voteOptions.length;
+            
+            // Répartir les votes de manière aléatoire entre les contenus
+            for (let i = 0; i < totalFakeVotes; i++) {
+                const randomAnimeId = voteOptions[Math.floor(Math.random() * voteOptionsCount)].id;
+                currentVotes[randomAnimeId]++;
+            }
+            
+            // Marquer cette date comme ayant reçu des faux votes
+            localStorage.setItem(fakeVotesKey, today);
+            
+            // Sauvegarder les faux votes
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            
+            // NE PAS afficher les votes tant que l'utilisateur n'a pas voté
+            // updateVoteDisplay(); // Commenté pour masquer les votes avant le vote
+            
+            // Masquer les statistiques de vote UNIQUEMENT si l'utilisateur n'a pas encore voté
+            if (!userHasVoted) {
+                document.querySelectorAll('.vote-stats').forEach(stats => {
+                    stats.style.display = 'none';
+                });
+            }
+            
+            // Afficher les résultats si l'utilisateur a déjà voté
+            if (userHasVoted) {
+                updateVoteDisplay();
+                showVoteResults();
+            }
+            
+            console.log('Faux votes générés pour aujourd\'hui:', currentVotes);
+        }
+        
+        // Fonction de test pour vérifier l'état de l'avatar
+        window.testAvatar = function() {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const userAvatar = document.getElementById('user-avatar');
+            const logoLink = document.querySelector('.logo-link span');
+            
+            console.log('=== Test Avatar ===');
+            console.log('Utilisateur connecté:', !!user);
+            console.log('Avatar actuel:', userAvatar ? userAvatar.src : 'Non trouvé');
+            console.log('Logo texte:', logoLink ? logoLink.textContent : 'Non trouvé');
+            
+            if (user) {
+                console.log('Données utilisateur:', {
+                    username: user.username,
+                    name: user.name,
+                    email: user.email,
+                    avatar: user.avatar,
+                    picture: user.picture
+                });
+                
+                const avatarKey = 'avatar_' + user.email;
+                const storedAvatar = localStorage.getItem(avatarKey);
+                console.log('Avatar stocké:', storedAvatar);
+            }
+        };
+
+        // Charger les options de vote au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVoteOptions();
+            
+            // Écouter les changements de langue pour retraduire les genres
+            document.addEventListener('languageChanged', async function() {
+                console.log('🔄 Langue changée, retraduction des genres du vote...');
+                // Re-rendre les options de vote avec les genres traduits
+                if (voteOptions && voteOptions.length > 0) {
+                    await renderVoteOptions();
+                }
+            });
+            
+            // Démarrer la synchronisation des votes en temps réel
+            startVoteSync();
+            
+            // Event listeners pour le popup élégant
+            document.getElementById('popupClose').addEventListener('click', hideElegantPopup);
+            document.getElementById('popupButton').addEventListener('click', hideElegantPopup);
+            
+            // Initialiser les modals d'authentification
+            initializeAuthModals();
+            
+            // Vérifier l'état d'authentification
+            checkAuthState();
+        });
+
+        // ===== SYSTÈME D'AUTHENTIFICATION =====
+        
+        // Initialiser le popup d'authentification existant
+        function initializeAuthModals() {
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            // MAIS ne pas l'appeler si le popup est déjà géré par acceuil.js
+            // (pour éviter les appels multiples)
+            if (!user || !user.email || !isLoggedIn) {
+                console.log('🔓 initializeAuthModals : Utilisateur non connecté détecté');
+                // Ne pas appeler showAuthPopup ici car acceuil.js le gère déjà
+                // Le popup sera affiché par acceuil.js après le chargement
+            } else {
+                console.log('🔒 initializeAuthModals : Popup non affiché (utilisateur connecté)');
+            }
+        }
+
+        // Déterminer le genre pour un jour donné (pour varier les contenus)
+        function getGenreForDay(dateString) {
+            const date = new Date(dateString);
+            const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            
+            // Liste des genres populaires pour varier les contenus
+            const animeGenres = [
+                'action', 'adventure', 'comedy', 'drama', 'fantasy', 'horror', 
+                'mystery', 'romance', 'sci-fi', 'slice of life', 'sports', 'supernatural'
+            ];
+            
+            const mangaGenres = [
+                'action', 'adventure', 'comedy', 'drama', 'fantasy', 'horror',
+                'mystery', 'romance', 'sci-fi', 'slice of life', 'sports', 'supernatural',
+                'psychological', 'thriller', 'historical', 'martial arts'
+            ];
+            
+            const contentType = getContentTypeForDay(dateString);
+            const genres = contentType === 'anime' ? animeGenres : mangaGenres;
+            
+            // Changer de genre tous les 3 jours pour plus de variété
+            const genreIndex = Math.floor(dayOfYear / 3) % genres.length;
+            return genres[genreIndex];
+        }
+        
+        // Charger les votes sauvegardés depuis le localStorage
+        function loadSavedVotes() {
+            const savedVotes = localStorage.getItem('dailyVotes');
+            if (savedVotes) {
+                const saved = JSON.parse(savedVotes);
+                // Charger les votes existants pour les contenus actuels
+                Object.keys(saved).forEach(id => {
+                    if (currentVotes.hasOwnProperty(id)) {
+                        currentVotes[id] = saved[id];
+                    }
+                });
+            }
+            
+            // Vérifier si l'utilisateur a déjà voté aujourd'hui
+            const lastVoteDate = localStorage.getItem('lastVoteDate');
+            const today = new Date().toDateString();
+            if (lastVoteDate === today) {
+                userHasVoted = true;
+                
+                // Afficher les statistiques de vote car l'utilisateur a déjà voté
+                document.querySelectorAll('.vote-stats').forEach(stats => {
+                    stats.style.display = 'block';
+                });
+                
+                // Afficher les résultats
+                showVoteResults();
+                // Mettre à jour l'affichage des votes
+                updateVoteDisplay();
+                // Désactiver les boutons
+                document.querySelectorAll('.vote-button').forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                });
+            }
+        }
+        
+        // Fallback avec des contenus par défaut variés par genre - utilise l'API pour récupérer les images
+        async function loadFallbackOptions() {
+            // Déterminer le type de contenu et le genre pour aujourd'hui
+            const today = new Date().toDateString();
+            const contentType = getContentTypeForDay(today);
+            const genre = getGenreForDay(today);
+            
+            // IDs MyAnimeList pour les contenus de fallback
+            const fallbackIds = {
+                anime: {
+                    action: [16498, 20, 30276], // Attack on Titan, Naruto, Dragon Ball Super
+                    comedy: [30276, 30831, 37105], // One Punch Man, KonoSuba, Grand Blue
+                    drama: [1535, 5114, 1575], // Death Note, Fullmetal Alchemist, Code Geass
+                    fantasy: [11757, 31240, 29893] // Sword Art Online, Re:Zero, Overlord
+                },
+                manga: {
+                    action: [13, 42, 3], // One Piece, Dragon Ball, Bleach
+                    comedy: [918, 37105, 44307], // Gintama, Grand Blue, Nichijou
+                    drama: [1, 656, 12], // Monster, Vagabond, Berserk
+                    fantasy: [701, 71040, 70345] // Tower of God, Solo Leveling, The Beginning After The End
+                }
+            };
+            
+            const ids = fallbackIds[contentType]?.[genre] || fallbackIds[contentType]?.action || [];
+            
+            // Récupérer les données depuis l'API pour chaque ID
+            const fallbackContents = [];
+            
+            for (const id of ids.slice(0, 3)) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${contentType}/${id}/full`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const content = data.data;
+                        
+                        // Récupérer l'image depuis l'API
+                        // Utiliser la même logique que les pages de détails
+                        const imageUrl = content.images?.jpg?.large_image_url || 
+                                       content.images?.jpg?.image_url || 
+                                       null;
+                        
+                        if (imageUrl && imageUrl !== 'https://cdn.myanimelist.net/images/anime/1749/128927.jpg' &&
+                            imageUrl !== 'https://cdn.myanimelist.net/images/manga/1749/128927.jpg') {
+                            
+                            // Vérifier que l'ID et le titre correspondent
+                            if (!content.mal_id || !content.title) {
+                                console.warn(`⚠️ Contenu fallback sans ID ou titre, ignoré:`, content);
+                                continue;
+                            }
+                            
+                            const fallbackData = {
+                                id: content.mal_id,
+                                title: content.title,
+                                titleEnglish: content.title_english || content.title,
+                                genres: content.genres ? content.genres.map(g => g.name) : [],
+                                image: imageUrl,
+                                score: content.score || 0,
+                                type: contentType
+                            };
+                            
+                            // Log pour vérifier la correspondance
+                            console.log(`✅ Contenu fallback chargé depuis API - ID: ${fallbackData.id}, Titre: ${fallbackData.title}, Image: ${imageUrl}`);
+                            
+                            fallbackContents.push(fallbackData);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Erreur lors du chargement du contenu fallback ID ${id}:`, error);
+                }
+            }
+            
+            // Si on n'a pas assez de contenus, utiliser des IDs de secours avec images hardcodées valides
+            if (fallbackContents.length < 3) {
+                const hardcodedFallback = {
+                    anime: {
+                        action: [
+                            { id: 16498, title: 'Attack on Titan', titleEnglish: 'Attack on Titan', genres: ['Action', 'Drame', 'Fantastique'], image: 'https://cdn.myanimelist.net/images/anime/10/47347.jpg', score: 8.54, type: 'anime' },
+                            { id: 20, title: 'Naruto', titleEnglish: 'Naruto', genres: ['Action', 'Aventure', 'Fantastique'], image: 'https://cdn.myanimelist.net/images/anime/13/17405.jpg', score: 8.32, type: 'anime' },
+                            { id: 30276, title: 'Dragon Ball Super', titleEnglish: 'Dragon Ball Super', genres: ['Action', 'Aventure', 'Fantastique'], image: 'https://cdn.myanimelist.net/images/anime/6/20936.jpg', score: 7.89, type: 'anime' }
+                        ],
+                        comedy: [
+                            { id: 30276, title: 'One Punch Man', titleEnglish: 'One Punch Man', genres: ['Comédie', 'Action', 'Superhéros'], image: 'https://cdn.myanimelist.net/images/anime/12/76049.jpg', score: 8.50, type: 'anime' },
+                            { id: 30831, title: 'KonoSuba', titleEnglish: 'KonoSuba', genres: ['Comédie', 'Fantasy', 'Aventure'], image: 'https://cdn.myanimelist.net/images/anime/8/77831.jpg', score: 8.07, type: 'anime' },
+                            { id: 37105, title: 'Grand Blue', titleEnglish: 'Grand Blue', genres: ['Comédie', 'Slice of Life', 'Sport'], image: 'https://cdn.myanimelist.net/images/anime/1291/93444.jpg', score: 8.15, type: 'anime' }
+                        ],
+                        drama: [
+                            { id: 1535, title: 'Death Note', titleEnglish: 'Death Note', genres: ['Thriller', 'Psychologique', 'Surnaturel'], image: 'https://cdn.myanimelist.net/images/anime/9/9453.jpg', score: 8.62, type: 'anime' },
+                            { id: 5114, title: 'Fullmetal Alchemist', titleEnglish: 'Fullmetal Alchemist', genres: ['Action', 'Aventure', 'Drame'], image: 'https://cdn.myanimelist.net/images/anime/1223/96541.jpg', score: 9.11, type: 'anime' },
+                            { id: 1575, title: 'Code Geass', titleEnglish: 'Code Geass', genres: ['Action', 'Drame', 'Mecha'], image: 'https://cdn.myanimelist.net/images/anime/1032/117644.jpg', score: 8.70, type: 'anime' }
+                        ],
+                        fantasy: [
+                            { id: 11757, title: 'Sword Art Online', titleEnglish: 'Sword Art Online', genres: ['Action', 'Aventure', 'Fantasy'], image: 'https://cdn.myanimelist.net/images/anime/13/39717.jpg', score: 7.47, type: 'anime' },
+                            { id: 31240, title: 'Re:Zero', titleEnglish: 'Re:Zero', genres: ['Drame', 'Fantasy', 'Psychologique'], image: 'https://cdn.myanimelist.net/images/anime/10/79410.jpg', score: 8.25, type: 'anime' },
+                            { id: 29893, title: 'Overlord', titleEnglish: 'Overlord', genres: ['Action', 'Fantasy', 'Aventure'], image: 'https://cdn.myanimelist.net/images/anime/10/76049.jpg', score: 7.89, type: 'anime' }
+                        ]
+                    },
+                    manga: {
+                        action: [
+                            { id: 13, title: 'One Piece', titleEnglish: 'One Piece', genres: ['Aventure', 'Action', 'Comédie'], image: 'https://cdn.myanimelist.net/images/manga/2/253146.jpg', score: 8.71, type: 'manga' },
+                            { id: 42, title: 'Dragon Ball', titleEnglish: 'Dragon Ball', genres: ['Action', 'Aventure', 'Fantastique'], image: 'https://cdn.myanimelist.net/images/manga/3/55539.jpg', score: 8.45, type: 'manga' },
+                            { id: 3, title: 'Bleach', titleEnglish: 'Bleach', genres: ['Action', 'Fantastique', 'Surnaturel'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.12, type: 'manga' }
+                        ],
+                        comedy: [
+                            { id: 918, title: 'Gintama', titleEnglish: 'Gintama', genres: ['Comédie', 'Action', 'Science-Fiction'], image: 'https://cdn.myanimelist.net/images/manga/3/163123.jpg', score: 9.04, type: 'manga' },
+                            { id: 37105, title: 'Grand Blue', titleEnglish: 'Grand Blue', genres: ['Comédie', 'Slice of Life', 'Sport'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.15, type: 'manga' },
+                            { id: 44307, title: 'Nichijou', titleEnglish: 'Nichijou', genres: ['Comédie', 'Slice of Life', 'Absurde'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 7.89, type: 'manga' }
+                        ],
+                        drama: [
+                            { id: 1, title: 'Monster', titleEnglish: 'Monster', genres: ['Drame', 'Thriller', 'Psychologique'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.12, type: 'manga' },
+                            { id: 656, title: 'Vagabond', titleEnglish: 'Vagabond', genres: ['Action', 'Drame', 'Historique'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.25, type: 'manga' },
+                            { id: 12, title: 'Berserk', titleEnglish: 'Berserk', genres: ['Action', 'Drame', 'Fantasy'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.47, type: 'manga' }
+                        ],
+                        fantasy: [
+                            { id: 701, title: 'Tower of God', titleEnglish: 'Tower of God', genres: ['Action', 'Fantasy', 'Aventure'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.34, type: 'manga' },
+                            { id: 71040, title: 'Solo Leveling', titleEnglish: 'Solo Leveling', genres: ['Action', 'Fantasy', 'Aventure'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.67, type: 'manga' },
+                            { id: 70345, title: 'The Beginning After The End', titleEnglish: 'The Beginning After The End', genres: ['Action', 'Fantasy', 'Aventure'], image: 'https://cdn.myanimelist.net/images/manga/1/157931.jpg', score: 8.12, type: 'manga' }
+                        ]
+                    }
+                };
+                
+                // Compléter avec les contenus hardcodés si nécessaire
+                const hardcodedList = hardcodedFallback[contentType]?.[genre] || hardcodedFallback[contentType]?.action || [];
+                for (const hardcoded of hardcodedList) {
+                    if (fallbackContents.length >= 3) break;
+                    if (!fallbackContents.find(c => c.id === hardcoded.id)) {
+                        fallbackContents.push(hardcoded);
+                    }
+                }
+            }
+            
+            // Mélanger les contenus pour éviter la répétition
+            fallbackContents.sort(() => Math.random() - 0.5);
+            
+            // Prendre les 3 premiers
+            voteOptions = fallbackContents.slice(0, 3);
+            
+            // Vérifier que tous les contenus ont une image valide
+            voteOptions = voteOptions.map(content => {
+                if (!content.image || content.image === '' || content.image === 'undefined' || content.image === 'null') {
+                    console.warn(`⚠️ Contenu fallback sans image: ${content.title}, utilisation de l'image par défaut`);
+                    content.image = '../images/default-anime.svg';
+                } else {
+                    // Vérifier que l'URL de l'image est valide
+                    try {
+                        new URL(content.image);
+                        console.log(`✅ URL d'image valide pour ${content.title}: ${content.image}`);
+                    } catch (e) {
+                        // Si ce n'est pas une URL absolue, vérifier que c'est un chemin relatif valide
+                        if (!content.image.startsWith('../') && !content.image.startsWith('./') && !content.image.startsWith('/')) {
+                            console.warn(`⚠️ URL d'image invalide pour ${content.title}: "${content.image}", utilisation de l'image par défaut`);
+                            content.image = '../images/default-anime.svg';
+                        }
+                    }
+                }
+                return content;
+            });
+            
+            console.log(`✅ ${voteOptions.length} contenus fallback chargés pour le vote du jour`);
+            voteOptions.forEach(content => {
+                console.log(`  - ${content.title}: ${content.image ? `Image: ${content.image}` : 'Pas d\'image'}`);
+            });
+            
+            // Sauvegarder les contenus du jour (fallback)
+            currentDayContent = {
+                date: today,
+                contentType: contentType,
+                genre: genre,
+                content: voteOptions
+            };
+            localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+            
+            // Initialiser les votes
+            voteOptions.forEach(content => {
+                currentVotes[content.id] = 0;
+            });
+            
+            loadSavedVotes();
+            await renderVoteOptions();
+            
+            document.getElementById('voteLoading').style.display = 'none';
+            document.getElementById('voteOptions').style.display = 'grid';
+            
+            // Démarrer les faux votes automatiques (une seule fois par jour)
+            startFakeVotes();
+        }
+        
+        // Fonction pour vérifier si un texte est un genre valide
+        function isValidGenre(genre) {
+            if (!genre || typeof genre !== 'string') return false;
+            
+            const genreText = genre.trim();
+            const genreTextLower = genreText.toLowerCase();
+            
+            // Exclure les textes qui ressemblent à des titres d'épisodes (commence par # suivi d'un numéro)
+            if (/^\s*#\d+/.test(genreText)) {
+                return false;
+            }
+            
+            // Liste des mots à exclure (ne sont pas des genres)
+            const excludedWords = [
+                'titre', 'synopsis', 'title', 'description', 'summary', 'plot',
+                'le', 'la', 'les', 'un', 'une', 'des', 'et', 'ou', 'avec', 'pour', 'dans', 'sur', 'par', 'de', 'du',
+                'the', 'a', 'an', 'and', 'or', 'with', 'for', 'in', 'on', 'by', 'of',
+                'en', 'es', 'it', 'de', 'ja', 'fr', // codes de langue
+                'season', 'saison', 'episode', 'épisode', 'chapter', 'chapitre',
+                'rating', 'note', 'score', 'votes', 'vote', 'popular', 'popularité'
+            ];
+            
+            // Vérifier si le texte est un mot exclu
+            if (excludedWords.includes(genreTextLower)) {
+                return false;
+            }
+            
+            // Exclure les textes qui commencent par un "#" (tags ou numéros)
+            if (/^#/.test(genreText)) {
+                return false;
+            }
+            
+            // Exclure les titres d'épisodes : contient "#" suivi d'un nombre (ex: "#2 :", "#14")
+            if (/#\d+\s*[:：]?/i.test(genreText)) {
+                return false;
+            }
+            
+            // Exclure les textes contenant "Episode" ou "Épisode" suivi d'un numéro
+            if (/(episode|épisode)\s*\d+/i.test(genreText)) {
+                return false;
+            }
+            
+            // Exclure les textes contenant des parenthèses avec des numéros (ex: "(Épisode 14)", "(14)")
+            if (/\([^)]*\d+[^)]*\)/.test(genreText)) {
+                return false;
+            }
+            
+            // Exclure les textes contenant ":" (suggère un titre d'épisode ou une description)
+            if (/:\s/.test(genreText)) {
+                return false;
+            }
+            
+            // Exclure les textes contenant "!" ou "?" (suggère un titre ou une phrase)
+            if (/[!?]/.test(genreText)) {
+                return false;
+            }
+            
+            // Vérifier si le texte est trop court ou trop long pour être un genre
+            if (genreText.length < 2 || genreText.length > 50) {
+                return false;
+            }
+            
+            // Vérifier si le texte ressemble à une phrase (trop de mots)
+            const words = genreTextLower.split(/\s+/);
+            if (words.length > 5) {
+                return false;
+            }
+            
+            // Exclure les textes qui contiennent trop de caractères spéciaux (suggère un titre)
+            const specialCharCount = (genreText.match(/[#:()[\]{}'",;!?]/g) || []).length;
+            if (specialCharCount > 1) {
+                return false;
+            }
+            
+            // Exclure les textes qui ressemblent à des phrases complètes (contiennent des mots typiques de phrases)
+            const phraseIndicators = ['oppai', 'motomemasu', 'le', 'la', 'les', 'un', 'une', 'the', 'a', 'an'];
+            const genreWords = genreTextLower.split(/\s+/);
+            const hasPhraseIndicators = genreWords.some(word => phraseIndicators.includes(word));
+            if (hasPhraseIndicators && genreWords.length > 2) {
+                return false;
+            }
+            
+            // Exclure les textes qui contiennent des mots spécifiques suggérant un titre d'épisode
+            if (/oppai|motomemasu/i.test(genreText)) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Fonction pour traduire un genre
+        function translateGenre(genre, targetLanguage) {
+            // Si ce n'est pas un genre valide, retourner null
+            if (!isValidGenre(genre)) {
+                return null;
+            }
+            
+            const genreTranslations = {
+                'Action': { en: 'Action', de: 'Action', es: 'Acción', it: 'Azione', ja: 'アクション' },
+                'Aventure': { en: 'Adventure', de: 'Abenteuer', es: 'Aventura', it: 'Avventura', ja: '冒険' },
+                'Avant-garde': { en: 'Avant Garde', de: 'Avantgarde', es: 'Vanguardia', it: 'Avanguardia', ja: '前衛' },
+                'Prix': { en: 'Award Winning', de: 'Preisgekrönt', es: 'Ganador de Premios', it: 'Vincitore di Premi', ja: '受賞作' },
+                'Boys Love': { en: 'Boys Love', de: 'Boys Love', es: 'Boys Love', it: 'Boys Love', ja: 'ボーイズラブ' },
+                'Comédie': { en: 'Comedy', de: 'Komödie', es: 'Comedia', it: 'Commedia', ja: 'コメディ' },
+                'Drame': { en: 'Drama', de: 'Drama', es: 'Drama', it: 'Dramma', ja: 'ドラマ' },
+                'Fantasy': { en: 'Fantasy', de: 'Fantasy', es: 'Fantasía', it: 'Fantasy', ja: 'ファンタジー' },
+                'Girls Love': { en: 'Girls Love', de: 'Girls Love', es: 'Girls Love', it: 'Girls Love', ja: 'ガールズラブ' },
+                'Gastronomie': { en: 'Gourmet', de: 'Gourmet', es: 'Gastronomía', it: 'Gastronomia', ja: 'グルメ' },
+                'Horreur': { en: 'Horror', de: 'Horror', es: 'Terror', it: 'Horror', ja: 'ホラー' },
+                'Mystère': { en: 'Mystery', de: 'Mystery', es: 'Misterio', it: 'Mistero', ja: 'ミステリー' },
+                'Romance': { en: 'Romance', de: 'Romance', es: 'Romance', it: 'Romance', ja: 'ロマンス' },
+                'Science-Fiction': { en: 'Sci-Fi', de: 'Science Fiction', es: 'Ciencia Ficción', it: 'Sci-Fi', ja: 'SF' },
+                'Tranche de vie': { en: 'Slice of Life', de: 'Slice of Life', es: 'Recuentos de la Vida', it: 'Slice of Life', ja: '日常' },
+                'Sport': { en: 'Sports', de: 'Sport', es: 'Deportes', it: 'Sport', ja: 'スポーツ' },
+                'Surnaturel': { en: 'Supernatural', de: 'Übernatürlich', es: 'Sobrenatural', it: 'Soprannaturale', ja: '超自然' },
+                'Suspense': { en: 'Suspense', de: 'Spannung', es: 'Suspenso', it: 'Suspense', ja: 'サスペンス' },
+                'Ecchi': { en: 'Ecchi', de: 'Ecchi', es: 'Ecchi', it: 'Ecchi', ja: 'エッチ' },
+                'Érotique': { en: 'Erotica', de: 'Erotik', es: 'Erótica', it: 'Erotica', ja: 'エロ' },
+                'Hentai': { en: 'Hentai', de: 'Hentai', es: 'Hentai', it: 'Hentai', ja: '変態' },
+                'Casting adulte': { en: 'Adult Cast', de: 'Erwachsenenbesetzung', es: 'Reparto Adulto', it: 'Cast Adulto', ja: '大人向け' },
+                'Anthropomorphique': { en: 'Anthropomorphic', de: 'Anthropomorph', es: 'Antropomórfico', it: 'Antropomorfico', ja: '擬人化' },
+                'CGDCT': { en: 'CGDCT', de: 'CGDCT', es: 'CGDCT', it: 'CGDCT', ja: 'CGDCT' },
+                'Garde d\'enfants': { en: 'Childcare', de: 'Kinderbetreuung', es: 'Cuidado Infantil', it: 'Cura dei Bambini', ja: '育児' },
+                'Sport de combat': { en: 'Combat Sports', de: 'Kampfsport', es: 'Deportes de Combate', it: 'Sport di Combattimento', ja: '格闘技' },
+                'Travestissement': { en: 'Crossdressing', de: 'Crossdressing', es: 'Travestismo', it: 'Travestitismo', ja: '女装' },
+                'Délinquants': { en: 'Delinquents', de: 'Delinquenten', es: 'Delincuentes', it: 'Delinquenti', ja: '不良' },
+                'Détective': { en: 'Detective', de: 'Detektiv', es: 'Detective', it: 'Detective', ja: '探偵' },
+                'Éducatif': { en: 'Educational', de: 'Bildung', es: 'Educativo', it: 'Educativo', ja: '教育' },
+                'Humour gags': { en: 'Gag Humor', de: 'Gag-Humor', es: 'Humor de Gags', it: 'Umorismo Gag', ja: 'ギャグ' },
+                'Gore': { en: 'Gore', de: 'Gore', es: 'Gore', it: 'Gore', ja: 'グロ' },
+                'Harem': { en: 'Harem', de: 'Harem', es: 'Harem', it: 'Harem', ja: 'ハーレム' },
+                'Jeu à enjeux élevés': { en: 'High Stakes Game', de: 'Hochrisiko-Spiel', es: 'Juego de Alto Riesgo', it: 'Gioco ad Alto Rischio', ja: 'ハイリスクゲーム' },
+                'Historique': { en: 'Historical', de: 'Historisch', es: 'Histórico', it: 'Storico', ja: '歴史' },
+                'Idoles (Femmes)': { en: 'Idols (Female)', de: 'Idols (Weiblich)', es: 'Idols (Femeninas)', it: 'Idols (Femminili)', ja: 'アイドル（女性）' },
+                'Idoles (Hommes)': { en: 'Idols (Male)', de: 'Idols (Männlich)', es: 'Idols (Masculinas)', it: 'Idols (Maschili)', ja: 'アイドル（男性）' },
+                'Isekai': { en: 'Isekai', de: 'Isekai', es: 'Isekai', it: 'Isekai', ja: '異世界' },
+                'Iyashikei': { en: 'Iyashikei', de: 'Iyashikei', es: 'Iyashikei', it: 'Iyashikei', ja: '癒し系' },
+                'Polygone amoureux': { en: 'Love Polygon', de: 'Liebespolygon', es: 'Polígono Amoroso', it: 'Poligono Amoroso', ja: '恋愛多角形' },
+                'Statut amoureux': { en: 'Love Status', de: 'Liebesstatus', es: 'Estado Amoroso', it: 'Stato Amoroso', ja: '恋愛状況' },
+                'Changement de sexe magique': { en: 'Magical Sex Shift', de: 'Magischer Geschlechtswechsel', es: 'Cambio de Sexo Mágico', it: 'Cambio di Sesso Magico', ja: '魔法性転換' },
+                'Magical Girl': { en: 'Magical Girl', de: 'Magical Girl', es: 'Chica Mágica', it: 'Magical Girl', ja: '魔法少女' },
+                'Arts martiaux': { en: 'Martial Arts', de: 'Kampfkunst', es: 'Artes Marciales', it: 'Arti Marziali', ja: '武術' },
+                'Mecha': { en: 'Mecha', de: 'Mecha', es: 'Mecha', it: 'Mecha', ja: 'メカ' },
+                'Médical': { en: 'Medical', de: 'Medizinisch', es: 'Médico', it: 'Medico', ja: '医療' },
+                'Militaire': { en: 'Military', de: 'Militärisch', es: 'Militar', it: 'Militare', ja: '軍事' },
+                'Musique': { en: 'Music', de: 'Musik', es: 'Música', it: 'Musica', ja: '音楽' },
+                'Mythologie': { en: 'Mythology', de: 'Mythologie', es: 'Mitología', it: 'Mitologia', ja: '神話' },
+                'Crime organisé': { en: 'Organized Crime', de: 'Organisierte Kriminalität', es: 'Crimen Organizado', it: 'Crimine Organizzato', ja: '組織犯罪' },
+                'Culture Otaku': { en: 'Otaku Culture', de: 'Otaku-Kultur', es: 'Cultura Otaku', it: 'Cultura Otaku', ja: 'オタク文化' },
+                'Parodie': { en: 'Parody', de: 'Parodie', es: 'Parodia', it: 'Parodia', ja: 'パロディ' },
+                'Arts du spectacle': { en: 'Performing Arts', de: 'Darstellende Kunst', es: 'Artes Escénicas', it: 'Arti dello Spettacolo', ja: '芸能' },
+                'Animaux': { en: 'Pets', de: 'Haustiere', es: 'Mascotas', it: 'Animali Domestici', ja: 'ペット' },
+                'Psychologique': { en: 'Psychological', de: 'Psychologisch', es: 'Psicológico', it: 'Psicologico', ja: '心理' },
+                'Course': { en: 'Racing', de: 'Rennsport', es: 'Carreras', it: 'Corse', ja: 'レーシング' },
+                'Réincarnation': { en: 'Reincarnation', de: 'Reinkarnation', es: 'Reencarnación', it: 'Reincarnazione', ja: '転生' },
+                'Harem inversé': { en: 'Reverse Harem', de: 'Reverse Harem', es: 'Harem Inverso', it: 'Harem Inverso', ja: '逆ハーレム' },
+                'Samouraï': { en: 'Samurai', de: 'Samurai', es: 'Samurái', it: 'Samurai', ja: '侍' },
+                'École': { en: 'School', de: 'Schule', es: 'Escuela', it: 'Scuola', ja: '学校' },
+                'Showbiz': { en: 'Showbiz', de: 'Showbiz', es: 'Showbiz', it: 'Showbiz', ja: '芸能界' },
+                'Espace': { en: 'Space', de: 'Weltraum', es: 'Espacio', it: 'Spazio', ja: '宇宙' },
+                'Jeu de stratégie': { en: 'Strategy Game', de: 'Strategiespiel', es: 'Juego de Estrategia', it: 'Gioco di Strategia', ja: '戦略ゲーム' },
+                'Super pouvoir': { en: 'Super Power', de: 'Superkraft', es: 'Super Poder', it: 'Super Potere', ja: '超能力' },
+                'Survie': { en: 'Survival', de: 'Überleben', es: 'Supervivencia', it: 'Sopravvivenza', ja: 'サバイバル' },
+                'Sport d\'équipe': { en: 'Team Sports', de: 'Mannschaftssport', es: 'Deportes de Equipo', it: 'Sport di Squadra', ja: 'チームスポーツ' },
+                'Voyage temporel': { en: 'Time Travel', de: 'Zeitreise', es: 'Viaje en el Tiempo', it: 'Viaggio nel Tempo', ja: '時間旅行' },
+                'Fantasy urbaine': { en: 'Urban Fantasy', de: 'Urbane Fantasy', es: 'Fantasía Urbana', it: 'Fantasy Urbana', ja: 'アーバンファンタジー' },
+                'Vampire': { en: 'Vampire', de: 'Vampir', es: 'Vampiro', it: 'Vampiro', ja: '吸血鬼' },
+                'Jeu vidéo': { en: 'Video Game', de: 'Videospiel', es: 'Videojuego', it: 'Videogioco', ja: 'ゲーム' },
+                'Villainess': { en: 'Villainess', de: 'Villainess', es: 'Villana', it: 'Villainess', ja: '悪役令嬢' },
+                'Arts visuels': { en: 'Visual Arts', de: 'Bildende Kunst', es: 'Artes Visuales', it: 'Arti Visive', ja: '視覚芸術' },
+                'Lieu de travail': { en: 'Workplace', de: 'Arbeitsplatz', es: 'Lugar de Trabajo', it: 'Luogo di Lavoro', ja: '職場' },
+                'Fantastique': { en: 'Fantasy', de: 'Fantasy', es: 'Fantasía', it: 'Fantasy', ja: 'ファンタジー' },
+                'Thriller': { en: 'Thriller', de: 'Thriller', es: 'Thriller', it: 'Thriller', ja: 'スリラー' },
+                'Superhéros': { en: 'Superhero', de: 'Superheld', es: 'Superhéroe', it: 'Supereroe', ja: 'スーパーヒーロー' },
+                'Absurde': { en: 'Absurd', de: 'Absurd', es: 'Absurdo', it: 'Assurdo', ja: '不条理' }
+            };
+            
+            // Mapper les codes de langue
+            const langMap = {
+                'fr': 'fr',
+                'en': 'en',
+                'de': 'de',
+                'es': 'es',
+                'it': 'it',
+                'ja': 'ja'
+            };
+            
+            const langCode = langMap[targetLanguage] || 'en';
+            
+            // Normaliser le genre (gérer les genres avec plusieurs mots)
+            const normalizeGenre = (g) => {
+                // Convertir en minuscules d'abord, puis capitaliser chaque mot
+                return g.toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ');
+            };
+            
+            const normalizedGenre = normalizeGenre(genre);
+            
+            // Mapping des genres anglais (format API) vers les clés françaises
+            const englishToFrenchMap = {
+                'Action': 'Action',
+                'Adventure': 'Aventure',
+                'Avant-Garde': 'Avant-garde',
+                'Avant Garde': 'Avant-garde',
+                'Award Winning': 'Prix',
+                'Award-Winning': 'Prix',
+                'Boys Love': 'Boys Love',
+                'Comedy': 'Comédie',
+                'Drama': 'Drame',
+                'Fantasy': 'Fantasy',
+                'Girls Love': 'Girls Love',
+                'Gourmet': 'Gastronomie',
+                'Horror': 'Horreur',
+                'Mystery': 'Mystère',
+                'Romance': 'Romance',
+                'Sci-Fi': 'Science-Fiction',
+                'Sci-fi': 'Science-Fiction',
+                'Science Fiction': 'Science-Fiction',
+                'Slice Of Life': 'Tranche de vie',
+                'Slice of Life': 'Tranche de vie',
+                'Sports': 'Sport',
+                'Supernatural': 'Surnaturel',
+                'Suspense': 'Suspense',
+                'Thriller': 'Thriller',
+                'Ecchi': 'Ecchi',
+                'Erotica': 'Érotique',
+                'Hentai': 'Hentai',
+                'Adult Cast': 'Casting adulte',
+                'Anthropomorphic': 'Anthropomorphique',
+                'CGDCT': 'CGDCT',
+                'Childcare': 'Garde d\'enfants',
+                'Combat Sports': 'Sport de combat',
+                'Crossdressing': 'Travestissement',
+                'Delinquents': 'Délinquants',
+                'Detective': 'Détective',
+                'Educational': 'Éducatif',
+                'Gag Humor': 'Humour gags',
+                'Gore': 'Gore',
+                'Harem': 'Harem',
+                'High Stakes Game': 'Jeu à enjeux élevés',
+                'Historical': 'Historique',
+                'Idols (Female)': 'Idoles (Femmes)',
+                'Idols (Male)': 'Idoles (Hommes)',
+                'Isekai': 'Isekai',
+                'Iyashikei': 'Iyashikei',
+                'Love Polygon': 'Polygone amoureux',
+                'Love Status': 'Statut amoureux',
+                'Magical Sex Shift': 'Changement de sexe magique',
+                'Magical Girl': 'Magical Girl',
+                'Martial Arts': 'Arts martiaux',
+                'Martial arts': 'Arts martiaux',
+                'Mecha': 'Mecha',
+                'Medical': 'Médical',
+                'Military': 'Militaire',
+                'Music': 'Musique',
+                'Mythology': 'Mythologie',
+                'Organized Crime': 'Crime organisé',
+                'Otaku Culture': 'Culture Otaku',
+                'Parody': 'Parodie',
+                'Performing Arts': 'Arts du spectacle',
+                'Pets': 'Animaux',
+                'Psychological': 'Psychologique',
+                'Racing': 'Course',
+                'Reincarnation': 'Réincarnation',
+                'Reverse Harem': 'Harem inversé',
+                'Samurai': 'Samouraï',
+                'School': 'École',
+                'Showbiz': 'Showbiz',
+                'Space': 'Espace',
+                'Strategy Game': 'Jeu de stratégie',
+                'Super Power': 'Super pouvoir',
+                'Survival': 'Survie',
+                'Team Sports': 'Sport d\'équipe',
+                'Time Travel': 'Voyage temporel',
+                'Urban Fantasy': 'Fantasy urbaine',
+                'Vampire': 'Vampire',
+                'Video Game': 'Jeu vidéo',
+                'Villainess': 'Villainess',
+                'Visual Arts': 'Arts visuels',
+                'Workplace': 'Lieu de travail'
+            };
+            
+            // Convertir le genre anglais en clé française si nécessaire
+            // Essayer d'abord avec le genre normalisé, puis avec le genre original et ses variantes
+            let genreKey = normalizedGenre;
+            
+            // Liste des variantes à essayer
+            const variants = [
+                normalizedGenre,
+                genre,
+                genre.replace(/-/g, ' '),
+                genre.replace(/ /g, '-'),
+                genre.toLowerCase(),
+                genre.toUpperCase(),
+                genre.replace(/-/g, ' ').toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+            ];
+            
+            // Essayer chaque variante
+            for (const variant of variants) {
+                if (englishToFrenchMap[variant]) {
+                    genreKey = englishToFrenchMap[variant];
+                    break;
+                }
+            }
+            
+            // Si le genre existe dans les traductions, retourner la traduction
+            if (genreTranslations[genreKey] && genreTranslations[genreKey][langCode]) {
+                return genreTranslations[genreKey][langCode];
+            }
+            
+            // Essayer aussi avec le genre normalisé directement
+            if (genreTranslations[normalizedGenre] && genreTranslations[normalizedGenre][langCode]) {
+                return genreTranslations[normalizedGenre][langCode];
+            }
+            
+            // Essayer avec le genre original
+            if (genreTranslations[genre] && genreTranslations[genre][langCode]) {
+                return genreTranslations[genre][langCode];
+            }
+            
+            // Si aucune traduction trouvée, retourner le genre original (capitalisé si en anglais)
+            return normalizedGenre;
+        }
+        
+        // Rendre les options de vote
+        async function renderVoteOptions() {
+            const container = document.getElementById('voteOptions');
+            if (!container) {
+                console.error('❌ Container voteOptions non trouvé');
+                return;
+            }
+            container.innerHTML = '';
+            
+            // Obtenir la langue actuelle
+            const currentLang = localStorage.getItem('mangaWatchLanguage') || 'fr';
+            
+            // Mettre à jour la description avec le type de contenu
+            if (voteOptions.length > 0) {
+                const contentType = voteOptions[0].type;
+                
+                const voteDescription = document.getElementById('voteDescription');
+                const voteTypeIndicator = document.getElementById('voteTypeIndicator');
+                
+                if (voteDescription) {
+                    const typeText = contentType === 'anime' ? (window.t ? window.t('search.type.anime') : 'anime') : (window.t ? window.t('search.type.manga') : 'manga');
+                    const template = window.t ? window.t('home.vote_description_template') : `Quel ${typeText.toLowerCase()} préférez-vous aujourd'hui ?`;
+                    voteDescription.textContent = template.replace('{type}', typeText.toLowerCase()).replace(/\s*\{genre\}\s*/g, '');
+                }
+                
+                // Afficher le badge de type global (sans le genre)
+                if (voteTypeIndicator) {
+                    const typeBadge = contentType === 'anime' ? 
+                        `<span class="global-type-badge anime-badge"><i class="fas fa-tv"></i> ${window.t ? window.t('home.vote_type_badge_anime') : 'Vote du jour : Anime'}</span>` : 
+                        `<span class="global-type-badge manga-badge"><i class="fas fa-book"></i> ${window.t ? window.t('home.vote_type_badge_manga') : 'Vote du jour : Manga'}</span>`;
+                    
+                    voteTypeIndicator.innerHTML = typeBadge;
+                    voteTypeIndicator.style.display = 'block';
+                }
+            }
+            
+            // Fonction pour récupérer l'image depuis l'API si elle manque
+            async function fetchImageFromAPI(contentId, contentType) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${contentType}/${contentId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Utiliser la même logique que les pages de détails
+                        const imageUrl = data.data?.images?.jpg?.large_image_url || 
+                                       data.data?.images?.jpg?.image_url || 
+                                       null;
+                        if (imageUrl && !imageUrl.includes('1749/128927.jpg')) {
+                            return imageUrl;
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`⚠️ Erreur lors de la récupération de l'image depuis l'API pour ${contentId}:`, error);
+                }
+                return null;
+            }
+            
+            // Traiter chaque contenu et récupérer les images manquantes
+            const processedContents = await Promise.all(
+                voteOptions.map(async (content) => {
+                    let imageUrl = content.image;
+                    
+                    // Si pas d'image ou image invalide, essayer de récupérer depuis l'API
+                    if (!imageUrl || imageUrl === '' || imageUrl === 'undefined' || imageUrl === 'null') {
+                        console.warn(`⚠️ Pas d'image pour ${content.title || content.id}, tentative de récupération depuis l'API...`);
+                        if (content.id && typeof content.id === 'number' && content.type) {
+                            const fetchedImage = await fetchImageFromAPI(content.id, content.type);
+                            if (fetchedImage) {
+                                console.log(`✅ Image récupérée depuis l'API pour ${content.title}: ${fetchedImage}`);
+                                imageUrl = fetchedImage;
+                                // Mettre à jour le contenu avec la nouvelle image
+                                content.image = fetchedImage;
+                            } else {
+                                imageUrl = '../images/default-anime.svg';
+                            }
+                        } else {
+                            imageUrl = '../images/default-anime.svg';
+                        }
+                    } else if (imageUrl.includes('cdn.myanimelist.net')) {
+                        // Vérifier si l'image n'est pas l'image par défaut de MAL
+                        if (imageUrl.includes('1749/128927.jpg')) {
+                            console.warn(`⚠️ Image par défaut MAL détectée pour ${content.title || content.id}, tentative de récupération depuis l'API...`);
+                            if (content.id && typeof content.id === 'number' && content.type) {
+                                const fetchedImage = await fetchImageFromAPI(content.id, content.type);
+                                if (fetchedImage) {
+                                    imageUrl = fetchedImage;
+                                    content.image = fetchedImage;
+                                } else {
+                                    imageUrl = '../images/default-anime.svg';
+                                }
+                            } else {
+                                imageUrl = '../images/default-anime.svg';
+                            }
+                        } else {
+                            console.log(`✅ URL MyAnimeList valide: ${imageUrl}`);
+                        }
+                    } else if (imageUrl.startsWith('../images/')) {
+                        console.log(`📁 Image locale: ${imageUrl}`);
+                    } else if (!imageUrl.startsWith('http') && !imageUrl.startsWith('../') && !imageUrl.startsWith('./') && !imageUrl.startsWith('/')) {
+                        console.warn(`⚠️ URL d'image invalide pour ${content.title || content.id}: "${imageUrl}", utilisation de l'image par défaut`);
+                        imageUrl = '../images/default-anime.svg';
+                    }
+                    
+                    return { ...content, image: imageUrl };
+                })
+            );
+            
+            // Utiliser les contenus avec les images corrigées
+            voteOptions = processedContents;
+            
+            voteOptions.forEach(content => {
+                const voteOption = document.createElement('div');
+                voteOption.className = 'vote-option';
+                voteOption.setAttribute('data-anime', content.id);
+                
+                const imageUrl = content.image;
+                
+                // Déterminer si les statistiques doivent être visibles
+                const shouldShowStats = userHasVoted || (localStorage.getItem('lastVoteDate') === new Date().toDateString());
+                const statsDisplay = shouldShowStats ? 'block' : 'none';
+                
+                // Traduire les genres en filtrant les genres invalides
+                const validGenres = content.genres ? content.genres.filter(g => {
+                    // Si c'est un objet avec une propriété name, extraire le nom
+                    const genreName = typeof g === 'string' ? g : (g?.name || '');
+                    const isValid = isValidGenre(genreName);
+                    if (!isValid && genreName) {
+                        console.warn(`⚠️ Genre invalide filtré: "${genreName}" pour "${content.title || content.id}"`);
+                    }
+                    return isValid;
+                }).slice(0, 3).map(g => {
+                    // Extraire le nom si c'est un objet
+                    return typeof g === 'string' ? g : (g?.name || '');
+                }) : [];
+                
+                const translatedGenres = validGenres.map(genre => translateGenre(genre, currentLang)).filter(g => g !== null && g !== undefined);
+                const genresDisplay = translatedGenres.length > 0 ? translatedGenres.join(', ') : '';
+                
+                // Log pour déboguer
+                console.log(`🖼️ Création de la carte de vote pour "${content.title || content.id}" avec image: ${imageUrl}`);
+                
+                voteOption.innerHTML = `
+                    <div class="vote-image" style="width: 100%; height: 320px; overflow: hidden; border-radius: 16px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
+                        <img src="${imageUrl}" 
+                             alt="${content.title || content.titleEnglish || 'Image'}" 
+                             class="anime-cover" 
+                             onerror="(function(img) { console.warn('⚠️ Erreur de chargement image:', img.src); img.onerror = null; img.src = '../images/default-anime.svg'; img.style.opacity = '1'; img.style.display = 'block'; })(this);"
+                             onload="(function(img) { console.log('✅ Image chargée avec succès:', img.src); img.style.opacity = '1'; img.style.display = 'block'; })(this);"
+                             style="opacity: 0; transition: opacity 0.3s ease; width: 100%; height: 100%; object-fit: cover; display: block; max-width: 100%; max-height: 100%;"
+                             loading="lazy">
+                    </div>
+                    <h3 class="anime-title" onclick="goToContentDetails('${content.id}', '${content.type}')" style="cursor: pointer;">
+                        ${content.titleEnglish || content.title || 'Titre inconnu'}
+                    </h3>
+                    <p class="anime-genre">${genresDisplay}</p>
+                    <button class="vote-button" onclick="voteForAnime('${content.id}')" ${shouldShowStats ? 'disabled style="opacity: 0.5;"' : ''}>
+                        <i class="fas fa-vote-yea"></i> ${window.t ? window.t('home.vote_button_text') : 'Voter'}
+                    </button>
+                    <div class="vote-stats" style="display: ${statsDisplay};">
+                        <span class="vote-count">${currentVotes[content.id] || 0}</span> ${window.t ? window.t('home.vote_count') : 'votes'}
+                    </div>
+                `;
+                
+                container.appendChild(voteOption);
+            });
+        }
+
+        // Fonction pour afficher le popup élégant
+        function showElegantPopup(title, message, icon = '⚠️') {
+            document.getElementById('popupIcon').textContent = icon;
+            document.getElementById('popupTitle').textContent = title;
+            document.getElementById('popupMessage').textContent = message;
+            document.getElementById('elegantPopup').classList.add('show');
+        }
+
+        // Fonction pour masquer le popup
+        function hideElegantPopup() {
+            document.getElementById('elegantPopup').classList.remove('show');
+        }
+
+        // Fonction de vote
+        function voteForAnime(animeId) {
+            if (userHasVoted) {
+                showElegantPopup(
+                    'Vote déjà effectué',
+                    'Vous avez déjà voté aujourd\'hui ! Vous pourrez voter à nouveau demain.',
+                    '🗳️'
+                );
+                return;
+            }
+
+            currentVotes[animeId]++;
+            userHasVoted = true;
+            
+            // Sauvegarder les votes
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            localStorage.setItem('lastVoteDate', new Date().toDateString());
+            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            
+            // Mettre à jour l'affichage
+            updateVoteDisplay();
+            showVoteResults();
+            
+            // Afficher les votes sur toutes les cartes après le premier vote
+            document.querySelectorAll('.vote-stats').forEach(stats => {
+                stats.style.display = 'block';
+            });
+            
+            // Mettre à jour l'affichage des votes pour montrer les 20 votes aléatoires + le vote de l'utilisateur
+            updateVoteDisplay();
+            
+            // Désactiver tous les boutons de vote
+            document.querySelectorAll('.vote-button').forEach(btn => {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            });
+        }
+
+        // Mettre à jour l'affichage des votes
+        function updateVoteDisplay() {
+            voteOptions.forEach(content => {
+                const voteCount = document.querySelector(`[data-anime="${content.id}"] .vote-count`);
+                
+                if (voteCount) {
+                    voteCount.textContent = currentVotes[content.id] || 0;
+                }
+                
+                // Les statistiques sont maintenant toujours visibles
+            });
+        }
+
+        // Afficher les résultats
+        function showVoteResults() {
+            const totalVotes = Object.values(currentVotes).reduce((sum, votes) => sum + votes, 0);
+            
+            if (totalVotes === 0) return;
+            
+            // Générer dynamiquement les barres de résultats
+            const resultsChart = document.getElementById('resultsChart');
+            resultsChart.innerHTML = '';
+            
+            voteOptions.forEach(content => {
+                const percentage = totalVotes > 0 ? Math.round((currentVotes[content.id] / totalVotes) * 100) : 0;
+                
+                const resultBar = document.createElement('div');
+                resultBar.className = 'result-bar';
+                resultBar.id = `${content.id}-bar`;
+                
+                resultBar.innerHTML = `
+                    <span class="anime-name">${content.titleEnglish}</span>
+                    <div class="bar-container">
+                        <div class="bar-fill" style="width: 0%"></div>
+                    </div>
+                    <span class="percentage">0%</span>
+                `;
+                
+                resultsChart.appendChild(resultBar);
+                
+                // Animer la barre après un court délai
+                setTimeout(() => {
+                    const barFill = resultBar.querySelector('.bar-fill');
+                    const percentageText = resultBar.querySelector('.percentage');
+                    if (barFill && percentageText) {
+                        barFill.style.width = percentage + '%';
+                        percentageText.textContent = percentage + '%';
+                    }
+                }, 100);
+            });
+            
+            // Afficher la section des résultats
+            document.getElementById('voteResults').style.display = 'block';
+        }
+
+        // Réinitialiser le vote
+        function resetVote() {
+            // Réinitialiser tous les votes
+            currentVotes = {};
+            voteOptions.forEach(content => {
+                currentVotes[content.id] = 0;
+            });
+            
+            // Sauvegarder
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            
+            // Masquer les résultats
+            document.getElementById('voteResults').style.display = 'none';
+            
+            // Mettre à jour l'affichage
+            updateVoteDisplay();
+        }
+
+        // Fonction pour valider une image
+        function validateImage(url) {
+            return new Promise((resolve) => {
+                if (!url || url.includes('1749/128927.jpg')) {
+                    resolve('../images/default-anime.svg');
+                    return;
+                }
+                
+                const img = new Image();
+                img.onload = () => resolve(url);
+                img.onerror = () => resolve('../images/default-anime.svg');
+                img.src = url;
+                
+                // Timeout après 3 secondes
+                setTimeout(() => resolve('../images/default-anime.svg'), 3000);
+            });
+        }
+        
+        // Démarrer la synchronisation des votes
+        function startVoteSync() {
+            // Arrêter l'ancien intervalle s'il existe
+            if (voteSyncInterval) {
+                clearInterval(voteSyncInterval);
+            }
+            
+            // Vérifier les votes toutes les 30 secondes
+            voteSyncInterval = setInterval(checkForNewVotes, 30000);
+            
+            // Vérifier aussi après certaines actions utilisateur
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    checkForNewVotes(); // Vérifier quand on revient sur l'onglet
+                }
+            });
+            
+            // Vérifier au clic sur la page (pour détecter l'activité)
+            document.addEventListener('click', () => {
+                checkForNewVotes();
+            });
+            
+            console.log('Synchronisation des votes démarrée');
+        }
+        
+        // Arrêter la synchronisation des votes
+        function stopVoteSync() {
+            if (voteSyncInterval) {
+                clearInterval(voteSyncInterval);
+                voteSyncInterval = null;
+                console.log('Synchronisation des votes arrêtée');
+            }
+        }
+        
+        // Vérifier s'il y a de nouveaux votes
+        function checkForNewVotes() {
+            const savedVotes = localStorage.getItem('dailyVotes');
+            const savedTimestamp = localStorage.getItem('lastVoteUpdate');
+            
+            if (!savedVotes || !savedTimestamp) return;
+            
+            const currentTimestamp = Date.now();
+            const savedVoteData = JSON.parse(savedVotes);
+            
+            // Vérifier si les votes ont changé
+            let votesChanged = false;
+            let totalNewVotes = 0;
+            
+            Object.keys(savedVoteData).forEach(id => {
+                if (currentVotes.hasOwnProperty(id)) {
+                    const oldVote = currentVotes[id] || 0;
+                    const newVote = savedVoteData[id] || 0;
+                    
+                    if (newVote > oldVote) {
+                        votesChanged = true;
+                        totalNewVotes += (newVote - oldVote);
+                        currentVotes[id] = newVote;
+                    }
+                }
+            });
+            
+            // Si des votes ont changé, mettre à jour l'affichage
+            if (votesChanged) {
+                console.log(`Nouveaux votes détectés : +${totalNewVotes} votes`);
+                
+                // Mettre à jour l'affichage
+                updateVoteDisplay();
+                
+                // Afficher une notification si l'utilisateur a déjà voté
+                if (userHasVoted) {
+                    showVoteResults();
+                    showVoteUpdateNotification(totalNewVotes);
+                }
+                
+                // Mettre à jour le timestamp
+                lastVoteTimestamp = currentTimestamp;
+            }
+        }
+        
+        // Afficher une notification de mise à jour des votes
+        function showVoteUpdateNotification(newVotes) {
+            // Créer une notification élégante
+            const notification = document.createElement('div');
+            notification.className = 'vote-update-notification';
+            notification.innerHTML = `
+                <div style="background: #2a2d36; color: #f5f6fa; padding: 12px 20px; border-radius: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.15); display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px;">
+                    <i class="fas fa-sync-alt" style="animation: spin 1s linear infinite;"></i>
+                    +${newVotes} ${window.t ? window.t('home.vote_new_votes_notification') : 'nouveau(x) vote(s) !'}
+                </div>
+            `;
+            
+            // Styles pour l'animation
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .vote-update-notification {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    animation: slideIn 0.5s ease-out;
+                }
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // Ajouter à la page
+            document.body.appendChild(notification);
+            
+            // Supprimer après 3 secondes
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+        
+        // Fonction pour rediriger vers les détails d'une œuvre
+        function goToContentDetails(contentId, contentType) {
+            // Pour les animes, on va vers la saison 1 par défaut
+            if (contentType === 'anime') {
+                // Construire l'URL pour la saison 1 de l'anime
+                const animeUrl = `anime-details.html?id=${contentId}&season=1`;
+                window.location.href = animeUrl;
+            } else if (contentType === 'manga') {
+                // Pour les mangas, redirection directe vers les détails
+                const mangaUrl = `anime-details.html?id=${contentId}&type=manga`;
+                window.location.href = mangaUrl;
+            }
+        }
+        
+        // ===== SYSTÈME D'AUTHENTIFICATION =====
+        
+        // Initialiser le popup d'authentification existant
+        function initializeAuthModals() {
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            // Afficher le popup seulement si l'utilisateur n'est pas connecté
+            // MAIS ne pas l'appeler si le popup est déjà géré par acceuil.js
+            // (pour éviter les appels multiples)
+            if (!user || !user.email || !isLoggedIn) {
+                console.log('🔓 initializeAuthModals : Utilisateur non connecté détecté');
+                // Ne pas appeler showAuthPopup ici car acceuil.js le gère déjà
+                // Le popup sera affiché par acceuil.js après le chargement
+            } else {
+                console.log('🔒 initializeAuthModals : Popup non affiché (utilisateur connecté)');
+            }
+        }
+        
+        // Vérifier l'état d'authentification
+        function checkAuthState() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            
+            updateAuthUI(isLoggedIn, user);
+        }
+        
+        // Mettre à jour l'interface utilisateur selon l'état d'authentification
+        function updateAuthUI(isLoggedIn, user = null) {
+            const userAvatar = document.getElementById('user-avatar');
+            
+            if (isLoggedIn && user) {
+                // Utilisateur connecté
+                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé (le plus récent)
+                if (userAvatar) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = null;
+                    
+                    // Prioriser l'avatar personnalisé (le plus récent)
+                    if (user.customAvatar) {
+                        avatarUrl = user.customAvatar;
+                    } else if (user.avatar) {
+                        avatarUrl = user.avatar;
+                    } else if (user.originalAvatar) {
+                        avatarUrl = user.originalAvatar;
+                    } else if (user.picture) {
+                        avatarUrl = user.picture;
+                    } else {
+                        // En dernier recours, vérifier le localStorage
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) {
+                            avatarUrl = storedAvatar;
+                        } else {
+                            avatarUrl = '';
+                        }
+                    }
+                    
+                    // Mettre à jour l'avatar et le localStorage avec la valeur la plus récente
+                    if (avatarUrl) {
+                        userAvatar.src = avatarUrl;
+                        // Mettre à jour le localStorage avec l'avatar le plus récent
+                        if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
+                            localStorage.setItem(avatarKey, avatarUrl);
+                        }
+                    }
+                }
+                
+                // Garder le nom MangaWatch sans ajouter le pseudo
+                const logoLink = document.querySelector('.logo-link span');
+                if (logoLink) {
+                    logoLink.textContent = 'MangaWatch';
+                }
+            } else {
+                // Utilisateur non connecté
+                // Réinitialiser l'avatar
+                userAvatar.src = '';
+                
+                // Réinitialiser le nom dans le header
+                const logoLink = document.querySelector('.logo-link span');
+                if (logoLink) {
+                    logoLink.textContent = 'MangaWatch';
+                }
+            }
+        }
+        
+        // Gérer la déconnexion
+        function handleLogout() {
+            localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('rememberMe');
+            
+            updateAuthUI(false);
+            
+            // Afficher un message de déconnexion
+            showElegantPopup(
+                window.t ? window.t('home.logout_title') : '👋 Déconnexion', 
+                window.t ? window.t('home.logout_message') : 'Vous avez été déconnecté avec succès', 
+                'info'
+            );
+        }
+        
+        // Fonction pour générer des faux votes aléatoires (une seule fois par jour)
+        function startFakeVotes() {
+            const today = new Date().toDateString();
+            const fakeVotesKey = 'fakeVotesDate';
+            const lastFakeVotesDate = localStorage.getItem(fakeVotesKey);
+            
+            // Si les faux votes ont déjà été générés aujourd'hui, charger les votes sauvegardés
+            if (lastFakeVotesDate === today) {
+                console.log('Faux votes déjà générés aujourd\'hui, chargement des votes sauvegardés...');
+                
+                // Charger les votes sauvegardés pour s'assurer qu'ils sont dans currentVotes
+                const savedVotes = localStorage.getItem('dailyVotes');
+                if (savedVotes) {
+                    const saved = JSON.parse(savedVotes);
+                    // Charger tous les votes sauvegardés dans currentVotes
+                    Object.keys(saved).forEach(id => {
+                        const contentId = parseInt(id);
+                        currentVotes[contentId] = saved[id] || 0;
+                    });
+                    console.log('✅ Votes sauvegardés chargés:', currentVotes);
+                }
+                
+                // Afficher les résultats si l'utilisateur a déjà voté
+                if (userHasVoted) {
+                    updateVoteDisplay();
+                    showVoteResults();
+                }
+                return;
+            }
+            
+            // Générer environ 20 faux votes aléatoirement répartis (une seule fois par jour)
+            const totalFakeVotes = 20;
+            
+            // Initialiser currentVotes pour chaque contenu si ce n'est pas déjà fait
+            voteOptions.forEach(content => {
+                if (!currentVotes.hasOwnProperty(content.id)) {
+                    currentVotes[content.id] = 0;
+                }
+            });
+            const voteOptionsCount = voteOptions.length;
+            
+            // Répartir les votes de manière aléatoire entre les contenus
+            for (let i = 0; i < totalFakeVotes; i++) {
+                const randomAnimeId = voteOptions[Math.floor(Math.random() * voteOptionsCount)].id;
+                currentVotes[randomAnimeId]++;
+            }
+            
+            // Marquer cette date comme ayant reçu des faux votes
+            localStorage.setItem(fakeVotesKey, today);
+            
+            // Sauvegarder les faux votes
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            
+            // NE PAS afficher les votes tant que l'utilisateur n'a pas voté
+            // updateVoteDisplay(); // Commenté pour masquer les votes avant le vote
+            
+            // Masquer les statistiques de vote UNIQUEMENT si l'utilisateur n'a pas encore voté
+            if (!userHasVoted) {
+                document.querySelectorAll('.vote-stats').forEach(stats => {
+                    stats.style.display = 'none';
+                });
+            }
+            
+            // Afficher les résultats si l'utilisateur a déjà voté
+            if (userHasVoted) {
+                updateVoteDisplay();
+                showVoteResults();
+            }
+            
+            console.log('Faux votes générés pour aujourd\'hui:', currentVotes);
+        }
+        
+        // Fonction de test pour vérifier l'état de l'avatar
+        window.testAvatar = function() {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const userAvatar = document.getElementById('user-avatar');
+            const logoLink = document.querySelector('.logo-link span');
+            
+            console.log('=== Test Avatar ===');
+            console.log('Utilisateur connecté:', !!user);
+            console.log('Avatar actuel:', userAvatar ? userAvatar.src : 'Non trouvé');
+            console.log('Logo texte:', logoLink ? logoLink.textContent : 'Non trouvé');
+            
+            if (user) {
+                console.log('Données utilisateur:', {
+                    username: user.username,
+                    name: user.name,
+                    email: user.email,
+                    avatar: user.avatar,
+                    picture: user.picture
+                });
+                
+                const avatarKey = 'avatar_' + user.email;
+                const storedAvatar = localStorage.getItem(avatarKey);
+                console.log('Avatar stocké:', storedAvatar);
+            }
+        };
+
+        // Charger les options de vote au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVoteOptions();
+            
+            // Écouter les changements de langue pour retraduire les genres
+            document.addEventListener('languageChanged', async function() {
+                console.log('🔄 Langue changée, retraduction des genres du vote...');
+                // Re-rendre les options de vote avec les genres traduits
+                if (voteOptions && voteOptions.length > 0) {
+                    await renderVoteOptions();
+                }
+            });
+            
+            // Démarrer la synchronisation des votes en temps réel
+            startVoteSync();
+            
+            // Event listeners pour le popup élégant
+            document.getElementById('popupClose').addEventListener('click', hideElegantPopup);
+            document.getElementById('popupButton').addEventListener('click', hideElegantPopup);
+            
+            // Fermer le popup en cliquant sur l'arrière-plan
+            document.getElementById('elegantPopup').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideElegantPopup();
+                }
+            });
+            
+            // Gestion des modals d'authentification
+            initializeAuthModals();
+            
+            // Vérifier l'état de connexion au chargement
+            checkAuthState();
+        });
+
+
+    </script>
+    <!-- Script pour générer des utilisateurs fictifs -->
+    <script src="../js/fake-users-generator.js"></script>
+    <!-- Chargement des scripts avec type="module" -->
+    <script src="../js/localization.js"></script>
+    <script>
+        (function() {
+            function applyLang() {
+                if (window.localization && typeof window.localization.applyLanguage === 'function') {
+                    window.localization.applyLanguage();
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', applyLang);
+            } else {
+                applyLang();
+            }
+        })();
+    </script>
+    <script src="../js/minorContentFilter.js"></script>
+    <script src="../js/search.js"></script>
+    <script src="../js/catalogue.js" type="module"></script>
+    <script src="../js/acceuil.js" type="module"></script>
+    <script src="../js/hamburger-menu.js"></script>
+    <!-- Système de messagerie -->
+    <script src="../js/messaging.js" type="module"></script>
+    <script src="../js/auth.js" type="module"></script>
+    <script type="module" src="../js/firebase-service.js"></script>
+    <script src="../js/help-ticket.js"></script>
+    <!-- TEST : Forcer l'affichage du popup après chargement -->
+    <!-- Le popup s'affiche automatiquement via js/acceuil.js si nécessaire -->
+</body>
+</html>

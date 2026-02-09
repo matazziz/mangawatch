@@ -1,0 +1,29 @@
+/* Fix pour centrer la popup Firebase Google Sign-In */
+/* La popup Firebase s'ouvre dans une iframe, on ne peut pas la centrer directement */
+/* Mais on peut améliorer l'expérience avec un overlay */
+
+/* Style pour la popup Firebase si elle s'ouvre dans une nouvelle fenêtre */
+body > iframe[src*="accounts.google.com"],
+body > iframe[src*="firebase"],
+body > div[id*="firebase"] {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10502 !important;
+}
+
+/* Overlay pour la popup Firebase */
+.firebase-auth-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+

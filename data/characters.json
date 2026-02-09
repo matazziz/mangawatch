@@ -1,0 +1,47 @@
+{
+  "one_piece": {
+    "title": "One Piece",
+    "characters": [
+      { "id": "luffy", "name": "Monkey D. Luffy", "image": "" },
+      { "id": "zoro", "name": "Roronoa Zoro", "image": "" },
+      { "id": "nami", "name": "Nami", "image": "" },
+      { "id": "usopp", "name": "Usopp", "image": "" },
+      { "id": "sanji", "name": "Sanji", "image": "" },
+      { "id": "chopper", "name": "Tony Tony Chopper", "image": "" },
+      { "id": "robin", "name": "Nico Robin", "image": "" },
+      { "id": "franky", "name": "Franky", "image": "" },
+      { "id": "brook", "name": "Brook", "image": "" },
+      { "id": "jinbe", "name": "Jinbe", "image": "" }
+    ]
+  },
+  "demon_slayer": {
+    "title": "Demon Slayer",
+    "characters": [
+      { "id": "tanjiro", "name": "Tanjiro Kamado", "image": "" },
+      { "id": "nezuko", "name": "Nezuko Kamado", "image": "" },
+      { "id": "zenitsu", "name": "Zenitsu Agatsuma", "image": "" },
+      { "id": "inosuke", "name": "Inosuke Hashibira", "image": "" },
+      { "id": "giyuu", "name": "Giyu Tomioka", "image": "" },
+      { "id": "shinobu", "name": "Shinobu Kocho", "image": "" },
+      { "id": "kyojuro", "name": "Kyojuro Rengoku", "image": "" },
+      { "id": "muzan", "name": "Muzan Kibutsuji", "image": "" },
+      { "id": "akaza", "name": "Akaza", "image": "" },
+      { "id": "daki", "name": "Daki", "image": "" }
+    ]
+  },
+  "death_note": {
+    "title": "Death Note",
+    "characters": [
+      { "id": "light", "name": "Light Yagami", "image": "" },
+      { "id": "l", "name": "L", "image": "" },
+      { "id": "misa", "name": "Misa Amane", "image": "" },
+      { "id": "ryuk", "name": "Ryuk", "image": "" },
+      { "id": "near", "name": "Near", "image": "" },
+      { "id": "mello", "name": "Mello", "image": "" },
+      { "id": "matsuda", "name": "Touta Matsuda", "image": "" },
+      { "id": "soichiro", "name": "Soichiro Yagami", "image": "" },
+      { "id": "rem", "name": "Rem", "image": "" },
+      { "id": "higuchi", "name": "Kyosuke Higuchi", "image": "" }
+    ]
+  }
+}
