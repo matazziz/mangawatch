@@ -803,6 +803,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     transform: translateY(0);
 }
 
+/* Sur mobile le menu utilise translateX (voir media query 768px) */
+
 /* Menu mobile : disposition horizontale par défaut (desktop) */
 .mobile-menu .nav-links {
     flex-direction: row;
@@ -885,58 +887,63 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         display: flex;
     }
     
-    /* Header mobile : logo, recherche, hamburger, photo de profil à droite du menu */
+    /* Header mobile : MangaWatch réduit, pas d'image Kame House */
     .logo-link span {
-        font-size: 0.9rem;
+        font-size: 0.7rem;
+        letter-spacing: 0.8px;
     }
     
-    .logo-image {
-        height: 28px;
-        width: auto;
+    .main-header .logo-image {
+        display: none;
     }
     
     .header-right {
-        gap: 8px;
+        gap: 10px;
     }
     
+    /* Avatar un peu plus grand sur mobile */
     .avatar-link {
-        width: 40px;
-        height: 40px;
-        padding: 1px;
+        width: 46px;
+        height: 46px;
+        padding: 2px;
     }
     
     .user-avatar {
-        width: 36px;
-        height: 36px;
+        width: 42px;
+        height: 42px;
     }
     
+    /* Barre de recherche un peu plus grande */
     .search-wrapper {
         flex: 1 1 auto;
         min-width: 0;
         max-width: none;
+        min-width: 120px;
     }
     
     .search-bar {
-        border-radius: 22px;
+        border-radius: 24px;
+        padding: 2px 0;
+        min-height: 42px;
     }
     
     .search-type-selector {
-        min-width: 70px;
-        font-size: 0.82rem;
-        padding: 8px 28px 8px 10px;
-        border-radius: 22px 0 0 22px;
+        min-width: 72px;
+        font-size: 0.85rem;
+        padding: 10px 28px 10px 12px;
+        border-radius: 24px 0 0 24px;
         background-size: 8px;
         background-position: right 8px center;
     }
     
     .search-bar input {
-        font-size: 0.9rem;
-        padding: 8px 10px;
+        font-size: 0.95rem;
+        padding: 10px 12px;
     }
     
     .search-bar button[type="submit"] {
-        border-radius: 0 22px 22px 0;
-        padding: 8px 14px;
+        border-radius: 0 24px 24px 0;
+        padding: 10px 16px;
         font-size: 1rem;
     }
     
@@ -947,25 +954,40 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         gap: 8px;
     }
     
-    /* Menu mobile en vertical (s'ouvre en colonne) */
+    /* Menu hamburger : panneau étroit à droite, en colonne, la page reste visible */
     .mobile-menu {
         top: 56px;
-        padding: 12px 16px 20px;
+        left: auto;
+        right: 0;
+        width: 260px;
+        max-width: 85vw;
+        padding: 16px 12px 20px;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0 0 0 16px;
+        box-shadow: -8px 8px 32px rgba(0, 0, 0, 0.4);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .mobile-menu.active {
+        transform: translateX(0);
     }
     
     .mobile-menu .nav-links {
         flex-direction: column;
         flex-wrap: nowrap;
-        gap: 8px;
+        gap: 6px;
         align-items: stretch;
+        justify-content: flex-start;
     }
     
     .mobile-menu .nav-links a {
         width: 100%;
         min-width: 0;
         justify-content: flex-start;
-        padding: 12px 16px;
-        font-size: 0.95rem;
+        padding: 12px 14px;
+        font-size: 0.9rem;
         border-radius: 12px;
     }
 }
@@ -1000,22 +1022,21 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     .logo-link span {
-        font-size: 0.8rem;
+        font-size: 0.65rem;
     }
     
-    .logo-image {
-        height: 24px;
-        width: auto;
+    .main-header .logo-image {
+        display: none;
     }
     
     .avatar-link {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
     }
     
     .user-avatar {
-        width: 32px;
-        height: 32px;
+        width: 40px;
+        height: 40px;
     }
     
     .search-wrapper {
@@ -1024,27 +1045,28 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     .search-bar {
-        border-radius: 18px;
+        border-radius: 22px;
+        min-height: 40px;
     }
     
     .search-type-selector {
-        min-width: 58px;
-        font-size: 0.75rem;
-        padding: 6px 24px 6px 8px;
-        border-radius: 18px 0 0 18px;
+        min-width: 64px;
+        font-size: 0.8rem;
+        padding: 8px 24px 8px 10px;
+        border-radius: 22px 0 0 22px;
         background-size: 6px;
         background-position: right 6px center;
     }
     
     .search-bar input {
-        font-size: 0.85rem;
-        padding: 6px 8px;
+        font-size: 0.9rem;
+        padding: 8px 10px;
     }
     
     .search-bar button[type="submit"] {
-        border-radius: 0 18px 18px 0;
-        padding: 6px 12px;
-        font-size: 0.9rem;
+        border-radius: 0 22px 22px 0;
+        padding: 8px 14px;
+        font-size: 0.95rem;
     }
     
     .hamburger-btn {
@@ -1058,6 +1080,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     
     .mobile-menu {
         top: 52px;
+        width: 240px;
     }
     
     .language-selector {

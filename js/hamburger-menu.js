@@ -2,19 +2,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     const hamburgerBtn = document.querySelector('.hamburger-btn');
     const mobileMenu = document.querySelector('.mobile-menu');
-    const body = document.body;
 
     // Fonction pour basculer le menu
     function toggleMenu() {
         hamburgerBtn.classList.toggle('active');
         mobileMenu.classList.toggle('active');
-        
-        // Empêcher le défilement du body quand le menu est ouvert
-        if (mobileMenu.classList.contains('active')) {
-            body.style.overflow = 'hidden';
-        } else {
-            body.style.overflow = '';
-        }
+        // Sur mobile le menu est un panneau étroit à droite : on laisse le body scrollable pour voir la page en fond
     }
 
     // Écouteur d'événement pour le bouton hamburger
@@ -28,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
         link.addEventListener('click', () => {
             hamburgerBtn.classList.remove('active');
             mobileMenu.classList.remove('active');
-            body.style.overflow = '';
         });
     });
 
@@ -38,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!hamburgerBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
                 hamburgerBtn.classList.remove('active');
                 mobileMenu.classList.remove('active');
-                body.style.overflow = '';
             }
         }
     });
@@ -48,7 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('active')) {
             hamburgerBtn.classList.remove('active');
             mobileMenu.classList.remove('active');
-            body.style.overflow = '';
         }
     });
 
@@ -58,7 +48,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Sur desktop, fermer le menu mobile
             hamburgerBtn.classList.remove('active');
             mobileMenu.classList.remove('active');
-            body.style.overflow = '';
         }
     });
 
