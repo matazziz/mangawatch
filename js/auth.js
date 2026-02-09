@@ -141,18 +141,20 @@ async function handleFirebaseGoogleSignIn() {
         if (!existingAccount && typeof window.profileAccountService !== 'undefined') {
             try {
                 const firestoreProfile = await window.profileAccountService.getProfileAccountInfo(user.email);
-                if (firestoreProfile && (firestoreProfile.username || firestoreProfile.country || firestoreProfile.langue)) {
+                if (firestoreProfile && (firestoreProfile.username || firestoreProfile.country || firestoreProfile.langue || firestoreProfile.avatar)) {
                     const syncedAccount = {
                         email: user.email,
                         username: firestoreProfile.username || user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Utilisateur',
                         country: firestoreProfile.country || 'fr',
                         langue: firestoreProfile.langue || 'fr',
-                        continent: firestoreProfile.country || 'fr'
+                        continent: firestoreProfile.country || 'fr',
+                        avatar: firestoreProfile.avatar || null,
+                        customAvatar: firestoreProfile.avatar || null
                     };
                     accounts.push(syncedAccount);
                     localStorage.setItem('accounts', JSON.stringify(accounts));
                     existingAccount = syncedAccount;
-                    console.log('✅ Profil restauré depuis Firestore (pseudo, pays):', syncedAccount.username, syncedAccount.country);
+                    console.log('✅ Profil restauré depuis Firestore (pseudo, pays, avatar):', syncedAccount.username, syncedAccount.country);
                 }
             } catch (e) {
                 console.warn('Chargement profil Firestore:', e);
@@ -166,7 +168,7 @@ async function handleFirebaseGoogleSignIn() {
             console.log('✅ Pseudo trouvé:', userName);
         }
         
-        // Sauvegarder les informations de l'utilisateur
+        // Sauvegarder les informations de l'utilisateur (inclure avatar Firestore si présent)
         const userData = {
             name: userName,
             email: user.email,
@@ -177,6 +179,10 @@ async function handleFirebaseGoogleSignIn() {
             country: existingAccount?.country || existingAccount?.continent || 'fr',
             isMinor: existingAccount?.isMinor || false
         };
+        if (existingAccount?.avatar || existingAccount?.customAvatar) {
+            userData.avatar = existingAccount.avatar || existingAccount.customAvatar;
+            userData.customAvatar = existingAccount.avatar || existingAccount.customAvatar;
+        }
         
         localStorage.setItem('user', JSON.stringify(userData));
         localStorage.setItem('isLoggedIn', 'true');

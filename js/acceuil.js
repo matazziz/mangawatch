@@ -204,6 +204,23 @@ window.attachCountrySearch = attachCountrySearch;
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('✅ DOMContentLoaded - Bienvenue sur la page d\'accueil !');
 
+    // Charger l'avatar depuis Firestore (persistance après changement de page ou si absent en local)
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (user && user.email) {
+            const { avatarService } = await import('./firebase-service.js');
+            const avatarUrl = await avatarService.getAvatar(user.email);
+            if (avatarUrl) {
+                user.customAvatar = avatarUrl;
+                user.avatar = avatarUrl;
+                localStorage.setItem('user', JSON.stringify(user));
+                localStorage.setItem('avatar_' + user.email, avatarUrl);
+                const img = document.getElementById('user-avatar');
+                if (img) img.src = avatarUrl;
+            }
+        }
+    } catch (e) { /* ignore */ }
+
     // --- LOGIQUE D'AFFICHAGE DU POPUP D'AUTHENTIFICATION ---
     // Afficher le popup seulement si l'utilisateur n'est pas connecté
     // Si l'utilisateur a coché "rester connecté", il reste connecté donc pas de popup

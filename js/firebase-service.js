@@ -1120,7 +1120,8 @@ export const profileAccountService = {
         return {
           username: data.username || null,
           country: data.country || data.continent || null,
-          langue: data.langue || data.language || null
+          langue: data.langue || data.language || null,
+          avatar: data.avatar || null
         };
       }
       return null;

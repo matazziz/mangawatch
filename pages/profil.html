@@ -3680,14 +3680,13 @@
                 // Sauvegarder la date de modification
                 localStorage.setItem('lastUsernameChange_' + user.email, new Date().toISOString());
                 
-                // Mettre à jour l'affichage partout dans l'interface
+                // Mettre à jour l'affichage partout sans rafraîchir
+                const usernameDisplayEl = document.getElementById('username-display');
+                if (usernameDisplayEl) usernameDisplayEl.value = username;
+                const userNameText = document.getElementById('user-name-text');
+                if (userNameText) userNameText.textContent = username;
                 if (typeof window.updateUserNameDisplay === 'function') {
                     window.updateUserNameDisplay(username, user.email);
-                } else {
-                    const userNameText = document.getElementById('user-name-text');
-                    if (userNameText) {
-                        userNameText.textContent = username;
-                    }
                 }
                 
                 // Mettre à jour dans le header (si présent)
