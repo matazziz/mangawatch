@@ -15,61 +15,58 @@
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     
-    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <!-- Script pour charger l'avatar (localStorage d'abord, puis Firestore quand dispo) -->
     <script>
         (function() {
-            // Charger l'avatar avant que la page ne s'affiche
-            try {
-                const user = JSON.parse(localStorage.getItem('user') || 'null');
-                if (user && user.email) {
-                    const avatarKey = 'avatar_' + user.email;
-                    let avatarUrl = null;
-                    
-                    // Prioriser l'avatar personnalisé (le plus récent)
-                    if (user.customAvatar) {
-                        avatarUrl = user.customAvatar;
-                    } else if (user.avatar) {
-                        avatarUrl = user.avatar;
-                    } else if (user.originalAvatar) {
-                        avatarUrl = user.originalAvatar;
-                    } else if (user.picture) {
-                        avatarUrl = user.picture;
-                    } else {
-                        // En dernier recours, vérifier le localStorage
-                        const storedAvatar = localStorage.getItem(avatarKey);
-                        if (storedAvatar) {
-                            avatarUrl = storedAvatar;
-                        }
-                    }
-                    
-                    // Si on a trouvé un avatar, le précharger et mettre à jour le src par défaut
-                    if (avatarUrl && avatarUrl !== '') {
-                        // Précharger l'image
-                        const img = new Image();
-                        img.src = avatarUrl;
-                        
-                        // Mettre à jour le src de l'image dans le DOM dès qu'il est disponible
-                        function updateAvatarSrc() {
-                            const avatarElement = document.getElementById('user-avatar');
-                            if (avatarElement) {
-                                avatarElement.src = avatarUrl;
-                            } else {
-                                // Si l'élément n'existe pas encore, réessayer
-                                setTimeout(updateAvatarSrc, 10);
-                            }
-                        }
-                        
-                        // Démarrer la mise à jour immédiatement
-                        if (document.readyState === 'loading') {
-                            document.addEventListener('DOMContentLoaded', updateAvatarSrc);
-                        } else {
-                            updateAvatarSrc();
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('Erreur lors du préchargement de l\'avatar:', e);
+            function applyAvatar(url) {
+                if (!url) return;
+                var el = document.getElementById('user-avatar');
+                if (el) el.src = url;
             }
+            try {
+                var user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    var avatarKey = 'avatar_' + user.email;
+                    var avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || localStorage.getItem(avatarKey) || '';
+                    if (avatarUrl) {
+                        var img = new Image();
+                        img.src = avatarUrl;
+                        function setSrc() {
+                            var el = document.getElementById('user-avatar');
+                            if (el) el.src = avatarUrl; else setTimeout(setSrc, 20);
+                        }
+                        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setSrc);
+                        else setSrc();
+                    }
+                    // Quand Firestore est chargé, récupérer l'avatar et réappliquer (au cas où)
+                    var attempts = 0;
+                    function tryFirebaseAvatar() {
+                        if (window.avatarService && typeof window.avatarService.getAvatar === 'function') {
+                            window.avatarService.getAvatar(user.email).then(function(url) {
+                                if (url) {
+                                    user.customAvatar = url;
+                                    user.avatar = url;
+                                    localStorage.setItem('user', JSON.stringify(user));
+                                    localStorage.setItem(avatarKey, url);
+                                    applyAvatar(url);
+                                }
+                            }).catch(function() {});
+                            return;
+                        }
+                        attempts++;
+                        if (attempts < 20) setTimeout(tryFirebaseAvatar, 100);
+                    }
+                    document.addEventListener('DOMContentLoaded', function() {
+                        setTimeout(tryFirebaseAvatar, 50);
+                        // Réappliquer l'avatar après 1,5 s au cas où un autre script aurait écrasé l'image
+                        setTimeout(function() {
+                            var u = JSON.parse(localStorage.getItem('user') || 'null');
+                            var url = u && (u.customAvatar || u.avatar || u.originalAvatar || u.picture || (u.email ? localStorage.getItem('avatar_' + u.email) : null));
+                            if (url) applyAvatar(url);
+                        }, 1500);
+                    });
+                }
+            } catch (e) {}
         })();
     </script>
     
@@ -618,17 +615,23 @@
             // Il apparaît dans le popup d'authentification
         });
         
-        // Gestionnaire de réponse Google Sign-In
+        // Gestionnaire de réponse Google Sign-In (préserver avatar et profil)
         function handleCredentialResponse(response) {
             const responsePayload = parseJwt(response.credential);
-            
+            const existing = JSON.parse(localStorage.getItem('user') || 'null');
             const user = {
                 name: responsePayload.name,
                 email: responsePayload.email,
                 picture: responsePayload.picture,
                 token: response.credential
             };
-            
+            if (existing && existing.email === user.email) {
+                if (existing.customAvatar) user.customAvatar = existing.customAvatar;
+                if (existing.avatar) user.avatar = existing.avatar;
+                if (existing.country) user.country = existing.country;
+                if (existing.langue) user.langue = existing.langue;
+                if (existing.username) user.username = existing.username;
+            }
             localStorage.setItem('user', JSON.stringify(user));
             window.location.reload();
         }

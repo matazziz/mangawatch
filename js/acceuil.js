@@ -204,7 +204,16 @@ window.attachCountrySearch = attachCountrySearch;
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('✅ DOMContentLoaded - Bienvenue sur la page d\'accueil !');
 
-    // Charger l'avatar depuis Firestore (persistance après changement de page ou si absent en local)
+    // Charger l'avatar depuis Firestore et réappliquer (persistance après changement de page)
+    function applyAvatarFromUser() {
+        const u = JSON.parse(localStorage.getItem('user') || 'null');
+        const url = u?.customAvatar || u?.avatar || u?.originalAvatar || u?.picture || (u?.email ? localStorage.getItem('avatar_' + u.email) : null);
+        if (url) {
+            const img = document.getElementById('user-avatar');
+            if (img) img.src = url;
+        }
+    }
+    applyAvatarFromUser();
     try {
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         if (user && user.email) {
@@ -215,8 +224,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                 user.avatar = avatarUrl;
                 localStorage.setItem('user', JSON.stringify(user));
                 localStorage.setItem('avatar_' + user.email, avatarUrl);
-                const img = document.getElementById('user-avatar');
-                if (img) img.src = avatarUrl;
+                applyAvatarFromUser();
+                // Réappliquer après un délai au cas où un autre script aurait écrasé
+                setTimeout(applyAvatarFromUser, 800);
             }
         }
     } catch (e) { /* ignore */ }

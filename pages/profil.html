@@ -4027,13 +4027,10 @@
                 }
             }, 100);
             
-            // 6. Recharger la bannière depuis Firebase et localStorage
-            // Utiliser un délai pour s'assurer que les éléments DOM sont prêts
+            // 6. Recharger la bannière (cache affiché tout de suite dans loadBanner)
             setTimeout(async () => {
-                if (typeof loadBanner === 'function') {
-                    await loadBanner();
-                }
-            }, 300);
+                if (typeof loadBanner === 'function') await loadBanner();
+            }, 50);
             
             // Réinitialiser le flag après un court délai
             setTimeout(() => {
@@ -4343,12 +4340,7 @@
             }
             
             syncAndLoadUserData();
-            // Charger la bannière après la synchronisation
-            setTimeout(() => {
-                if (typeof loadBanner === 'function') {
-                    loadBanner();
-                }
-            }, 300);
+            setTimeout(() => { if (typeof loadBanner === 'function') loadBanner(); }, 50);
             
             // MÉCANISME DE PERSISTANCE : DÉSACTIVÉ TEMPORAIREMENT pour éviter les logs infinis
             // Réactivé plus tard si nécessaire avec une meilleure gestion
@@ -5781,60 +5773,56 @@
               });
           }
           
-          // Charger la bannière sauvegardée
+          // Charger la bannière sauvegardée (cache d'abord pour affichage immédiat, puis Firebase)
           async function loadBanner() {
               const user = JSON.parse(localStorage.getItem('user') || 'null');
               if (!user || !user.email) return;
               
-              // Charger les utilisateurs bloqués
               loadBlockedUsers();
               
-              // S'assurer que les éléments de la bannière existent
               const bannerImage = document.getElementById('banner-image');
               const bannerVideo = document.getElementById('banner-video');
               if (!bannerImage || !bannerVideo) {
-                  console.warn('⚠️ Éléments de bannière non trouvés, réessai dans 100ms...');
-                  setTimeout(loadBanner, 100);
+                  setTimeout(loadBanner, 80);
                   return;
               }
               
-              // Charger depuis Firebase si disponible, sinon localStorage
+              // 1) Afficher tout de suite le cache localStorage (pas de délai)
               let banner = null;
+              const cached = localStorage.getItem('profile_banner_' + user.email);
+              if (cached) {
+                  try {
+                      banner = JSON.parse(cached);
+                      displayBannerBlock(banner);
+                  } catch (e) {}
+              }
               
-              console.log('🔄 Chargement bannière pour:', user.email);
-              console.log('🔍 bannerService disponible:', !!window.bannerService);
-              
+              // 2) En parallèle, charger depuis Firebase et mettre à jour
               if (window.bannerService) {
                   try {
-                      console.log('📥 Tentative de chargement depuis Firebase (lecture serveur fraîche)...');
-                      banner = await window.bannerService.getBanner(user.email);
-                      if (banner) {
-                          console.log('✅ Bannière chargée depuis Firebase:', banner);
-                          // Mettre à jour localStorage pour garder la source de vérité synchronisée
-                          try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: banner.type, url: banner.url, volume: banner.volume !== undefined ? banner.volume : 0 })); } catch (e) {}
-                      } else {
-                          console.log('⚠️ Firebase n\'a pas retourné de bannière');
+                      const firebaseBanner = await window.bannerService.getBanner(user.email);
+                      if (firebaseBanner) {
+                          try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: firebaseBanner.type, url: firebaseBanner.url, volume: firebaseBanner.volume !== undefined ? firebaseBanner.volume : 0 })); } catch (e) {}
+                          displayBannerBlock(firebaseBanner);
                       }
-                  } catch (error) {
-                      console.error('❌ Erreur lors du chargement Firebase:', error);
+                  } catch (err) {
+                      console.warn('Bannière Firebase:', err);
                   }
               }
               
-              // Fallback vers localStorage si Firebase n'a pas retourné de bannière
-              if (!banner) {
-                  console.log('📥 Tentative de chargement depuis localStorage...');
+              if (!banner && !window.bannerService) {
                   const bannerData = localStorage.getItem('profile_banner_' + user.email);
                   if (bannerData) {
                       try {
                           banner = JSON.parse(bannerData);
-                          console.log('✅ Bannière chargée depuis localStorage:', banner);
-                      } catch (e) {
-                          console.error('❌ Erreur parsing localStorage bannière:', e);
-                      }
-                  } else {
-                      console.log('⚠️ Aucune bannière trouvée dans localStorage');
+                          displayBannerBlock(banner);
+                      } catch (e) {}
                   }
               }
+          }
+          
+          function displayBannerBlock(banner) {
+              if (!banner) return;
               
               if (banner) {
                   console.log('🎨 Affichage de la bannière:', banner.type, banner.url ? 'URL présente' : 'URL manquante');
