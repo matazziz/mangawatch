@@ -1101,6 +1101,72 @@ export const profileSettingsService = {
 };
 
 // ============================================
+// SERVICE PROFIL COMPTE (pseudo, pays, langue — synchronisation multi-domaines)
+// ============================================
+
+export const profileAccountService = {
+  /**
+   * Récupère les infos compte (pseudo, pays, langue) depuis Firestore pour un email.
+   * Utilisé au login Google pour restaurer pseudo/badge pays sur n'importe quel domaine.
+   * @param {string} userEmail - Email de l'utilisateur
+   * @returns {Promise<{ username?: string, country?: string, langue?: string }|null>}
+   */
+  async getProfileAccountInfo(userEmail) {
+    try {
+      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileDoc = await getDoc(profileRef);
+      if (profileDoc.exists()) {
+        const data = profileDoc.data();
+        return {
+          username: data.username || null,
+          country: data.country || data.continent || null,
+          langue: data.langue || data.language || null
+        };
+      }
+      return null;
+    } catch (error) {
+      console.warn('[Firebase ProfileAccount] getProfileAccountInfo:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Met à jour les champs compte (username, country, langue) dans Firestore.
+   * Appelé quand l'utilisateur modifie son pseudo ou pays sur la page profil.
+   * @param {string} userEmail - Email de l'utilisateur
+   * @param {{ username?: string, country?: string, langue?: string }} fields - Champs à mettre à jour
+   * @returns {Promise<void>}
+   */
+  async setProfileAccountInfo(userEmail, fields) {
+    try {
+      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileDoc = await getDoc(profileRef);
+      const updates = { updated_at: serverTimestamp() };
+      if (fields.username !== undefined) updates.username = fields.username;
+      if (fields.country !== undefined) updates.country = fields.country;
+      if (fields.langue !== undefined) updates.langue = fields.langue;
+      if (profileDoc.exists()) {
+        await updateDoc(profileRef, updates);
+      } else {
+        await setDoc(profileRef, {
+          id: userEmail,
+          email: userEmail,
+          ...updates,
+          created_at: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      console.error('[Firebase ProfileAccount] setProfileAccountInfo:', error);
+      throw error;
+    }
+  }
+};
+
+if (typeof window !== 'undefined') {
+  window.profileAccountService = profileAccountService;
+}
+
+// ============================================
 // SERVICE COLLECTION (LISTE UTILISATEUR)
 // ============================================
 

@@ -16,9 +16,10 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières -->
     <script type="module">
-        import { bannerService, profileSettingsService } from '/js/firebase-service.js';
+        import { bannerService, profileSettingsService, profileAccountService } from '/js/firebase-service.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
+        window.profileAccountService = profileAccountService;
     </script>
     
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
@@ -3613,7 +3614,7 @@
         });
         
         // Sauvegarder le nom d'utilisateur
-        usernameEditBtn.addEventListener('click', function() {
+        usernameEditBtn.addEventListener('click', async function() {
             const username = usernameInput.value.trim();
             const validation = validateUsername(username);
             
@@ -3640,6 +3641,12 @@
                 if (accountIndex !== -1) {
                     accounts[accountIndex].username = username;
                     localStorage.setItem('accounts', JSON.stringify(accounts));
+                }
+                // Synchroniser vers Firestore (pseudo disponible sur tous les domaines)
+                if (window.profileAccountService) {
+                    try {
+                        await window.profileAccountService.setProfileAccountInfo(user.email, { username });
+                    } catch (e) { console.error('Firestore pseudo:', e); }
                 }
                 
                 // Mettre à jour l'utilisateur
@@ -7280,7 +7287,7 @@
               });
               
               if (countrySaveBtn && countrySelectEdit) {
-                  countrySaveBtn.addEventListener('click', function() {
+                  countrySaveBtn.addEventListener('click', async function() {
                       const newCountryCode = countrySelectEdit.value;
                       var newCountryName = (typeof window.getCountryName === 'function' ? window.getCountryName(newCountryCode) : newCountryCode.toUpperCase());
                       
@@ -7289,6 +7296,12 @@
                       if (accountIndex !== -1) {
                           accounts[accountIndex].country = newCountryCode;
                           localStorage.setItem('accounts', JSON.stringify(accounts));
+                      }
+                      // Synchroniser vers Firestore (pays disponible sur tous les domaines)
+                      if (window.profileAccountService) {
+                          try {
+                              await window.profileAccountService.setProfileAccountInfo(user.email, { country: newCountryCode });
+                          } catch (e) { console.error('Firestore pays:', e); }
                       }
                       
                       user.country = newCountryCode;

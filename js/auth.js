@@ -134,22 +134,44 @@ async function handleFirebaseGoogleSignIn() {
         console.log('👤 Nom:', user.displayName);
         
         // Récupérer le compte depuis localStorage pour avoir le pseudo
-        const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-        const existingAccount = accounts.find(acc => acc.email === user.email);
+        let accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        let existingAccount = accounts.find(acc => acc.email === user.email);
+        
+        // Si pas de compte en local (ex: nouveau domaine mangawatch.fr), charger depuis Firestore
+        if (!existingAccount && typeof window.profileAccountService !== 'undefined') {
+            try {
+                const firestoreProfile = await window.profileAccountService.getProfileAccountInfo(user.email);
+                if (firestoreProfile && (firestoreProfile.username || firestoreProfile.country || firestoreProfile.langue)) {
+                    const syncedAccount = {
+                        email: user.email,
+                        username: firestoreProfile.username || user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Utilisateur',
+                        country: firestoreProfile.country || 'fr',
+                        langue: firestoreProfile.langue || 'fr',
+                        continent: firestoreProfile.country || 'fr'
+                    };
+                    accounts.push(syncedAccount);
+                    localStorage.setItem('accounts', JSON.stringify(accounts));
+                    existingAccount = syncedAccount;
+                    console.log('✅ Profil restauré depuis Firestore (pseudo, pays):', syncedAccount.username, syncedAccount.country);
+                }
+            } catch (e) {
+                console.warn('Chargement profil Firestore:', e);
+            }
+        }
         
         // Utiliser le pseudo du compte si disponible, sinon le displayName Google
         let userName = user.displayName || user.email?.split('@')[0] || 'Utilisateur';
         if (existingAccount && existingAccount.username) {
             userName = existingAccount.username;
-            console.log('✅ Pseudo trouvé dans les comptes:', userName);
+            console.log('✅ Pseudo trouvé:', userName);
         }
         
         // Sauvegarder les informations de l'utilisateur
         const userData = {
-            name: userName, // Utiliser le pseudo au lieu du displayName
+            name: userName,
             email: user.email,
             picture: user.photoURL || 'https://via.placeholder.com/150',
-            uid: user.uid, // ID Firebase unique
+            uid: user.uid,
             provider: 'google',
             langue: existingAccount?.langue || 'fr',
             country: existingAccount?.country || existingAccount?.continent || 'fr',
@@ -771,6 +793,13 @@ function showGoogleSignUpCompletionForm(googleUser) {
         
         accounts.push(newAccount);
         localStorage.setItem('accounts', JSON.stringify(accounts));
+        
+        // Synchroniser pseudo/pays/langue vers Firestore (disponibles sur tous les domaines)
+        if (typeof window.profileAccountService !== 'undefined') {
+            try {
+                await window.profileAccountService.setProfileAccountInfo(googleUser.email, { username: pseudo, country: country, langue: langue });
+            } catch (e) { console.warn('Firestore signup sync:', e); }
+        }
         
         // Sauvegarder les informations utilisateur
         const userData = {
