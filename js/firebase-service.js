@@ -30,6 +30,40 @@ import {
 import { storage } from './firebase-config.js';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
+/** Appliquer avec : gsutil cors set cors.json gs://mangawatch-98ed0.firebasestorage.app (ou gs://mangawatch-98ed0.appspot.com si c’est le bucket affiché dans la console) */
+const STORAGE_CORS_GSUTIL_HINT =
+  'Appliquez CORS sur le bucket : téléchargez cors.json du dépôt, puis gsutil cors set cors.json gs://mangawatch-98ed0.firebasestorage.app (Cloud Shell : console.cloud.google.com → activer Cloud Shell).';
+
+function logFirebaseStorageError(label, err) {
+  console.error(label, {
+    code: err?.code,
+    message: err?.message,
+    serverResponse: err?.serverResponse,
+    customData: err?.customData
+  });
+  if (err?.serverResponse) {
+    console.error(label + ' serverResponse brut:', err.serverResponse);
+  }
+}
+
+/** Si l’erreur est storage/unknown, log + throw un message avec piste CORS ; sinon ne fait rien. */
+function throwIfStorageUnknown(label, storageError) {
+  if (storageError?.code !== 'storage/unknown') {
+    return;
+  }
+  logFirebaseStorageError(label, storageError);
+  const sr = storageError.serverResponse
+    ? String(storageError.serverResponse).slice(0, 600)
+    : '';
+  const msg = sr
+    ? `Firebase Storage: ${sr} — ${STORAGE_CORS_GSUTIL_HINT}`
+    : `${storageError.message || 'Erreur inconnue'} — ${STORAGE_CORS_GSUTIL_HINT}`;
+  const wrapped = new Error(msg);
+  wrapped.code = 'storage/unknown';
+  wrapped.originalError = storageError;
+  throw wrapped;
+}
+
 // Collections Firestore
 export const COLLECTIONS = {
   FORUM_TOPICS: 'forum_topics',
@@ -469,6 +503,7 @@ export const bannerService = {
           bannerUrl = await getDownloadURL(storageRef);
           console.log('[Firebase Banner] URL récupérée:', bannerUrl);
         } catch (storageError) {
+          throwIfStorageUnknown('[Firebase Banner]', storageError);
           console.error('[Firebase Banner] Erreur upload Storage:', {
             message: storageError.message,
             code: storageError.code,
@@ -834,6 +869,7 @@ export const avatarService = {
         
         return avatarUrl;
       } catch (storageError) {
+        throwIfStorageUnknown('[Firebase Avatar]', storageError);
         console.error('[Firebase Avatar] Erreur upload Storage:', {
           message: storageError.message,
           code: storageError.code,
@@ -1067,6 +1103,36 @@ export const verificationService = {
       const verified = JSON.parse(localStorage.getItem('verified_users') || '[]');
       return verified.includes(userEmail);
     }
+  }
+};
+
+// ============================================
+// ADMIN — liste des profils Firestore (même source que la prod)
+// ============================================
+
+export const profileAdminService = {
+  /**
+   * Tous les documents user_profiles (email = id du document).
+   * Lecture publique autorisée par les règles Firestore du projet.
+   */
+  async listAllUserProfiles() {
+    const colRef = collection(db, COLLECTIONS.USER_PROFILES);
+    const snapshot = await getDocs(colRef);
+    return snapshot.docs.map((d) => {
+      const data = d.data();
+      const email = d.id;
+      const name =
+        (typeof data.username === 'string' && data.username.trim()) ||
+        (typeof data.displayName === 'string' && data.displayName.trim()) ||
+        (typeof data.name === 'string' && data.name.trim()) ||
+        (email.includes('@') ? email.split('@')[0] : email);
+      return {
+        email,
+        name,
+        avatar: data.avatar || data.photoURL || data.picture || null,
+        verified: data.verified === true
+      };
+    });
   }
 };
 
@@ -1623,6 +1689,7 @@ if (typeof window !== 'undefined') {
   window.bannerService = bannerService;
   window.avatarService = avatarService;
   window.verificationService = verificationService;
+  window.profileAdminService = profileAdminService;
   window.collectionService = collectionService;
   window.supportTicketService = supportTicketService;
   window.FIREBASE_COLLECTIONS = COLLECTIONS;

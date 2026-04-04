@@ -2376,57 +2376,62 @@
             initAdminAuth();
         }
         
-        // Récupérer tous les utilisateurs depuis localStorage
+        // Profils distants (Firestore), rempli par refreshAdminUsersFromFirestore — même base que mangawatch.fr
+        window.__adminFirestoreUsers = window.__adminFirestoreUsers || [];
+        
+        // Récupérer tous les utilisateurs : localStorage (cette machine) + Firestore (prod)
         function getAllUsers() {
-            const users = [];
-            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+            const map = new Map();
             
-            // Ajouter les comptes
+            function putUser(email, name, avatar) {
+                if (!email || typeof email !== 'string') return;
+                const prev = map.get(email);
+                const n = (name && String(name).trim()) || prev?.name || (email.includes('@') ? email.split('@')[0] : email);
+                const a = (avatar && String(avatar).trim()) || prev?.avatar || null;
+                map.set(email, { email, name: n, avatar: a });
+            }
+            
+            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
             accounts.forEach(account => {
                 if (account.email) {
-                    users.push({
-                        email: account.email,
-                        name: account.username || account.name || account.email.split('@')[0],
-                        avatar: localStorage.getItem('avatar_' + account.email) || null
-                    });
+                    putUser(
+                        account.email,
+                        account.username || account.name || account.email.split('@')[0],
+                        localStorage.getItem('avatar_' + account.email) || account.avatar || null
+                    );
                 }
             });
             
-            // Ajouter les profils sauvegardés
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
                 if (key && key.startsWith('profile_') && !key.startsWith('profile_description_') && !key.startsWith('profile_banner_')) {
                     try {
                         const email = key.replace('profile_', '');
-                        // Vérifier que c'est bien un email (contient @)
-                        if (!email.includes('@')) {
-                            continue;
-                        }
-                        
+                        if (!email.includes('@')) continue;
                         const profileData = localStorage.getItem(key);
-                        // Vérifier que les données commencent par { ou [ (JSON valide)
-                        if (!profileData || (!profileData.trim().startsWith('{') && !profileData.trim().startsWith('['))) {
-                            continue;
-                        }
-                        
+                        if (!profileData || (!profileData.trim().startsWith('{') && !profileData.trim().startsWith('['))) continue;
                         const profile = JSON.parse(profileData);
-                        
-                        // Vérifier si l'utilisateur n'est pas déjà dans la liste
-                        if (!users.find(u => u.email === email)) {
-                            users.push({
-                                email: email,
-                                name: profile.name || profile.username || email.split('@')[0],
-                                avatar: localStorage.getItem('avatar_' + email) || profile.picture || null
-                            });
+                        if (!map.has(email)) {
+                            putUser(
+                                email,
+                                profile.name || profile.username || email.split('@')[0],
+                                localStorage.getItem('avatar_' + email) || profile.picture || null
+                            );
                         }
-                    } catch (e) {
-                        // Ignorer silencieusement les erreurs de parsing pour éviter les logs répétés
-                        // Ces erreurs sont normales pour les clés qui ne sont pas du JSON
-                    }
+                    } catch (e) { }
                 }
             }
             
-            return users;
+            const remote = window.__adminFirestoreUsers;
+            if (Array.isArray(remote)) {
+                remote.forEach(u => {
+                    if (u && u.email) {
+                        putUser(u.email, u.name, u.avatar);
+                    }
+                });
+            }
+            
+            return Array.from(map.values());
         }
         
         // Récupérer les utilisateurs certifiés
@@ -4095,6 +4100,32 @@
             updateStats();
             displayReports();
             initMessagingForm();
+            
+            (async function refreshAdminUsersFromFirestore() {
+                try {
+                    const { profileAdminService } = await import('/js/firebase-service.js');
+                    if (!profileAdminService || typeof profileAdminService.listAllUserProfiles !== 'function') return;
+                    const remote = await profileAdminService.listAllUserProfiles();
+                    window.__adminFirestoreUsers = remote;
+                    const verified = JSON.parse(localStorage.getItem('verified_users') || '[]');
+                    const set = new Set(verified);
+                    let changed = false;
+                    for (const u of remote) {
+                        if (u.verified && !set.has(u.email)) {
+                            set.add(u.email);
+                            changed = true;
+                        }
+                    }
+                    if (changed) {
+                        localStorage.setItem('verified_users', JSON.stringify([...set]));
+                    }
+                    loadUsers();
+                    updateStats();
+                    loadUsersForManagement();
+                } catch (e) {
+                    console.warn('[Admin] Chargement Firestore user_profiles:', e);
+                }
+            })();
             
             // Gestion de la recherche
             const searchInput = document.getElementById('user-search-input');
