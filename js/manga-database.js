@@ -520,22 +520,104 @@ function updateInterfaceForContentType(contentType) {
     }, 100);
 }
 
-// Éléments du DOM
+// Éléments du DOM (reliés après parse du <main> — ne pas figer trop tôt)
 const elements = {
-    searchInput: document.getElementById('search-input'),
-    searchButton: document.getElementById('search-button'),
-    typeFilter: document.getElementById('type-filter'),
-    animeTypeFilter: document.getElementById('anime-type-specific-filter'),
-    statusFilter: document.getElementById('status-filter'),
-    ratingFilter: document.getElementById('rating-filter'),
-    orderFilter: document.getElementById('order-filter'),
-    mangaGrid: document.getElementById('manga-grid'),
-    loading: document.getElementById('loading'),
-    prevPage: document.getElementById('prev-page'),
-    nextPage: document.getElementById('next-page'),
-    pageNumbers: document.getElementById('page-numbers'),
-    // Les références à la modale ont été supprimées car nous utilisons maintenant une page dédiée
+    searchInput: null,
+    searchButton: null,
+    typeFilter: null,
+    animeTypeFilter: null,
+    statusFilter: null,
+    ratingFilter: null,
+    orderFilter: null,
+    mangaGrid: null,
+    loading: null,
+    prevPage: null,
+    nextPage: null,
+    pageNumbers: null
 };
+
+function bindMangaDatabaseElements() {
+    elements.searchInput = document.getElementById('search-input');
+    elements.searchButton = document.getElementById('search-button');
+    elements.typeFilter = document.getElementById('type-filter');
+    elements.animeTypeFilter = document.getElementById('anime-type-specific-filter');
+    elements.statusFilter = document.getElementById('status-filter');
+    elements.ratingFilter = document.getElementById('rating-filter');
+    elements.orderFilter = document.getElementById('order-filter');
+    elements.mangaGrid = document.getElementById('manga-grid');
+    elements.loading = document.getElementById('loading');
+    elements.prevPage = document.getElementById('prev-page');
+    elements.nextPage = document.getElementById('next-page');
+    elements.pageNumbers = document.getElementById('page-numbers');
+}
+
+/** Toujours appeler après chargement / erreur pour éviter spinner infini */
+function revealMangaDatabaseUI() {
+    if (elements.mangaGrid) {
+        elements.mangaGrid.style.opacity = '1';
+        elements.mangaGrid.style.transition = 'opacity 0.3s ease-in-out';
+    }
+    if (elements.loading) {
+        elements.loading.style.display = 'none';
+    }
+}
+
+function wireMangaDatabaseEventListeners() {
+    if (!elements.searchButton || !elements.searchInput) {
+        console.warn('[manga-database] Barre de recherche introuvable, écouteurs non branchés.');
+        return;
+    }
+    elements.searchButton.addEventListener('click', handleSearch);
+    elements.searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('clear-search') || e.target.closest('#clear-search-btn, .clear-search-btn')) {
+            clearSearch();
+        }
+    });
+    elements.searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.trim();
+        if (searchTerm) {
+            displaySearchTerm(searchTerm);
+        } else {
+            hideSearchTerm();
+        }
+    });
+    if (elements.typeFilter) elements.typeFilter.addEventListener('change', updateFilters);
+    if (elements.animeTypeFilter) elements.animeTypeFilter.addEventListener('change', updateFilters);
+    if (elements.statusFilter) {
+        elements.statusFilter.addEventListener('change', () => {
+            updateFilters();
+        });
+    } else {
+        const statusFilterDirect = document.getElementById('status-filter');
+        if (statusFilterDirect) {
+            statusFilterDirect.addEventListener('change', () => {
+                updateFilters();
+            });
+        }
+    }
+    if (elements.ratingFilter) elements.ratingFilter.addEventListener('change', updateFilters);
+    if (elements.orderFilter) elements.orderFilter.addEventListener('change', updateFilters);
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', resetFilters);
+    }
+    const genreSortBtn = document.getElementById('genre-sort-btn');
+    if (genreSortBtn) {
+        genreSortBtn.addEventListener('click', toggleGenreSort);
+    }
+    if (elements.prevPage) elements.prevPage.addEventListener('click', () => changePage(currentPage - 1));
+    if (elements.nextPage) elements.nextPage.addEventListener('click', () => changePage(currentPage + 1));
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            savePageState();
+        }, 500);
+    });
+}
 
 // Fonction utilitaire pour obtenir le statut en français
 function getMangaStatus(status) {
@@ -635,6 +717,9 @@ function filterDoujinTypeForMinors() {
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', () => {
+    bindMangaDatabaseElements();
+    wireMangaDatabaseEventListeners();
+
     // Initialiser la localisation
     if (window.localization) {
         window.localization.init();
@@ -669,9 +754,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Attendre un peu pour s'assurer que tous les éléments sont chargés
     setTimeout(() => {
-        // Vérifier que les éléments du DOM existent avant d'ajouter des écouteurs
+        bindMangaDatabaseElements();
         if (!elements.mangaGrid || !elements.searchButton || !elements.searchInput) {
-            console.error('Éléments du DOM manquants');
+            console.error('Éléments du DOM manquants (manga-database)');
+            revealMangaDatabaseUI();
             return;
         }
         
@@ -712,87 +798,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 300);
 });
-    
-    // Écouteurs d'événements
-    elements.searchButton.addEventListener('click', handleSearch);
-    elements.searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSearch();
-    });
-    
-    // Écouteur pour le bouton de suppression de recherche
-    document.addEventListener('click', (e) => {
-        if (e.target.classList.contains('clear-search')) {
-            clearSearch();
-        }
-    });
-    
-    // Écouteur pour afficher le terme de recherche en temps réel
-    elements.searchInput.addEventListener('input', (e) => {
-        const searchTerm = e.target.value.trim();
-        if (searchTerm) {
-            displaySearchTerm(searchTerm);
-        } else {
-            hideSearchTerm();
-        }
-    });
-    
-    // Écouteurs pour les filtres
-    if (elements.typeFilter) elements.typeFilter.addEventListener('change', updateFilters);
-    if (elements.animeTypeFilter) elements.animeTypeFilter.addEventListener('change', updateFilters);
-    if (elements.statusFilter) {
-        console.log('✅ Élément statusFilter trouvé:', elements.statusFilter);
-        elements.statusFilter.addEventListener('change', () => {
-            console.log('🔍 Filtre de statut changé:', elements.statusFilter.value);
-            updateFilters();
-        });
-    } else {
-        console.error('❌ Élément statusFilter NON trouvé !');
-        // Essayer de le trouver directement
-        const statusFilterDirect = document.getElementById('status-filter');
-        if (statusFilterDirect) {
-            console.log('✅ Élément status-filter trouvé directement:', statusFilterDirect);
-            statusFilterDirect.addEventListener('change', () => {
-                console.log('🔍 Filtre de statut changé (direct):', statusFilterDirect.value);
-                updateFilters();
-            });
-        } else {
-            console.error('❌ Élément status-filter NON trouvé même directement !');
-        }
-    }
-    if (elements.ratingFilter) elements.ratingFilter.addEventListener('change', updateFilters);
-    if (elements.orderFilter) elements.orderFilter.addEventListener('change', updateFilters);
-    
-    // Bouton de réinitialisation des filtres
-    const resetFiltersBtn = document.getElementById('reset-filters-btn');
-    if (resetFiltersBtn) {
-        resetFiltersBtn.addEventListener('click', resetFilters);
-    }
-    
-    // Bouton de tri par genre
-    const genreSortBtn = document.getElementById('genre-sort-btn');
-    if (genreSortBtn) {
-        genreSortBtn.addEventListener('click', toggleGenreSort);
-    }
-    
-    // Pagination
-    if (elements.prevPage) elements.prevPage.addEventListener('click', () => changePage(currentPage - 1));
-    if (elements.nextPage) elements.nextPage.addEventListener('click', () => changePage(currentPage + 1));
-    
-    // Sauvegarder la position de scroll au défilement
-    let scrollTimeout;
-    window.addEventListener('scroll', () => {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            // Sauvegarder tous les 500ms
-            savePageState();
-        }, 500);
-    });
-    
-    // Initialiser la page avec "Tous les types" par défaut après un délai
-    setTimeout(() => {
-        console.log('🔄 Démarrage de l\'initialisation...');
-        initializePage();
-    }, 100);
 
 // Fonction d'initialisation de la page
 function initializePage() {
@@ -813,14 +818,16 @@ function initializePage() {
     // Masquer l'option Doujin pour les mineurs
     filterDoujinTypeForMinors();
     
-    // Vérifier que les éléments essentiels sont présents
+    bindMangaDatabaseElements();
     if (!elements.typeFilter) {
         console.error('❌ Élément typeFilter non trouvé !');
+        revealMangaDatabaseUI();
         return;
     }
     
     if (!elements.mangaGrid) {
         console.error('❌ Élément mangaGrid non trouvé !');
+        revealMangaDatabaseUI();
         return;
     }
     
@@ -912,35 +919,26 @@ function initializePage() {
     
     // Charger les données
     console.log('📡 Appel de fetchContentList depuis initializePage...');
-    fetchContentList().then(() => {
-        console.log('✅ fetchContentList terminé avec succès');
-        // Attendre un peu pour que l'interface soit mise à jour
-        setTimeout(() => {
-            // Afficher le contenu une fois les données chargées
-            if (elements.mangaGrid) {
-                elements.mangaGrid.style.opacity = '1';
-                elements.mangaGrid.style.transition = 'opacity 0.3s ease-in-out';
-                console.log('✅ Grille affichée avec opacité:', elements.mangaGrid.style.opacity);
-            }
-            if (elements.loading) {
-                elements.loading.style.display = 'none';
-                console.log('✅ Loading masqué');
-            }
-            
-            // Restaurer la position de scroll si nécessaire
-            const pendingScroll = localStorage.getItem('pendingScrollRestore');
-            if (pendingScroll && parseInt(pendingScroll) > 0) {
-                setTimeout(() => {
-                    window.scrollTo(0, parseInt(pendingScroll));
-                    console.log('✅ Position de scroll restaurée:', pendingScroll);
-                    localStorage.removeItem('pendingScrollRestore');
-                }, 200);
-            }
-        }, 100);
-    }).catch(error => {
-        console.error('❌ Erreur lors du chargement des données:', error);
-        showError('Erreur lors du chargement des données. Veuillez réessayer.');
-    });
+    fetchContentList()
+        .then(() => {
+            console.log('✅ fetchContentList terminé avec succès');
+            setTimeout(() => {
+                const pendingScroll = localStorage.getItem('pendingScrollRestore');
+                if (pendingScroll && parseInt(pendingScroll, 10) > 0) {
+                    setTimeout(() => {
+                        window.scrollTo(0, parseInt(pendingScroll, 10));
+                        localStorage.removeItem('pendingScrollRestore');
+                    }, 200);
+                }
+            }, 100);
+        })
+        .catch(error => {
+            console.error('❌ Erreur lors du chargement des données:', error);
+            showError('Erreur lors du chargement des données. Veuillez réessayer.');
+        })
+        .finally(() => {
+            setTimeout(() => revealMangaDatabaseUI(), 80);
+        });
 }
 
 // Fonction pour récupérer la liste des mangas/animes
@@ -990,11 +988,19 @@ async function fetchContentList() {
                 }
             }, 200);
         } else {
-            showError('Aucune donnée reçue de l\'API');
+            showError('Aucune donnée reçue de l\'API (Jikan indisponible, limite ou timeout). Réessayez dans un instant.');
+            totalPages = 1;
+            currentPage = 1;
+            updatePagination();
+            displayContentList([]);
         }
     } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
         showError('Erreur lors du chargement des données');
+        totalPages = 1;
+        currentPage = 1;
+        updatePagination();
+        displayContentList([]);
     } finally {
         showLoading(false);
     }
@@ -1012,27 +1018,36 @@ async function fetchContentFromAPI(endpoint, params) {
     console.log(`Filtres:`, params);
     console.log(`Type filter value: ${elements.typeFilter ? elements.typeFilter.value : 'N/A'}`);
     
+    const FETCH_TIMEOUT_MS = 28000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
     try {
-        const response = await fetch(url);
-        
+        const response = await fetch(url, { signal: controller.signal });
+
         if (!response.ok) {
             if (response.status === 429) {
                 console.warn(`⚠️ Rate limiting détecté. Attendre avant de réessayer...`);
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 return null;
-            } else {
-                console.warn(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-                return null;
             }
+            console.warn(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+            return null;
         }
-        
+
         const data = await response.json();
         console.log(`API Response:`, data);
-        
+
         return data;
     } catch (error) {
-        console.error('Erreur lors de la récupération des données:', error);
+        if (error && error.name === 'AbortError') {
+            console.error('Jikan: délai dépassé (timeout)', url);
+        } else {
+            console.error('Erreur lors de la récupération des données:', error);
+        }
         return null;
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
@@ -2761,7 +2776,9 @@ function changePage(page) {
 
 // Mettre à jour la pagination
 function updatePagination() {
-    // Désactiver/activer les boutons précédent/suivant
+    bindMangaDatabaseElements();
+    if (!elements.prevPage || !elements.nextPage || !elements.pageNumbers) return;
+
     elements.prevPage.disabled = currentPage === 1;
     elements.nextPage.disabled = currentPage >= totalPages;
     
@@ -2806,6 +2823,7 @@ function updatePagination() {
 
 // Afficher/masquer le chargement
 function showLoading(show) {
+    if (!elements.loading) return;
     elements.loading.style.display = show ? 'flex' : 'none';
 }
 
