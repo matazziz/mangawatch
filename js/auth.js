@@ -179,6 +179,9 @@ async function handleFirebaseGoogleSignIn() {
             country: existingAccount?.country || existingAccount?.continent || 'fr',
             isMinor: existingAccount?.isMinor || false
         };
+        if (existingAccount?.username) {
+            userData.username = existingAccount.username;
+        }
         if (existingAccount?.avatar || existingAccount?.customAvatar) {
             userData.avatar = existingAccount.avatar || existingAccount.customAvatar;
             userData.customAvatar = existingAccount.avatar || existingAccount.customAvatar;
@@ -509,6 +512,7 @@ async function handleFirebaseGoogleSignUp() {
             console.log('✅ Compte existant, connexion directe');
             const userData = {
                 name: existingAccount.username || user.displayName || user.email?.split('@')[0] || 'Utilisateur',
+                username: existingAccount.username,
                 email: user.email,
                 picture: user.photoURL || 'https://via.placeholder.com/150',
                 uid: user.uid,
@@ -807,9 +811,10 @@ function showGoogleSignUpCompletionForm(googleUser) {
             } catch (e) { console.warn('Firestore signup sync:', e); }
         }
         
-        // Sauvegarder les informations utilisateur
+        // Sauvegarder les informations utilisateur (username + name = pseudo affiché partout, évite écrasement par Google JWT)
         const userData = {
             name: pseudo,
+            username: pseudo,
             email: googleUser.email,
             picture: googleUser.photoURL || 'https://via.placeholder.com/150',
             uid: googleUser.uid,

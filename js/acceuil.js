@@ -1977,8 +1977,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                 } catch (e) { /* ignore */ }
                 const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
                 const isVerified = verifiedUsers.includes(acc.email);
+                // Comptes Google : n'afficher que le pseudo enregistré, pas un éventuel "name" type nom complet
+                let displayUsername = acc.username;
+                if (!displayUsername && acc.provider !== 'google') {
+                    displayUsername = acc.name;
+                }
+                if (!displayUsername) {
+                    displayUsername = acc.email?.split('@')[0] || 'Utilisateur';
+                }
                 return {
-                    username: acc.username || acc.name || acc.email?.split('@')[0] || 'Utilisateur',
+                    username: displayUsername,
                     email: acc.email,
                     avatar: avatar || "🌸",
                     avatarType: avatar ? "image" : "emoji",

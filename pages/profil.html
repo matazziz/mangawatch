@@ -3344,9 +3344,12 @@
                         }
                     }
 
+                    const prevUser = JSON.parse(localStorage.getItem('user') || 'null');
                     let userName = fbUser.displayName || payload.name || ((payload.given_name || '') + ' ' + (payload.family_name || '')).trim() || fbUser.email.split('@')[0];
                     if (existingAccount && existingAccount.username) {
                         userName = existingAccount.username;
+                    } else if (prevUser && prevUser.email === fbUser.email) {
+                        userName = prevUser.username || prevUser.name || userName;
                     }
 
                     const user = {
@@ -3367,6 +3370,11 @@
                     if (existingAccount?.avatar || existingAccount?.customAvatar) {
                         user.avatar = existingAccount.avatar || existingAccount.customAvatar;
                         user.customAvatar = existingAccount.avatar || existingAccount.customAvatar;
+                    }
+                    if (existingAccount?.username) {
+                        user.username = existingAccount.username;
+                    } else if (prevUser && prevUser.email === fbUser.email && (prevUser.username || prevUser.name)) {
+                        user.username = prevUser.username || prevUser.name;
                     }
 
                     localStorage.setItem('profile_' + user.email, JSON.stringify(user));

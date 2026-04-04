@@ -615,22 +615,34 @@
             // Il apparaît dans le popup d'authentification
         });
         
-        // Gestionnaire de réponse Google Sign-In (préserver avatar et profil)
+        // Gestionnaire de réponse Google Sign-In (préserver pseudo choisi, pas le nom Google)
         function handleCredentialResponse(response) {
             const responsePayload = parseJwt(response.credential);
+            if (!responsePayload || !responsePayload.email) return;
             const existing = JSON.parse(localStorage.getItem('user') || 'null');
+            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+            const accountRow = accounts.find(function (a) { return a.email === responsePayload.email; });
+            var displayName = responsePayload.name;
+            if (accountRow && accountRow.username) {
+                displayName = accountRow.username;
+            } else if (existing && existing.email === responsePayload.email) {
+                displayName = existing.username || existing.name || displayName;
+            }
             const user = {
-                name: responsePayload.name,
+                name: displayName,
                 email: responsePayload.email,
                 picture: responsePayload.picture,
                 token: response.credential
             };
+            if (accountRow && accountRow.username) user.username = accountRow.username;
             if (existing && existing.email === user.email) {
                 if (existing.customAvatar) user.customAvatar = existing.customAvatar;
                 if (existing.avatar) user.avatar = existing.avatar;
                 if (existing.country) user.country = existing.country;
                 if (existing.langue) user.langue = existing.langue;
-                if (existing.username) user.username = existing.username;
+                if (existing.uid) user.uid = existing.uid;
+                if (existing.provider) user.provider = existing.provider;
+                if (!user.username && existing.username) user.username = existing.username;
             }
             localStorage.setItem('user', JSON.stringify(user));
             window.location.reload();
