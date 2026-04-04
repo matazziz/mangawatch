@@ -260,6 +260,7 @@ export const forumService = {
 
 import {
   signInWithPopup,
+  signInWithCredential,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -316,6 +317,22 @@ export const authService = {
       
       throw error;
     }
+  },
+
+  /**
+   * Connexion Google via le jeton JWT renvoyé par Google Identity Services (One Tap / bouton FedCM).
+   * Nécessaire pour que Storage/Firestore voient un utilisateur authentifié (même session que la popup Firebase).
+   */
+  async signInWithGoogleIdToken(idToken) {
+    if (!idToken || typeof idToken !== 'string') {
+      throw new Error('Jeton Google invalide');
+    }
+    const credential = GoogleAuthProvider.credential(idToken);
+    const result = await signInWithCredential(auth, credential);
+    return {
+      user: result.user,
+      credential: GoogleAuthProvider.credentialFromResult(result)
+    };
   },
 
   /**
