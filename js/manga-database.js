@@ -144,37 +144,10 @@ function getGenreSortButtonLabel() {
     return (t && t[lang] && t[lang].genre_sort) ? t[lang].genre_sort : 'Trier par genre';
 }
 
-// Mapping des noms de genres (API = anglais) vers les libellés par langue (pour les cartes)
-const GENRE_API_TO_LOCALIZED = {
-    'Action': { fr: 'Action', en: 'Action', de: 'Action', es: 'Acción', it: 'Azione', ja: 'アクション' },
-    'Adventure': { fr: 'Aventure', en: 'Adventure', de: 'Abenteuer', es: 'Aventura', it: 'Avventura', ja: '冒険' },
-    'Avant Garde': { fr: 'Avant-garde', en: 'Avant Garde', de: 'Avantgarde', es: 'Vanguardia', it: 'Avanguardia', ja: '前衛' },
-    'Award Winning': { fr: 'Prix', en: 'Award Winning', de: 'Preisgekrönt', es: 'Ganador de Premios', it: 'Vincitore di Premi', ja: '受賞作' },
-    'Boys Love': { fr: 'Boys Love', en: 'Boys Love', de: 'Boys Love', es: 'Boys Love', it: 'Boys Love', ja: 'ボーイズラブ' },
-    'Comedy': { fr: 'Comédie', en: 'Comedy', de: 'Komödie', es: 'Comedia', it: 'Commedia', ja: 'コメディ' },
-    'Drama': { fr: 'Drame', en: 'Drama', de: 'Drama', es: 'Drama', it: 'Dramma', ja: 'ドラマ' },
-    'Fantasy': { fr: 'Fantasy', en: 'Fantasy', de: 'Fantasy', es: 'Fantasía', it: 'Fantasy', ja: 'ファンタジー' },
-    'Girls Love': { fr: 'Girls Love', en: 'Girls Love', de: 'Girls Love', es: 'Girls Love', it: 'Girls Love', ja: 'ガールズラブ' },
-    'Gourmet': { fr: 'Gastronomie', en: 'Gourmet', de: 'Gourmet', es: 'Gastronomía', it: 'Gastronomia', ja: 'グルメ' },
-    'Horror': { fr: 'Horreur', en: 'Horror', de: 'Horror', es: 'Terror', it: 'Horror', ja: 'ホラー' },
-    'Mystery': { fr: 'Mystère', en: 'Mystery', de: 'Mystery', es: 'Misterio', it: 'Mistero', ja: 'ミステリー' },
-    'Romance': { fr: 'Romance', en: 'Romance', de: 'Romance', es: 'Romance', it: 'Romance', ja: 'ロマンス' },
-    'Sci-Fi': { fr: 'Science-Fiction', en: 'Sci-Fi', de: 'Science Fiction', es: 'Ciencia Ficción', it: 'Sci-Fi', ja: 'SF' },
-    'Slice of Life': { fr: 'Tranche de vie', en: 'Slice of Life', de: 'Slice of Life', es: 'Recuentos de la Vida', it: 'Slice of Life', ja: '日常' },
-    'Sports': { fr: 'Sport', en: 'Sports', de: 'Sport', es: 'Deportes', it: 'Sport', ja: 'スポーツ' },
-    'Supernatural': { fr: 'Surnaturel', en: 'Supernatural', de: 'Übernatürlich', es: 'Sobrenatural', it: 'Soprannaturale', ja: '超自然' },
-    'Suspense': { fr: 'Suspense', en: 'Suspense', de: 'Spannung', es: 'Suspenso', it: 'Suspense', ja: 'サスペンス' },
-    'Ecchi': { fr: 'Ecchi', en: 'Ecchi', de: 'Ecchi', es: 'Ecchi', it: 'Ecchi', ja: 'エッチ' },
-    'Erotica': { fr: 'Érotique', en: 'Erotica', de: 'Erotik', es: 'Erótica', it: 'Erotica', ja: 'エロ' },
-    'Hentai': { fr: 'Hentai', en: 'Hentai', de: 'Hentai', es: 'Hentai', it: 'Hentai', ja: '変態' }
-};
-
+// Genres : même mapping que localization.js (window.getTranslatedGenre) — évite const GENRE_API_TO_LOCALIZED en double en scope globale
 function getTranslatedGenreForCard(apiGenreName) {
     if (!apiGenreName || typeof apiGenreName !== 'string') return apiGenreName || '';
-    const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
-    const normalized = apiGenreName.trim();
-    const map = GENRE_API_TO_LOCALIZED[normalized] || GENRE_API_TO_LOCALIZED[normalized.replace(/\s+/g, ' ')];
-    if (map && map[currentLanguage]) return map[currentLanguage];
+    if (typeof window.getTranslatedGenre === 'function') return window.getTranslatedGenre(apiGenreName);
     return apiGenreName;
 }
 
