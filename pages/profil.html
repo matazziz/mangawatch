@@ -3311,26 +3311,47 @@
 
                     let accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
                     let existingAccount = accounts.find(acc => acc.email === fbUser.email);
+                    const prevUser = JSON.parse(localStorage.getItem('user') || 'null');
 
-                    if (!existingAccount && typeof window.profileAccountService !== 'undefined' && window.profileAccountService.getProfileAccountInfo) {
+                    let firestoreProfile = null;
+                    if (typeof window.profileAccountService !== 'undefined' && window.profileAccountService.getProfileAccountInfo) {
                         try {
-                            const firestoreProfile = await window.profileAccountService.getProfileAccountInfo(fbUser.email);
-                            if (firestoreProfile && (firestoreProfile.username || firestoreProfile.country || firestoreProfile.langue || firestoreProfile.avatar)) {
-                                const syncedAccount = {
-                                    email: fbUser.email,
-                                    username: firestoreProfile.username || fbUser.displayName?.split(' ')[0] || fbUser.email?.split('@')[0] || 'Utilisateur',
-                                    country: firestoreProfile.country || 'fr',
-                                    langue: firestoreProfile.langue || 'fr',
-                                    continent: firestoreProfile.country || 'fr',
-                                    avatar: firestoreProfile.avatar || null,
-                                    customAvatar: firestoreProfile.avatar || null
-                                };
-                                accounts.push(syncedAccount);
-                                localStorage.setItem('accounts', JSON.stringify(accounts));
-                                existingAccount = syncedAccount;
-                            }
+                            firestoreProfile = await window.profileAccountService.getProfileAccountInfo(fbUser.email);
                         } catch (e) {
                             console.warn('Chargement profil Firestore (Google profil):', e);
+                        }
+                    }
+
+                    if (firestoreProfile) {
+                        const idx = accounts.findIndex(acc => acc.email === fbUser.email);
+                        if (idx >= 0) {
+                            const acc = accounts[idx];
+                            if (firestoreProfile.username) acc.username = firestoreProfile.username;
+                            if (firestoreProfile.country) {
+                                acc.country = firestoreProfile.country;
+                                acc.continent = firestoreProfile.country;
+                            }
+                            if (firestoreProfile.langue) acc.langue = firestoreProfile.langue;
+                            if (firestoreProfile.avatar) {
+                                acc.avatar = firestoreProfile.avatar;
+                                acc.customAvatar = firestoreProfile.avatar;
+                            }
+                            existingAccount = acc;
+                            localStorage.setItem('accounts', JSON.stringify(accounts));
+                        } else if (firestoreProfile.username || firestoreProfile.country || firestoreProfile.langue || firestoreProfile.avatar) {
+                            const syncedAccount = {
+                                email: fbUser.email,
+                                username: firestoreProfile.username || fbUser.email?.split('@')[0] || 'Utilisateur',
+                                country: firestoreProfile.country || 'fr',
+                                langue: firestoreProfile.langue || 'fr',
+                                continent: firestoreProfile.country || 'fr',
+                                avatar: firestoreProfile.avatar || null,
+                                customAvatar: firestoreProfile.avatar || null,
+                                provider: 'google'
+                            };
+                            accounts.push(syncedAccount);
+                            localStorage.setItem('accounts', JSON.stringify(accounts));
+                            existingAccount = syncedAccount;
                         }
                     }
 
@@ -3344,13 +3365,15 @@
                         }
                     }
 
-                    const prevUser = JSON.parse(localStorage.getItem('user') || 'null');
-                    let userName = fbUser.displayName || payload.name || ((payload.given_name || '') + ' ' + (payload.family_name || '')).trim() || fbUser.email.split('@')[0];
-                    if (existingAccount && existingAccount.username) {
-                        userName = existingAccount.username;
-                    } else if (prevUser && prevUser.email === fbUser.email) {
-                        userName = prevUser.username || prevUser.name || userName;
-                    }
+                    const emailPart = fbUser.email.split('@')[0] || 'Utilisateur';
+                    let userName =
+                        firestoreProfile?.username ||
+                        (existingAccount && existingAccount.username) ||
+                        (prevUser && prevUser.email === fbUser.email ? (prevUser.username || prevUser.name) : null) ||
+                        fbUser.displayName ||
+                        payload.name ||
+                        ((payload.given_name || '') + ' ' + (payload.family_name || '')).trim() ||
+                        emailPart;
 
                     const user = {
                         name: userName,
@@ -3373,6 +3396,8 @@
                     }
                     if (existingAccount?.username) {
                         user.username = existingAccount.username;
+                    } else if (firestoreProfile?.username) {
+                        user.username = firestoreProfile.username;
                     } else if (prevUser && prevUser.email === fbUser.email && (prevUser.username || prevUser.name)) {
                         user.username = prevUser.username || prevUser.name;
                     }
