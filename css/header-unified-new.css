@@ -747,7 +747,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
 .hamburger-btn {
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
+    justify-content: center;
     width: 30px;
     height: 25px;
     background: transparent;
@@ -755,6 +755,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     cursor: pointer;
     padding: 0;
     flex-shrink: 0;
+    position: relative;
+    z-index: 10003;
 }
 
 .hamburger-btn:hover span {
@@ -762,12 +764,27 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
 }
 
 .hamburger-btn span {
-    width: 100%;
+    display: block;
+    width: 20px;
     height: 3px;
+    margin: 2.5px auto;
     background: var(--primary);
     border-radius: 2px;
     transition: var(--transition);
     box-shadow: 0 0 10px rgba(0, 168, 77, 0.5);
+    transform-origin: center;
+}
+
+.hamburger-btn.active span:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger-btn.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-btn.active span:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
 }
 
 .avatar-link {
@@ -813,19 +830,24 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
 .mobile-menu {
     position: fixed;
     top: 70px;
-    left: 0;
+    left: auto;
     right: 0;
+    width: min(340px, 45vw);
+    max-width: 420px;
     background: rgba(18, 18, 18, 0.95);
     backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 0 16px;
     z-index: 999;
-    transform: translateY(-100%);
+    transform: translateX(100%);
     transition: var(--transition);
-    padding: 20px;
+    padding: 16px 12px 20px;
+    box-shadow: -8px 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .mobile-menu.active {
-    transform: translateY(0);
+    transform: translateX(0);
 }
 
 /* Sur mobile le menu utilise translateX (voir media query 768px) */
@@ -845,10 +867,11 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     gap: 8px;
     padding: 12px 18px;
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
+    border-radius: 12px;
     font-size: 0.9rem;
-    min-width: 120px;
-    justify-content: center;
+    min-width: 0;
+    width: 100%;
+    justify-content: flex-start;
 }
 
 .mobile-menu .nav-links a:hover {
@@ -906,10 +929,6 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     /* Nav desktop masquée */
     .main-header .nav-links {
         display: none;
-    }
-    
-    .hamburger-btn {
-        display: flex;
     }
     
     /* Header mobile : MangaWatch réduit, pas d'image Kame House */
@@ -981,25 +1000,49 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     
     .main-header {
         padding: 0 10px;
-        height: 56px;
-        min-height: 56px;
+        height: 64px;
+        min-height: 64px;
         gap: 8px;
     }
     
-    /* Menu hamburger : panneau étroit à droite, en colonne, la page reste visible */
+    /* Menu hamburger mobile "drawer" + overlay */
+    body.mobile-menu-open {
+        overflow: hidden;
+        touch-action: none;
+    }
+
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.28s ease;
+        z-index: 10000;
+    }
+
+    body.mobile-menu-open::before {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
     .mobile-menu {
-        top: 56px;
+        top: 0;
         left: auto;
         right: 0;
-        width: 260px;
-        max-width: 85vw;
-        padding: 16px 12px 20px;
+        height: 100dvh;
+        width: min(320px, 88vw);
+        max-width: 88vw;
+        padding: 78px 14px 20px;
         border-left: 1px solid rgba(255, 255, 255, 0.1);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0 0 0 16px;
-        box-shadow: -8px 8px 32px rgba(0, 0, 0, 0.4);
+        border-bottom: none;
+        border-radius: 0;
+        box-shadow: -10px 0 38px rgba(0, 0, 0, 0.45);
         transform: translateX(100%);
-        transition: transform 0.3s ease;
+        transition: transform 0.28s ease;
+        z-index: 10001;
+        overflow-y: auto;
     }
     
     .mobile-menu.active {
@@ -1009,25 +1052,29 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     .mobile-menu .nav-links {
         flex-direction: column;
         flex-wrap: nowrap;
-        gap: 6px;
+        gap: 8px;
         align-items: stretch;
         justify-content: flex-start;
     }
     
     .mobile-menu .nav-links a {
         width: 100%;
+        box-sizing: border-box;
         min-width: 0;
         justify-content: flex-start;
         padding: 12px 14px;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        overflow: hidden;
+        transition: background 0.2s ease, transform 0.2s ease;
     }
 }
 
 /* Ajuster l'espace du body pour le header réduit sur mobile */
 @media (max-width: 768px) {
     body {
-        padding-top: 56px;
+        padding-top: 64px;
     }
 }
 
@@ -1048,8 +1095,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
 @media (max-width: 480px) {
     .main-header {
         padding: 0 8px;
-        height: 52px;
-        min-height: 52px;
+        height: 58px;
+        min-height: 58px;
         gap: 6px;
     }
     
@@ -1111,8 +1158,10 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     .mobile-menu {
-        top: 52px;
-        width: 240px;
+        top: 0;
+        width: min(300px, 90vw);
+        max-width: 90vw;
+        padding-top: 84px;
     }
     
     .language-selector {
@@ -1129,7 +1178,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
 
 @media (max-width: 480px) {
     body {
-        padding-top: 52px;
+        padding-top: 58px;
     }
 }
 
