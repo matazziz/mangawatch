@@ -581,11 +581,20 @@
 /* Responsive */
 @media (max-width: 768px) {
     .message-button {
-        bottom: 20px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-        font-size: 18px;
+        bottom: 14px;
+        right: 14px;
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+        border-width: 1.5px;
+    }
+
+    .message-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+        top: -4px;
+        right: -4px;
     }
 
     .message-popup {
@@ -603,6 +612,24 @@
 
     .message-popup-body {
         padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .message-button {
+        bottom: 12px;
+        right: 12px;
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+        box-shadow: 0 3px 14px rgba(0, 168, 77, 0.35), 0 0 20px rgba(0, 168, 77, 0.18);
+    }
+
+    .message-badge {
+        width: 18px;
+        height: 18px;
+        font-size: 9px;
+        border-width: 1.5px;
     }
 }
 

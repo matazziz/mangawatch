@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MangaWatch - Accueil</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="../css/header-unified-new.css">
     <link rel="stylesheet" href="../css/home-deathnote.css">
     <link rel="stylesheet" href="../css/footer-unified.css">
     <link rel="stylesheet" href="../css/messaging.css">
@@ -1285,6 +1285,9 @@
             
             voteOptions.forEach(content => {
                 const percentage = totalVotes > 0 ? Math.round((currentVotes[content.id] / totalVotes) * 100) : 0;
+                const voteCount = currentVotes[content.id] || 0;
+                // Garder une petite visibilité visuelle pour les options ayant au moins 1 vote
+                const visibleBarWidth = voteCount > 0 ? Math.max(percentage, 6) : 0;
                 
                 const resultBar = document.createElement('div');
                 resultBar.className = 'result-bar';
@@ -1295,7 +1298,7 @@
                     <div class="bar-container">
                         <div class="bar-fill" style="width: 0%"></div>
                     </div>
-                    <span class="percentage">0%</span>
+                    <span class="percentage">0% (0)</span>
                 `;
                 
                 resultsChart.appendChild(resultBar);
@@ -1305,8 +1308,8 @@
                     const barFill = resultBar.querySelector('.bar-fill');
                     const percentageText = resultBar.querySelector('.percentage');
                     if (barFill && percentageText) {
-                        barFill.style.width = percentage + '%';
-                        percentageText.textContent = percentage + '%';
+                        barFill.style.width = visibleBarWidth + '%';
+                        percentageText.textContent = `${percentage}% (${voteCount})`;
                     }
                 }, 100);
             });
@@ -2645,6 +2648,9 @@
             
             voteOptions.forEach(content => {
                 const percentage = totalVotes > 0 ? Math.round((currentVotes[content.id] / totalVotes) * 100) : 0;
+                const voteCount = currentVotes[content.id] || 0;
+                // Sur mobile, garder un minimum de largeur visuelle pour rendre la progression visible.
+                const visibleBarWidth = voteCount > 0 ? Math.max(percentage, 6) : 0;
                 
                 const resultBar = document.createElement('div');
                 resultBar.className = 'result-bar';
@@ -2655,7 +2661,7 @@
                     <div class="bar-container">
                         <div class="bar-fill" style="width: 0%"></div>
                     </div>
-                    <span class="percentage">0%</span>
+                    <span class="percentage">0% (0)</span>
                 `;
                 
                 resultsChart.appendChild(resultBar);
@@ -2665,8 +2671,11 @@
                     const barFill = resultBar.querySelector('.bar-fill');
                     const percentageText = resultBar.querySelector('.percentage');
                     if (barFill && percentageText) {
-                        barFill.style.width = percentage + '%';
-                        percentageText.textContent = percentage + '%';
+                        barFill.style.width = visibleBarWidth + '%';
+                        // Fallback inline pour garantir la couleur sur tous les mobiles.
+                        barFill.style.background = 'linear-gradient(90deg, #00a84d, #00c45d, #00a84d)';
+                        barFill.style.opacity = '1';
+                        percentageText.textContent = `${percentage}% (${voteCount})`;
                     }
                 }, 100);
             });
