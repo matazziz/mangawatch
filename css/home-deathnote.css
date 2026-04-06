@@ -941,6 +941,25 @@ body {
 
 /* Téléphone et tablette : tout réduire */
 @media (max-width: 768px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .main-container,
+    .hero-section,
+    .section,
+    .author-of-week-container,
+    .new-users-container,
+    .vote-container,
+    .vote-options,
+    .vote-option {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
     body {
         padding-top: 56px;
     }
@@ -966,6 +985,7 @@ body {
         margin-bottom: 1.25rem;
         max-width: 100%;
         overflow-wrap: anywhere;
+        word-break: break-word;
     }
     
     .cta-buttons {
@@ -1139,6 +1159,8 @@ body {
     .work-title {
         font-size: 1.15rem;
         margin-bottom: 0.75rem;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
     .work-description {
@@ -1149,6 +1171,25 @@ body {
 
 /* Très petits écrans (téléphone) */
 @media (max-width: 480px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .main-container,
+    .hero-section,
+    .section,
+    .author-of-week-container,
+    .new-users-container,
+    .vote-container,
+    .vote-options,
+    .vote-option {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
     body {
         padding-top: 52px;
     }

@@ -961,8 +961,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     .search-wrapper {
         flex: 1 1 0;
         min-width: 0;
-        width: 240px;
-        max-width: 240px;
+        width: min(240px, calc(100vw - 160px));
+        max-width: min(240px, calc(100vw - 160px));
     }
 
     .search-results-dropdown {
@@ -1165,8 +1165,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     .search-wrapper {
         flex: 1 1 0;
         min-width: 0;
-        width: 200px;
-        max-width: 200px;
+        width: min(200px, calc(100vw - 130px));
+        max-width: min(200px, calc(100vw - 130px));
     }
     
     .search-bar {
