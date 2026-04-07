@@ -993,21 +993,29 @@ body {
         flex-direction: column;
         gap: 0.75rem;
         align-items: stretch;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     
     .cta-button {
+        display: block;
         width: 100%;
-        margin-bottom: 0;
+        max-width: 100%;
+        margin: 0 !important;
         padding: 0.9rem 1.1rem;
         font-size: 0.98rem;
         border-radius: 14px;
         text-transform: none;
         letter-spacing: 0.2px;
         white-space: normal;
+        box-sizing: border-box;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
     
     .cta-button.secondary {
-        margin-left: 0;
+        margin-left: 0 !important;
     }
     
     .section {
@@ -1089,17 +1097,33 @@ body {
     }
 
     .new-user-card {
-        padding: 0.85rem;
+        padding: 1rem 0.95rem;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 260px;
+        box-sizing: border-box;
     }
 
     .new-user-avatar {
-        width: 120px;
-        height: 120px;
-        min-width: 120px;
-        min-height: 120px;
-        max-width: 120px;
-        max-height: 120px;
-        margin-bottom: 0.9rem;
+        width: 132px !important;
+        height: 132px !important;
+        min-width: 132px !important;
+        min-height: 132px !important;
+        max-width: 132px !important;
+        max-height: 132px !important;
+        margin: 0 auto 0.9rem auto;
+        background: transparent;
+        box-shadow: none;
+        flex-shrink: 0;
+    }
+
+    .new-user-avatar img {
+        width: 100% !important;
+        height: 100% !important;
+        margin: auto;
+        border-radius: 50%;
     }
 
     .new-user-username {
@@ -1214,12 +1238,22 @@ body {
 
     .cta-buttons {
         gap: 0.6rem;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
     }
 
     .cta-button {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        margin: 0 !important;
         padding: 0.85rem 1rem;
         font-size: 0.94rem;
         white-space: normal;
+        box-sizing: border-box;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
     
     .section-title {
@@ -1293,17 +1327,32 @@ body {
     }
 
     .new-user-card {
-        padding: 0.75rem;
+        padding: 0.9rem 0.85rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 230px;
+        box-sizing: border-box;
     }
 
     .new-user-avatar {
-        width: 95px;
-        height: 95px;
-        min-width: 95px;
-        min-height: 95px;
-        max-width: 95px;
-        max-height: 95px;
-        margin-bottom: 0.7rem;
+        width: 112px !important;
+        height: 112px !important;
+        min-width: 112px !important;
+        min-height: 112px !important;
+        max-width: 112px !important;
+        max-height: 112px !important;
+        margin: 0 auto 0.7rem auto;
+        background: transparent;
+        box-shadow: none;
+        flex-shrink: 0;
+    }
+
+    .new-user-avatar img {
+        width: 100% !important;
+        height: 100% !important;
+        margin: auto;
+        border-radius: 50%;
     }
 
     .new-user-username {
