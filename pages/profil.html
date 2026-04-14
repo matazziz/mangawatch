@@ -20,9 +20,13 @@
     <!-- Import Firebase Service pour les bannières -->
     <script type="module">
         import { bannerService, profileSettingsService, profileAccountService } from '/js/firebase-service.js';
+        import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.profileAccountService = profileAccountService;
+        window.firebaseNotesService = firebaseNotesService;
+        window.firebaseTop10Service = firebaseTop10Service;
+        window.dispatchEvent(new CustomEvent('firebaseNotesServiceReady'));
     </script>
     
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
