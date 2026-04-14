@@ -6505,6 +6505,14 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
         
         if (!isAllTypes) {
             filteredAnimes = filteredAnimes.filter(anime => {
+                // Filtrage strict des 3 types principaux pour éviter tout mélange entre containers
+                if (selectedType === 'manga' || selectedType === 'anime' || selectedType === 'film') {
+                    const strictType = String(
+                        anime.contentType || (anime.isManga ? 'manga' : 'anime')
+                    ).toLowerCase().trim();
+                    return strictType === selectedType;
+                }
+
                 // Utiliser contentType si disponible, sinon fallback sur isManga
                 // IMPORTANT: Ne pas utiliser isManga comme fallback car cela peut causer des erreurs
                 // Par défaut, si aucun contentType n'est défini, considérer comme anime
