@@ -6014,6 +6014,21 @@
           const bannerRemoveBtn = document.getElementById('banner-remove-btn');
           const bannerImage = document.getElementById('banner-image');
           const bannerVideo = document.getElementById('banner-video');
+
+          async function playBannerVideoSafely(videoEl) {
+              if (!videoEl) return;
+              try {
+                  await videoEl.play();
+              } catch (e) {
+                  // Fallback autoplay: lancer en muet pour garantir l'animation
+                  try {
+                      videoEl.muted = true;
+                      await videoEl.play();
+                  } catch (e2) {
+                      console.error('Lecture vidéo impossible (même en muet):', e2);
+                  }
+              }
+          }
           
           // Fonction pour ouvrir le menu modal
           function openBannerMenu() {
@@ -6360,7 +6375,7 @@
                                   bannerVidEl.src = displayUrl;
                                   bannerVidEl.load();
                                   bannerVidEl.classList.add('active');
-                                  bannerVidEl.play().catch(e => console.error('Erreur lecture vidéo:', e));
+                                  playBannerVideoSafely(bannerVidEl);
                               }, 10);
                               bannerVidEl.onerror = function() {
                                   var u = this.src; setTimeout(() => { if (this.src === u && this.readyState === 0) this.src = displayUrl.split('?')[0] + '?retry=' + Date.now(); }, 1000);
@@ -7396,9 +7411,7 @@
                           bannerVideo.muted = false;
                           
                           // Démarrer la lecture de la vidéo
-                          bannerVideo.play().catch(e => {
-                              console.log('Erreur de lecture vidéo:', e);
-                          });
+                          playBannerVideoSafely(bannerVideo);
                           
                           closeBannerMenu();
                           showToast('Succès', 'Bannière vidéo ajoutée avec succès !', 'success');

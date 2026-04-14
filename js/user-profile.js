@@ -515,7 +515,9 @@ function applyBannerToDom(banner, bannerImage, bannerVideo) {
                 bannerVideo.muted = false;
             }, 100);
         }).catch(function(e) {
-            bannerVideo.muted = false;
+            // Fallback autoplay mobile/desktop: garder la vidéo animée en muet si nécessaire
+            bannerVideo.muted = true;
+            bannerVideo.play().catch(function() {});
         });
         bannerVideo.addEventListener('error', function onVideoError() {
             console.warn('Bannière vidéo non chargée (profil public)', banner.url && banner.url.substring(0, 50));
