@@ -294,20 +294,23 @@ html {
   [id^="star-containers"] .catalogue-card .card-more-menu,
   [id^="star-containers"] .catalogue-card .dropdown-menu {
     width: auto !important;
-    min-width: 118px !important;
-    max-width: 150px !important;
+    min-width: 96px !important;
+    max-width: 120px !important;
     right: 4px !important;
     left: auto !important;
-    padding: 4px 0 !important;
-    border-radius: 8px !important;
+    top: 28px !important;
+    padding: 3px 6px !important;
+    border-radius: 7px !important;
+    font-size: 0.74rem !important;
+    line-height: 1.1 !important;
   }
 
   [id^="star-containers"] .catalogue-card .card-more-menu button,
   [id^="star-containers"] .catalogue-card .dropdown-menu button {
     width: auto !important;
     min-width: 100% !important;
-    padding: 6px 10px !important;
-    font-size: 0.72rem !important;
+    padding: 4px 6px !important;
+    font-size: 0.68rem !important;
     white-space: nowrap !important;
   }
 
@@ -378,6 +381,27 @@ html {
     font-size: 0.95rem !important;
     line-height: 1 !important;
     padding: 0 !important;
+  }
+
+  #reviews-section .card-list .card-more-menu,
+  #reviews-section .card-list .dropdown-menu {
+    min-width: 96px !important;
+    max-width: 120px !important;
+    top: 30px !important;
+    right: 4px !important;
+    left: auto !important;
+    padding: 3px 6px !important;
+    border-radius: 7px !important;
+    font-size: 0.74rem !important;
+    line-height: 1.1 !important;
+    z-index: 360 !important;
+  }
+
+  #reviews-section .card-list .select-top10-btn,
+  #reviews-section .card-list .card-more-menu button,
+  #reviews-section .card-list .dropdown-menu button {
+    padding: 4px 0 !important;
+    font-size: 0.68rem !important;
   }
 
   /* Toasts/confirmations (top 10, succès/erreur) en version compacte mobile */
