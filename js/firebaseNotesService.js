@@ -5,14 +5,12 @@ import { db, COLLECTIONS } from './firebase-service.js';
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   addDoc,
   updateDoc,
   deleteDoc,
   query,
   where,
-  orderBy,
   Timestamp,
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -31,15 +29,15 @@ export const firebaseNotesService = {
       const notesRef = collection(db, COLLECTIONS.USER_NOTES);
       const q = query(
         notesRef,
-        where('user_email', '==', userEmail),
-        orderBy('added_at', 'desc')
+        where('user_email', '==', userEmail)
       );
       
       const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => {
+
+      const notes = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
+          _docId: doc.id,
           id: data.content_id,
           note: data.note,
           contentType: data.content_type,
@@ -51,6 +49,9 @@ export const firebaseNotesService = {
           score: data.score || 0
         };
       });
+
+      notes.sort((a, b) => Number(b.addedAt || 0) - Number(a.addedAt || 0));
+      return notes;
     } catch (error) {
       console.error('[Firebase Notes] Erreur lors de la récupération:', error);
       return [];
@@ -66,34 +67,14 @@ export const firebaseNotesService = {
    */
   async getNote(userEmail, contentId, contentType) {
     try {
-      const notesRef = collection(db, COLLECTIONS.USER_NOTES);
-      const q = query(
-        notesRef,
-        where('user_email', '==', userEmail),
-        where('content_id', '==', String(contentId)),
-        where('content_type', '==', contentType)
+      const allNotes = await this.getAllNotes(userEmail);
+      const found = allNotes.find(
+        n => String(n.id) === String(contentId) && String(n.contentType) === String(contentType)
       );
-      
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
+      if (!found) {
         return null;
       }
-      
-      const docData = querySnapshot.docs[0];
-      const data = docData.data();
-      
-      return {
-        id: data.content_id,
-        note: data.note,
-        contentType: data.content_type,
-        addedAt: data.added_at?.toMillis ? data.added_at.toMillis() : (data.added_at?.seconds ? data.added_at.seconds * 1000 : Date.now()),
-        titre: data.titre,
-        image: data.image,
-        synopsis: data.synopsis,
-        genres: data.genres || [],
-        score: data.score || 0
-      };
+      return found;
     } catch (error) {
       console.error('[Firebase Notes] Erreur lors de la récupération:', error);
       return null;
@@ -108,11 +89,9 @@ export const firebaseNotesService = {
    */
   async saveNote(userEmail, noteData) {
     try {
-      // Vérifier si la note existe déjà
-      const existingNote = await this.getNote(
-        userEmail,
-        noteData.id,
-        noteData.contentType
+      const allNotes = await this.getAllNotes(userEmail);
+      const existingNote = allNotes.find(
+        n => String(n.id) === String(noteData.id) && String(n.contentType) === String(noteData.contentType)
       );
       
       const noteRecord = {
@@ -129,18 +108,8 @@ export const firebaseNotesService = {
       };
       
       if (existingNote) {
-        // Mettre à jour la note existante
-        const notesRef = collection(db, COLLECTIONS.USER_NOTES);
-        const q = query(
-          notesRef,
-          where('user_email', '==', userEmail),
-          where('content_id', '==', String(noteData.id)),
-          where('content_type', '==', noteData.contentType)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-          const docRef = doc(db, COLLECTIONS.USER_NOTES, querySnapshot.docs[0].id);
+        if (existingNote._docId) {
+          const docRef = doc(db, COLLECTIONS.USER_NOTES, existingNote._docId);
           await updateDoc(docRef, noteRecord);
         }
       } else {
@@ -171,21 +140,17 @@ export const firebaseNotesService = {
       const notesRef = collection(db, COLLECTIONS.USER_NOTES);
       const q = query(
         notesRef,
-        where('user_email', '==', userEmail),
-        where('content_id', '==', String(contentId)),
-        where('content_type', '==', contentType)
+        where('user_email', '==', userEmail)
       );
       
       const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        return false;
-      }
-      
-      // Supprimer tous les documents correspondants (normalement un seul)
-      const deletePromises = querySnapshot.docs.map(doc => 
-        deleteDoc(doc.ref)
-      );
+      const matches = querySnapshot.docs.filter(d => {
+        const data = d.data();
+        return String(data.content_id) === String(contentId) && String(data.content_type) === String(contentType);
+      });
+      if (matches.length === 0) return false;
+
+      const deletePromises = matches.map(d => deleteDoc(d.ref));
       
       await Promise.all(deletePromises);
       return true;
@@ -258,15 +223,15 @@ export const firebaseTop10Service = {
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
       const q = query(
         top10Ref,
-        where('user_email', '==', userEmail),
-        orderBy('rang', 'asc')
+        where('user_email', '==', userEmail)
       );
       
       const querySnapshot = await getDocs(q);
-      
-      return querySnapshot.docs.map(doc => {
+
+      const items = querySnapshot.docs.map(doc => {
         const data = doc.data();
         return {
+          _docId: doc.id,
           id: data.content_id,
           contentType: data.content_type,
           rang: data.rang,
@@ -277,6 +242,8 @@ export const firebaseTop10Service = {
           score: data.score || 0
         };
       });
+      items.sort((a, b) => Number(a.rang || 99) - Number(b.rang || 99));
+      return items;
     } catch (error) {
       console.error('[Firebase Top10] Erreur lors de la récupération:', error);
       return [];
@@ -291,16 +258,11 @@ export const firebaseTop10Service = {
    */
   async saveTop10Item(userEmail, itemData) {
     try {
-      // Vérifier si l'élément existe déjà
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
-      const q = query(
-        top10Ref,
-        where('user_email', '==', userEmail),
-        where('content_id', '==', String(itemData.id)),
-        where('content_type', '==', itemData.contentType)
+      const allItems = await this.getTop10(userEmail);
+      const existingItem = allItems.find(
+        i => String(i.id) === String(itemData.id) && String(i.contentType) === String(itemData.contentType)
       );
-      
-      const querySnapshot = await getDocs(q);
       
       const itemRecord = {
         user_email: userEmail,
@@ -315,12 +277,10 @@ export const firebaseTop10Service = {
         updated_at: serverTimestamp()
       };
       
-      if (!querySnapshot.empty) {
-        // Mettre à jour
-        const docRef = doc(db, COLLECTIONS.USER_TOP10, querySnapshot.docs[0].id);
+      if (existingItem && existingItem._docId) {
+        const docRef = doc(db, COLLECTIONS.USER_TOP10, existingItem._docId);
         await updateDoc(docRef, itemRecord);
       } else {
-        // Créer
         await addDoc(top10Ref, {
           ...itemRecord,
           created_at: serverTimestamp()
@@ -346,18 +306,16 @@ export const firebaseTop10Service = {
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
       const q = query(
         top10Ref,
-        where('user_email', '==', userEmail),
-        where('content_id', '==', String(contentId)),
-        where('content_type', '==', contentType)
+        where('user_email', '==', userEmail)
       );
       
       const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        return false;
-      }
-      
-      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+      const matches = querySnapshot.docs.filter(d => {
+        const data = d.data();
+        return String(data.content_id) === String(contentId) && String(data.content_type) === String(contentType);
+      });
+      if (matches.length === 0) return false;
+      const deletePromises = matches.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
       
       return true;
