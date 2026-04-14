@@ -407,9 +407,15 @@ html {
 
   #reviews-section .card-list .anime-title,
   #reviews-section .card-list a[data-card-link="true"] {
-    font-size: 0.76rem !important;
-    line-height: 1.15 !important;
+    font-size: 0.7rem !important;
+    line-height: 1.1 !important;
     margin-top: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    min-height: calc(1.1em * 2) !important;
   }
 
   #reviews-section .card-list [id^="catalogue-card-"] > img {

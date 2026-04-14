@@ -10268,6 +10268,20 @@ async function getUserTop10(user, genre = null, type = null) {
                     }
                 }
             }
+            const hasItems = top10.some(item => item !== null);
+            if (hasItems) {
+                return top10;
+            }
+            // Si Firebase est vide, fallback local pour affichage immédiat
+            const localKey = getUserTop10Key(user, null, finalType);
+            try {
+                const localStored = localStorage.getItem(localKey);
+                if (localStored) {
+                    const localTop10 = JSON.parse(localStored);
+                    while (localTop10.length < 10) localTop10.push(null);
+                    return localTop10.slice(0, 10);
+                }
+            } catch (e) {}
             return top10;
         } catch (err) {
             console.error('❌ Erreur lors du chargement du top 10 depuis Firebase:', err);
@@ -10344,8 +10358,16 @@ async function setUserTop10(user, top10, genre = null, type = null) {
                 }
             }
             console.log('✅ Top 10 global sauvegardé dans Firebase pour type:', finalType || 'all');
+            // Toujours maintenir un cache local pour affichage instantané
+            const localKey = getUserTop10Key(user, null, finalType);
+            localStorage.setItem(localKey, JSON.stringify(cleanTop10));
         } catch (err) {
             console.error('❌ Erreur lors de la sauvegarde Firebase:', err);
+            // Fallback local en cas d'échec cloud
+            try {
+                const localKey = getUserTop10Key(user, null, finalType);
+                localStorage.setItem(localKey, JSON.stringify(cleanTop10));
+            } catch (e) {}
             throw err;
         }
     } else {
