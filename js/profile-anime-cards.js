@@ -327,7 +327,7 @@ async function syncLocalTop10ToFirebase(user) {
     }
 }
 
-function saveAnimeNote(animeId, rating, animeData = {}) {
+async function saveAnimeNote(animeId, rating, animeData = {}) {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     if (user && user.email) {
         await syncLocalTop10ToFirebase(user);
