@@ -204,54 +204,134 @@ async function loadUserNotes(userEmail) {
         console.warn('[loadUserNotes] Aucun email fourni');
     }
 
-    // Essayer d'abord Firebase (attendre un peu si les moduleens ne sont pas encore chargés)
+    const notesKey = 'user_content_notes_' + userEmail;
+    let localNotes = [];
+    try {
+        localNotes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+        if (!Array.isArray(localNotes)) localNotes = [];
+    } catch (e) {
+        localNotes = [];
+    }
+
+    const noteKey = (n) => `${String(n && n.id)}::${String((n && n.contentType) || 'anime').toLowerCase()}`;
+
+    // Essayer Firebase (avec un court retry), puis fusionner avec localStorage
+    let firebaseNotes = null;
+    if (typeof window.firebaseNotesService === 'undefined' || !window.firebaseNotesService) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
     if (typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {
         try {
             const notes = await window.firebaseNotesService.getAllNotes(userEmail);
-            if (notes && Array.isArray(notes)) {
-                console.log(`[loadUserNotes] ${notes.length} notes chargées depuis Firebase`);
-                return notes;
+            if (Array.isArray(notes)) {
+                firebaseNotes = notes;
             }
         } catch (err) {
-            console.error('[loadUserNotes] Erreur lors du chargement depuis Firebase:', err);
-        }
-    } else {
-        // Attendre un peu que les modules Firebase se chargent
-        console.log('[loadUserNotes] Firebase non disponible, attente de 500ms...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Réessayer Firebase
-        if (typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {
-            try {
-                const notes = await window.firebaseNotesService.getAllNotes(userEmail);
-                if (notes && Array.isArray(notes)) {
-                    console.log(`[loadUserNotes] ${notes.length} notes chargées depuis Firebase (après attente)`);
-                    return notes;
-                }
-            } catch (err) {
-                console.error('[loadUserNotes] Erreur lors du chargement depuis Firebase (après attente):', err);
-            }
+            console.error('[loadUserNotes] Erreur lors du chargement Firebase:', err);
         }
     }
 
-    // Fallback vers localStorage uniquement si Firebase n'est pas disponible
-    console.warn('[loadUserNotes] Firebase non disponible, fallback vers localStorage');
-    try {
-        const notesKey = 'user_content_notes_' + userEmail;
-        const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
-        console.log(`[loadUserNotes] ${notes.length} notes chargées depuis localStorage (fallback)`);
-        return notes;
-    } catch (e) {
-        console.error('[loadUserNotes] Erreur lors du chargement depuis localStorage:', e);
-        return [];
+    // Pas de Firebase dispo: fallback local direct
+    if (!firebaseNotes) {
+        console.warn('[loadUserNotes] Firebase indisponible, fallback localStorage');
+        return localNotes;
     }
+
+    // Fusion robuste: on garde la version la plus récente par (id + contentType)
+    const mergedMap = new Map();
+    for (const n of firebaseNotes) {
+        if (!n || !n.id) continue;
+        mergedMap.set(noteKey(n), n);
+    }
+    for (const n of localNotes) {
+        if (!n || !n.id) continue;
+        const k = noteKey(n);
+        const existing = mergedMap.get(k);
+        if (!existing) {
+            mergedMap.set(k, n);
+        } else {
+            const existingTs = Number(existing.addedAt || 0);
+            const localTs = Number(n.addedAt || 0);
+            if (localTs > existingTs) mergedMap.set(k, { ...existing, ...n });
+        }
+    }
+
+    const mergedNotes = Array.from(mergedMap.values());
+    try { localStorage.setItem(notesKey, JSON.stringify(mergedNotes)); } catch (e) {}
+
+    // Backfill Firebase pour les notes locales manquantes (critique sync mobile -> PC)
+    try {
+        const firebaseKeys = new Set((firebaseNotes || []).filter(n => n && n.id).map(noteKey));
+        const missingInFirebase = localNotes.filter(n => n && n.id && !firebaseKeys.has(noteKey(n)));
+        if (missingInFirebase.length > 0) {
+            for (const n of missingInFirebase) {
+                await window.firebaseNotesService.saveNote(userEmail, {
+                    id: n.id,
+                    note: Number(n.note || 0),
+                    contentType: n.contentType || 'anime',
+                    titre: n.titre || n.title || n.name || '',
+                    image: n.image || '',
+                    synopsis: n.synopsis || '',
+                    genres: Array.isArray(n.genres) ? n.genres : [],
+                    score: Number(n.score || 0)
+                });
+            }
+            console.log(`[loadUserNotes] ${missingInFirebase.length} note(s) locale(s) synchronisée(s) vers Firebase`);
+        }
+    } catch (syncErr) {
+        console.error('[loadUserNotes] Erreur sync local -> Firebase:', syncErr);
+    }
+
+    console.log(`[loadUserNotes] ${mergedNotes.length} note(s) fusionnées (Firebase + localStorage)`);
+    return mergedNotes;
 }
 
 // Exporter pour utilisation globale
 window.loadUserNotes = loadUserNotes;
 
+async function syncLocalTop10ToFirebase(user) {
+    if (!user || !user.email) return;
+    if (typeof window.firebaseTop10Service === 'undefined' || !window.firebaseTop10Service) return;
+    if (window.__top10SyncDoneForUser === user.email) return;
+
+    const types = ['anime', 'manga', 'film'];
+    try {
+        for (const type of types) {
+            const key = getUserTop10Key(user, null, type);
+            const stored = localStorage.getItem(key);
+            if (!stored) continue;
+            let top10 = [];
+            try { top10 = JSON.parse(stored) || []; } catch (e) { top10 = []; }
+            if (!Array.isArray(top10) || top10.length === 0) continue;
+
+            for (let i = 0; i < Math.min(10, top10.length); i++) {
+                const item = top10[i];
+                if (!item || !item.id) continue;
+                await window.firebaseTop10Service.saveTop10Item(user.email, {
+                    id: item.id,
+                    contentType: item.contentType || type,
+                    rang: i + 1,
+                    titre: item.titre || item.title || item.name || '',
+                    image: item.image || '',
+                    synopsis: item.synopsis || '',
+                    genres: Array.isArray(item.genres) ? item.genres : [],
+                    score: Number(item.score || 0)
+                });
+            }
+        }
+        window.__top10SyncDoneForUser = user.email;
+        console.log('[Top10 Sync] localStorage -> Firebase terminé');
+    } catch (err) {
+        console.error('[Top10 Sync] Erreur de synchronisation:', err);
+    }
+}
+
 function saveAnimeNote(animeId, rating, animeData = {}) {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (user && user.email) {
+        await syncLocalTop10ToFirebase(user);
+    }
     if (!user || !user.email) {
         console.error('Utilisateur non connecté');
         return;
