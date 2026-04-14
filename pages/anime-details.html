@@ -1044,6 +1044,15 @@
         }
         
         // Fonction pour sauvegarder la note (avec Firebase en priorité)
+        async function waitForFirebaseNotesService(maxWaitMs = 3000) {
+            if (window.firebaseNotesService) return true;
+            const start = Date.now();
+            while (!window.firebaseNotesService && (Date.now() - start) < maxWaitMs) {
+                await new Promise(resolve => setTimeout(resolve, 120));
+            }
+            return !!window.firebaseNotesService;
+        }
+
         async function saveRating(animeId, rating) {
             
             const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -1173,7 +1182,8 @@
             // Essayer d'abord de sauvegarder dans Firebase (si disponible)
             
             let firebaseSuccess = false;
-            if (typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {
+            const firebaseReady = await waitForFirebaseNotesService(3000);
+            if (firebaseReady && typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {
                 try {
                     const success = await window.firebaseNotesService.saveNote(user.email, animeNote);
                     
@@ -1235,6 +1245,14 @@
                 animeRatings[animeId] = rating;
                 localStorage.setItem('animeRatings', JSON.stringify(animeRatings));
             }
+
+            // Orienter le profil vers le bon type apres une note (anime/manga/film)
+            try {
+                let profileType = detectedContentType;
+                if (['tv', 'ova', 'ona', 'special', 'music'].includes(profileType)) profileType = 'anime';
+                if (['roman', 'manhwa', 'manhua', 'doujin'].includes(profileType)) profileType = 'manga';
+                localStorage.setItem('temp_selected_type', profileType || 'manga');
+            } catch (e) {}
             
             // Marquer que des notes ont été mises à jour
             localStorage.setItem('notes_updated', 'true');

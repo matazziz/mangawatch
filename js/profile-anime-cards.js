@@ -1014,8 +1014,8 @@ window.createStarBadges = function createStarBadges() {
     // === AJOUT BOUTON FILTRAGE PAR TYPE ===
     let typeButton = document.createElement('button');
     typeButton.id = 'filter-by-type-btn';
-    // Par défaut afficher tous les types pour ne jamais masquer une nouvelle note
-    window.selectedType = 'tous';
+    // Type par défaut stable pour éviter les regressions de rendu Top10/containers
+    window.selectedType = 'manga';
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
@@ -1027,7 +1027,7 @@ window.createStarBadges = function createStarBadges() {
         'film': _pt('profile.search_movie'),
         'tous': _pt('profile.type_all')
     };
-    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.type_all');
+    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.search_manga');
     typeButton.style.cssText = sortButton.style.cssText + 'margin-left: 0; margin-right: 8px;';
     typeButton.style.display = 'inline-block';
 
