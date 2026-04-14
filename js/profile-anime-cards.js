@@ -223,6 +223,26 @@ async function loadUserNotes(userEmail) {
 
     if (typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {
         try {
+            // Vider la file d'attente éventuelle créée depuis la page détails
+            const pendingKey = 'pending_firebase_notes_' + userEmail;
+            const pendingRaw = localStorage.getItem(pendingKey);
+            if (pendingRaw) {
+                let pending = [];
+                try { pending = JSON.parse(pendingRaw) || []; } catch (e) { pending = []; }
+                if (Array.isArray(pending) && pending.length > 0) {
+                    const remaining = [];
+                    for (const note of pending) {
+                        try {
+                            const ok = await window.firebaseNotesService.saveNote(userEmail, note);
+                            if (!ok) remaining.push(note);
+                        } catch (e) {
+                            remaining.push(note);
+                        }
+                    }
+                    localStorage.setItem(pendingKey, JSON.stringify(remaining));
+                }
+            }
+
             const notes = await window.firebaseNotesService.getAllNotes(userEmail);
             if (Array.isArray(notes)) {
                 firebaseNotes = notes;
@@ -10127,8 +10147,15 @@ function getUserTop10Key(user, genre = null, type = null) {
     return key;
 }
 
+function normalizeTop10Type(type) {
+    if (!type) return null;
+    const t = String(type).toLowerCase().trim();
+    if (!t || t === 'tous' || t === 'tous types') return null;
+    return t;
+}
+
 async function getUserTop10(user, genre = null, type = null) {
-    const finalType = type || 'anime';
+    const finalType = normalizeTop10Type(type);
     
     // IMPORTANT: Si un genre est spécifié, charger depuis localStorage d'abord
     // car les Top 10 par genre sont stockés dans localStorage, pas dans Firebase
@@ -10160,7 +10187,7 @@ async function getUserTop10(user, genre = null, type = null) {
                         // Filtrer par type et par genre
                         const filteredTop10 = new Array(10).fill(null);
                         for (const item of top10Data) {
-                            if ((!type || item.contentType === type)) {
+                            if (!finalType || item.contentType === finalType) {
                                 // Vérifier si le contenu a au moins un des genres sélectionnés
                                 const itemGenres = (item.genres || []).map(g => {
                                     if (typeof g === 'object' && g !== null && g.name) {
@@ -10199,7 +10226,7 @@ async function getUserTop10(user, genre = null, type = null) {
                         // Vérifier si on a trouvé des éléments
                         const hasItems = filteredTop10.some(item => item !== null);
                         if (hasItems) {
-                            console.log(`📊 Top 10 chargé depuis Firebase (filtré par genre) pour genre: ${genre}, type: ${finalType}`);
+                console.log(`📊 Top 10 chargé depuis Firebase (filtré par genre) pour genre: ${genre}, type: ${finalType || 'all'}`);
                             return filteredTop10;
                         }
                     } catch (err) {
@@ -10224,7 +10251,7 @@ async function getUserTop10(user, genre = null, type = null) {
             const top10 = new Array(10).fill(null);
             for (const item of top10Data) {
                 // Filtrer par type si spécifié
-                if (!type || item.contentType === type) {
+                if (!finalType || item.contentType === finalType) {
                     const rang = item.rang || 1;
                     if (rang >= 1 && rang <= 10) {
                         top10[rang - 1] = {
@@ -10278,7 +10305,7 @@ async function setUserTop10(user, top10, genre = null, type = null) {
         cleanTop10.push(null);
     }
     
-    const finalType = type || 'anime';
+    const finalType = normalizeTop10Type(type);
     
     // Top 10 par genre : Firebase ne gère pas les clés par genre, donc toujours utiliser localStorage
     // (sinon on écraserait le Top 10 global au lieu d'enregistrer le Top 10 du genre)
@@ -10286,7 +10313,7 @@ async function setUserTop10(user, top10, genre = null, type = null) {
         const top10Key = getUserTop10Key(user, genre, finalType);
         try {
             localStorage.setItem(top10Key, JSON.stringify(cleanTop10));
-            console.log('✅ Top 10 (genre) sauvegardé dans localStorage, genre:', genre, 'type:', finalType);
+            console.log('✅ Top 10 (genre) sauvegardé dans localStorage, genre:', genre, 'type:', finalType || 'all');
         } catch (err) {
             console.error('❌ Erreur lors de la sauvegarde localStorage (genre):', err);
             throw err;
@@ -10297,7 +10324,7 @@ async function setUserTop10(user, top10, genre = null, type = null) {
             const existingTop10 = await window.firebaseTop10Service.getTop10(user.email);
             for (const item of existingTop10) {
                 const itemType = item.contentType || 'anime';
-                if (itemType === finalType) {
+                if (!finalType || itemType === finalType) {
                     await window.firebaseTop10Service.deleteTop10Item(user.email, item.id, itemType);
                 }
             }
@@ -10316,7 +10343,7 @@ async function setUserTop10(user, top10, genre = null, type = null) {
                     });
                 }
             }
-            console.log('✅ Top 10 global sauvegardé dans Firebase pour type:', finalType);
+            console.log('✅ Top 10 global sauvegardé dans Firebase pour type:', finalType || 'all');
         } catch (err) {
             console.error('❌ Erreur lors de la sauvegarde Firebase:', err);
             throw err;
@@ -10326,7 +10353,7 @@ async function setUserTop10(user, top10, genre = null, type = null) {
         const top10Key = getUserTop10Key(user, null, finalType);
         try {
             localStorage.setItem(top10Key, JSON.stringify(cleanTop10));
-            console.log('✅ Top 10 sauvegardé dans localStorage pour type:', finalType);
+            console.log('✅ Top 10 sauvegardé dans localStorage pour type:', finalType || 'all');
         } catch (err) {
             console.error('❌ Erreur lors de la sauvegarde localStorage:', err);
             throw err;
