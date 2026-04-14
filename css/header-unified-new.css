@@ -112,6 +112,9 @@ body {
     border-radius: 22px 0 0 22px;
     border-right: 1px solid rgba(255, 255, 255, 0.12);
     background: linear-gradient(165deg, rgba(0, 168, 77, 0.08) 0%, rgba(0, 196, 93, 0.14) 50%, rgba(0, 168, 77, 0.06) 100%);
+    position: relative;
+    z-index: 3;
+    overflow: hidden;
 }
 .search-type-icon {
     display: flex;
@@ -170,10 +173,14 @@ body {
     background-size: 8px 5px;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
     overflow-x: hidden;
+    overflow-y: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
     scrollbar-width: none;
     -ms-overflow-style: none;
     letter-spacing: 0.02em;
+    position: relative;
+    z-index: 3;
 }
 
 .search-type-selector::-webkit-scrollbar {
@@ -327,11 +334,19 @@ body {
     outline: none;
     font-weight: 400;
     align-self: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative;
+    z-index: 1;
 }
 
 .search-bar input::placeholder {
     color: rgba(255, 255, 255, 0.5);
     font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Bouton croix pour effacer la recherche */
@@ -1004,11 +1019,11 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
 
     .search-type-selector {
-        min-width: 60px;
-        max-width: 60px;
-        width: 60px;
-        flex: 0 0 60px;
-        font-size: 0.56rem;
+        min-width: 72px;
+        max-width: 72px;
+        width: 72px;
+        flex: 0 0 72px;
+        font-size: 0.46rem;
         padding: 0 13px 0 5px;
         border-radius: 20px 0 0 20px;
         background-size: 4px;
@@ -1023,15 +1038,24 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         appearance: none;
         -webkit-appearance: none;
         -moz-appearance: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        background-color: rgba(16, 26, 20, 0.95);
+        position: relative;
+        z-index: 3;
     }
     
     .search-bar input {
-        font-size: 0.78rem;
-        padding: 0 9px;
+        font-size: 0.76rem;
+        padding: 0 8px 0 6px;
         height: 100%;
         box-sizing: border-box;
         min-width: 0;
         flex: 1 1 auto;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .search-bar button[type="submit"] {
@@ -1200,11 +1224,11 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
 
     .search-type-selector {
-        min-width: 50px;
-        max-width: 50px;
-        width: 50px;
-        flex: 0 0 50px;
-        font-size: 0.5rem;
+        min-width: 64px;
+        max-width: 64px;
+        width: 64px;
+        flex: 0 0 64px;
+        font-size: 0.42rem;
         padding: 0 11px 0 3px;
         border-radius: 18px 0 0 18px;
         background-size: 3px;
@@ -1219,15 +1243,24 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         appearance: none;
         -webkit-appearance: none;
         -moz-appearance: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        background-color: rgba(16, 26, 20, 0.95);
+        position: relative;
+        z-index: 3;
     }
     
     .search-bar input {
-        font-size: 0.68rem;
-        padding: 0 8px;
+        font-size: 0.66rem;
+        padding: 0 7px 0 5px;
         height: 100%;
         box-sizing: border-box;
         min-width: 0;
         flex: 1 1 auto;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .search-bar button[type="submit"] {

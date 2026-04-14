@@ -575,4 +575,30 @@ html {
     line-height: 1 !important;
     padding: 0 !important;
   }
+
+  #search-cards-container .catalogue-card .card-more-menu,
+  #genre-cards-container .catalogue-card .card-more-menu,
+  #search-results-container .catalogue-card .card-more-menu,
+  #search-cards-container-public .catalogue-card .card-more-menu,
+  #genre-cards-container-public .catalogue-card .card-more-menu,
+  #search-results-container-public .catalogue-card .card-more-menu {
+    top: 30px !important;
+    right: 0 !important;
+    min-width: 94px !important;
+    padding: 4px 8px !important;
+    border-radius: 7px !important;
+    font-size: 0.75rem !important;
+    line-height: 1.1 !important;
+    z-index: 360 !important;
+  }
+
+  #search-cards-container .catalogue-card .select-top10-btn,
+  #genre-cards-container .catalogue-card .select-top10-btn,
+  #search-results-container .catalogue-card .select-top10-btn,
+  #search-cards-container-public .catalogue-card .select-top10-btn,
+  #genre-cards-container-public .catalogue-card .select-top10-btn,
+  #search-results-container-public .catalogue-card .select-top10-btn {
+    padding: 4px 0 !important;
+    font-size: 0.72rem !important;
+  }
 }

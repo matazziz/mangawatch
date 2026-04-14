@@ -2690,17 +2690,17 @@ window.createStarBadges = function createStarBadges() {
                 right: 14px;
                 width: 32px;
                 height: 32px;
-                background: #f8f9fa;
+                background: #181b22;
                 border: 1.5px solid #00b894;
                 border-radius: 50%;
-                box-shadow: 0 2px 8px #0002;
-                color: #444;
+                box-shadow: 0 2px 8px #0008;
+                color: #00b894;
                 font-size: 1.3rem;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 cursor: pointer;
-                z-index: 10;
+                z-index: 320;
                 transition: border-color 0.18s, background 0.18s;
                 outline: none;
                 padding: 0;
@@ -2710,23 +2710,23 @@ window.createStarBadges = function createStarBadges() {
                 position: absolute;
                 top: 46px;
                 right: 0;
-                background: #fff;
+                background: #181b22;
                 color: #00b894;
-                font-size: 1rem;
+                font-size: 0.88rem;
                 font-weight: bold;
                 border-radius: 8px;
-                box-shadow: 0 4px 16px #0002;
-                padding: 7px 18px;
+                box-shadow: 0 4px 16px #0009;
+                padding: 6px 10px;
                 white-space: nowrap;
-                z-index: 20;
-                border: 1.5px solid #00b894;
-                min-width: 110px;
+                z-index: 330;
+                border: 1.5px solid #00b89455;
+                min-width: 106px;
                 text-align: center;
                 opacity: 0;
                 pointer-events: none;
                 transition: opacity 0.25s;
             ">
-                <div class="select-top10-btn" style="cursor:pointer;padding:6px 0;color:#00b894;font-weight:bold;font-size:0.9rem;transition:background-color 0.2s;" onmouseover="this.style.backgroundColor='#00b89420'" onmouseout="this.style.backgroundColor='transparent'">${getAddToTop10Label()}</div>
+                <div class="select-top10-btn" style="cursor:pointer;padding:5px 0;color:#00b894;font-weight:700;font-size:0.8rem;transition:background-color 0.2s;border-radius:6px;" onmouseover="this.style.backgroundColor='#00b89420'" onmouseout="this.style.backgroundColor='transparent'">${getAddToTop10Label()}</div>
             </div>
             <img src="${image}" alt="${titre}" style="width:140px;height:185px;object-fit:cover;display:block;object-position:center center;margin:0 auto 1rem auto;border-radius:10px;box-shadow:0 2px 12px #00b89455;align-self:center;">
             <a href="${pageHtml}" style="font-size:1.15rem;margin-bottom:0.5rem;color:#00b894;font-weight:700;text-align:center;text-decoration:none;cursor:pointer;display:block;transition:color 0.2s;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" onmouseover="this.style.color='#00d4aa'" onmouseout="this.style.color='#00b894'">${titre}</a>

@@ -1575,6 +1575,13 @@
                 border-radius: 12px;
             }
 
+            #collection-section .change-status-btn {
+                padding: 5px 9px !important;
+                font-size: 0.68rem !important;
+                border-radius: 12px !important;
+                gap: 4px !important;
+            }
+
             #collection-section {
                 padding-left: 0 !important;
                 padding-right: 0 !important;
@@ -1604,6 +1611,12 @@
             #collection-section .item-status {
                 font-size: 0.64rem;
                 padding: 3px 7px;
+            }
+
+            #collection-section .change-status-btn {
+                padding: 4px 8px !important;
+                font-size: 0.64rem !important;
+                border-radius: 11px !important;
             }
         }
 
@@ -1707,8 +1720,54 @@
             visibility: hidden !important;
         }
 
+        /* Forcer un thème sombre du popup statut sur tous navigateurs */
+        .status-modal .modal-content {
+            background: #121212 !important;
+            color: #f5f6fa !important;
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+
+        .status-modal .modal-header,
+        .status-modal .modal-body {
+            background: #121212 !important;
+            color: #f5f6fa !important;
+        }
+
+        .status-modal .status-option {
+            background: rgba(255, 255, 255, 0.06) !important;
+            border-color: rgba(255, 255, 255, 0.12) !important;
+            color: #f5f6fa !important;
+        }
+
+        .status-modal .status-name {
+            color: #f5f6fa !important;
+        }
+
+        .status-modal .status-desc {
+            color: #d0d6df !important;
+        }
+
         .profile-banner-bottom {
             justify-content: flex-end !important;
+        }
+
+        /* Réduire légèrement la taille Abonnés / Abonnements */
+        .profile-banner-bottom .follow-stat-number {
+            font-size: 1.45rem !important;
+        }
+
+        .profile-banner-bottom .follow-stat-label {
+            font-size: 0.78rem !important;
+        }
+
+        @media (max-width: 768px) {
+            .profile-banner-bottom .follow-stat-number {
+                font-size: 0.92rem !important;
+            }
+
+            .profile-banner-bottom .follow-stat-label {
+                font-size: 0.58rem !important;
+            }
         }
 
     </style>
