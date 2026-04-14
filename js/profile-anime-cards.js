@@ -1014,8 +1014,8 @@ window.createStarBadges = function createStarBadges() {
     // === AJOUT BOUTON FILTRAGE PAR TYPE ===
     let typeButton = document.createElement('button');
     typeButton.id = 'filter-by-type-btn';
-    // Afficher tous les types par défaut pour éviter les cartes manquantes selon l'appareil
-    window.selectedType = 'tous';
+    // Type par défaut: manga (séparation claire des types)
+    window.selectedType = 'manga';
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
@@ -1027,7 +1027,7 @@ window.createStarBadges = function createStarBadges() {
         'film': _pt('profile.search_movie'),
         'tous': _pt('profile.type_all')
     };
-    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.type_all');
+    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.search_manga');
     typeButton.style.cssText = sortButton.style.cssText + 'margin-left: 0; margin-right: 8px;';
     typeButton.style.display = 'inline-block';
 
@@ -1053,8 +1053,7 @@ window.createStarBadges = function createStarBadges() {
         text-align: left;
     `;
     typeMenu.innerHTML = `
-        <div class="type-menu-item" data-type="tous" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">${_pt('profile.type_all')}</div>
-        <div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_manga')}</div>
+        <div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">${_pt('profile.search_manga')}</div>
         <div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_anime')}</div>
         <div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_movie')}</div>
     `;
@@ -15007,14 +15006,8 @@ async function showTop10MiniInterface() {
             
             let itemRealType = null;
             
-            if (!isInGenreContainer) {
-                // Pour le top 10 global, utiliser le type sélectionné (plus fiable que le contentType)
-                // car le contentType peut être incorrect (ex: 'roman' pour 'Kaguya-sama')
-                itemRealType = window.selectedType || 'anime';
-            } else {
-                // Pour les conteneurs de genre, utiliser le contentType validé ou le type sélectionné
-                itemRealType = validatedContentType || window.selectedType || 'anime';
-            }
+            // Utiliser TOUJOURS le type réel validé de la carte pour éviter le mélange des top 10
+            itemRealType = validatedContentType || item.contentType || window.selectedType || 'anime';
             
             console.log('🔍 Type déterminé - isInGenreContainer:', isInGenreContainer, 'item.contentType:', item.contentType, 'window.selectedType:', window.selectedType, 'itemRealType:', itemRealType);
             

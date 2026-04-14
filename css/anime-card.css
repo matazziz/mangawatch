@@ -184,9 +184,10 @@ html {
   #reviews-section .card-list .select-top10-btn,
   [id^="star-containers"] .catalogue-card .card-more-menu button,
   #reviews-section .card-list .card-more-menu button {
-    font-size: 0.82rem !important;
-    padding: 8px 10px !important;
-    min-height: 34px !important;
+    font-size: 0.95rem !important;
+    padding: 10px 12px !important;
+    min-height: 38px !important;
+    font-weight: 700 !important;
   }
 }
 
@@ -429,13 +430,13 @@ html {
 
   [id^="star-containers"] .catalogue-card .anime-title,
   [id^="star-containers"] .catalogue-card a[data-card-link="true"] {
-    font-size: 0.66rem !important;
+    font-size: 0.6rem !important;
     line-height: 1.08 !important;
     display: -webkit-box !important;
-    -webkit-line-clamp: 3 !important;
+    -webkit-line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
-    min-height: calc(1.08em * 3) !important;
+    min-height: calc(1.08em * 2) !important;
     margin-bottom: 0.28rem !important;
   }
 
