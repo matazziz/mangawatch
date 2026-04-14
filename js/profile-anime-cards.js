@@ -11237,7 +11237,7 @@ async function renderTop10Slots() {
                 right: 0;
                 background: linear-gradient(135deg, #2a2d36 0%, #1e2128 100%);
                 color: #fff;
-                font-size: 0.85rem;
+                font-size: 0.78rem;
                 font-weight: 600;
                 border-radius: 10px;
                 box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 184, 148, 0.2);
@@ -11245,8 +11245,8 @@ async function renderTop10Slots() {
                 white-space: nowrap;
                 z-index: 20;
                 border: 1.5px solid rgba(0, 184, 148, 0.3);
-                min-width: 135px;
-                max-width: 140px;
+                min-width: 118px;
+                max-width: 126px;
                 text-align: left;
                 opacity: 0;
                 pointer-events: none;
@@ -11258,29 +11258,29 @@ async function renderTop10Slots() {
             moreMenu.innerHTML = `
                 <div class="move-top10-menu-item" style="
                     cursor: pointer;
-                    padding: 8px 14px;
+                    padding: 6px 10px;
                     transition: all 0.2s ease;
                     color: #fff;
                     border-bottom: 1px solid rgba(0, 184, 148, 0.2);
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    font-size: 0.85rem;
+                    gap: 5px;
+                    font-size: 0.78rem;
                 ">
-                    <span style="font-size: 0.95rem;">↕️</span>
+                    <span style="font-size: 0.82rem;">↕️</span>
                     <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getTop10MoveLabel()}</span>
                 </div>
                 <div class="remove-top10-menu-item" style="
                     cursor: pointer;
-                    padding: 8px 14px;
+                    padding: 6px 10px;
                     transition: all 0.2s ease;
                     color: #ff6b6b;
                     display: flex;
                     align-items: center;
-                    gap: 6px;
-                    font-size: 0.85rem;
+                    gap: 5px;
+                    font-size: 0.78rem;
                 ">
-                    <span style="font-size: 0.95rem;">✕</span>
+                    <span style="font-size: 0.82rem;">✕</span>
                     <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getTop10RemoveLabel()}</span>
                 </div>
             `;
