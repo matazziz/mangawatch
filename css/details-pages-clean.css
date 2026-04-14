@@ -302,7 +302,7 @@ body[data-page="anime-details"] .details-container {
 }
 
 .rating-stars {
-    font-size: 2.7rem;
+    font-size: 2.45rem;
     cursor: pointer;
     margin-bottom: 15px;
     display: flex;
@@ -424,7 +424,7 @@ body[data-page="anime-details"] .details-container {
     }
     
     .rating-stars {
-        font-size: 2.05rem;
+        font-size: 1.85rem;
         gap: 4px;
         width: 100%;
         justify-content: center;
@@ -523,7 +523,7 @@ body[data-page="anime-details"] .details-container {
     }
     
     .rating-stars {
-        font-size: 1.95rem;
+        font-size: 1.7rem;
         gap: 3px;
         width: 100%;
         justify-content: center;

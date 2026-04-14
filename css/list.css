@@ -923,16 +923,16 @@ body {
     }
 
     .item-meta {
-        gap: 5px;
+        gap: 4px;
         margin-bottom: 8px;
-        font-size: 0.68rem;
+        font-size: 0.64rem;
         flex-wrap: nowrap;
         white-space: nowrap;
     }
 
     .item-meta .episodes-long {
-        font-size: 0.62rem;
-        letter-spacing: -0.1px;
+        font-size: 0.58rem;
+        letter-spacing: -0.15px;
     }
 
     .item-synopsis {
@@ -1029,16 +1029,16 @@ body {
     }
 
     .item-meta {
-        gap: 4px;
+        gap: 3px;
         margin-bottom: 6px;
-        font-size: 0.62rem;
+        font-size: 0.58rem;
         flex-wrap: nowrap;
         white-space: nowrap;
     }
 
     .item-meta .episodes-long {
-        font-size: 0.56rem;
-        letter-spacing: -0.15px;
+        font-size: 0.52rem;
+        letter-spacing: -0.2px;
     }
 
     .item-synopsis {

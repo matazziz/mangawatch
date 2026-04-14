@@ -92,6 +92,55 @@ html {
   box-sizing: border-box;
 }
 
+/* Force thème sombre + menu compact pour le bouton "..." des cartes profil */
+[id^="star-containers"] .catalogue-card .card-more-btn,
+#reviews-section .card-list .card-more-btn,
+#search-cards-container .catalogue-card .card-more-btn,
+#genre-cards-container .catalogue-card .card-more-btn,
+#search-results-container .catalogue-card .card-more-btn,
+#search-cards-container-public .catalogue-card .card-more-btn,
+#genre-cards-container-public .catalogue-card .card-more-btn,
+#search-results-container-public .catalogue-card .card-more-btn {
+  background: #181b22 !important;
+  color: #00b894 !important;
+  border-color: #00b894 !important;
+  box-shadow: 0 2px 8px #0008 !important;
+}
+
+[id^="star-containers"] .catalogue-card .card-more-menu,
+#reviews-section .card-list .card-more-menu,
+#search-cards-container .catalogue-card .card-more-menu,
+#genre-cards-container .catalogue-card .card-more-menu,
+#search-results-container .catalogue-card .card-more-menu,
+#search-cards-container-public .catalogue-card .card-more-menu,
+#genre-cards-container-public .catalogue-card .card-more-menu,
+#search-results-container-public .catalogue-card .card-more-menu {
+  background: #181b22 !important;
+  color: #00b894 !important;
+  min-width: 86px !important;
+  max-width: 108px !important;
+  padding: 2px 5px !important;
+  border-radius: 6px !important;
+  border: 1px solid #00b89466 !important;
+  box-shadow: 0 4px 14px #0009 !important;
+  font-size: 0.68rem !important;
+  line-height: 1.05 !important;
+}
+
+[id^="star-containers"] .catalogue-card .select-top10-btn,
+#reviews-section .card-list .select-top10-btn,
+#search-cards-container .catalogue-card .select-top10-btn,
+#genre-cards-container .catalogue-card .select-top10-btn,
+#search-results-container .catalogue-card .select-top10-btn,
+#search-cards-container-public .catalogue-card .select-top10-btn,
+#genre-cards-container-public .catalogue-card .select-top10-btn,
+#search-results-container-public .catalogue-card .select-top10-btn {
+  color: #00b894 !important;
+  padding: 3px 0 !important;
+  font-size: 0.64rem !important;
+  font-weight: 700 !important;
+}
+
 .mobile-profile-filters-toggle {
   display: none;
   width: 100%;

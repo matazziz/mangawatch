@@ -332,15 +332,15 @@
         
         .volume-slider-compact::-webkit-slider-thumb {
             appearance: none;
-            width: 12px;
-            height: 12px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
             cursor: pointer;
             box-shadow: 0 2px 6px rgba(0, 184, 148, 0.5);
             transition: all 0.3s ease;
             border: 2px solid rgba(255, 255, 255, 0.3);
-            margin-top: -4px;
+            margin-top: -2.5px;
             position: relative;
         }
         
@@ -351,8 +351,8 @@
         }
         
         .volume-slider-compact::-moz-range-thumb {
-            width: 12px;
-            height: 12px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
             cursor: pointer;
@@ -2820,8 +2820,8 @@
 <button type="button" class="volume-icon-btn" id="banner-volume-mute-btn" title="" data-i18n-title="profile.mute_sound">
                                     <i class="fas fa-volume-mute"></i>
                                 </button>
-                <input type="range" id="banner-volume-slider" min="0" max="100" value="0" class="volume-slider-compact" style="flex: 1; min-width: 0;">
-                <span id="banner-volume-value" class="volume-value-compact">0%</span>
+                <input type="range" id="banner-volume-slider" min="0" max="100" value="35" class="volume-slider-compact" style="flex: 1; min-width: 0;">
+                <span id="banner-volume-value" class="volume-value-compact">35%</span>
             </div>
         </div>
         
@@ -2922,9 +2922,9 @@
                                     <i class="fas fa-volume-mute"></i>
                                 </button>
                                 <div style="flex: 1; position: relative; margin: 0 -4px; padding: 0;">
-                                    <input type="range" id="banner-volume-setting-slider" min="0" max="100" value="0" class="volume-slider-compact" style="width: calc(100% + 8px); margin: 0; padding: 0;">
+                                    <input type="range" id="banner-volume-setting-slider" min="0" max="100" value="35" class="volume-slider-compact" style="width: calc(100% + 8px); margin: 0; padding: 0;">
                                 </div>
-                                <span id="banner-volume-setting-value" class="volume-value-compact" style="margin-left: 0.5rem;">0%</span>
+                                <span id="banner-volume-setting-value" class="volume-value-compact" style="margin-left: 0.5rem;">35%</span>
                             </div>
                         </div>
                         <div class="setting-item">
@@ -6282,7 +6282,7 @@
                   try {
                       const firebaseBanner = await window.bannerService.getBanner(user.email);
                       if (firebaseBanner) {
-                          try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: firebaseBanner.type, url: firebaseBanner.url, volume: firebaseBanner.volume !== undefined ? firebaseBanner.volume : 0 })); } catch (e) {}
+                          try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: firebaseBanner.type, url: firebaseBanner.url, volume: firebaseBanner.volume !== undefined ? firebaseBanner.volume : 35 })); } catch (e) {}
                           displayBannerBlock(firebaseBanner);
                       }
                   } catch (err) {
@@ -6340,9 +6340,9 @@
                               };
                               bannerVidEl.onloadeddata = function() { this.classList.add('active'); };
                               bannerVidEl.addEventListener('timeupdate', function() { if (this.currentTime >= 45) this.currentTime = 0; });
-                              var savedVolume = banner.volume !== undefined ? banner.volume : 0;
+                              var savedVolume = banner.volume !== undefined ? banner.volume : 35;
                               bannerVidEl.volume = savedVolume / 100;
-                              bannerVidEl.muted = true;
+                              bannerVidEl.muted = savedVolume === 0;
                               var volumeSetting = document.getElementById('banner-volume-setting');
                               var volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
                               var volumeSettingValue = document.getElementById('banner-volume-setting-value');
@@ -6399,12 +6399,12 @@
               
               try {
                   // Récupérer les données existantes pour préserver le volume
-                  let existingVolume = 0;
+                  let existingVolume = 35;
                   if (window.bannerService) {
                       // Essayer de charger depuis Firebase
                       const existingBanner = await window.bannerService.getBanner(user.email);
                       if (existingBanner) {
-                          existingVolume = existingBanner.volume || 0;
+                          existingVolume = existingBanner.volume !== undefined ? existingBanner.volume : 35;
                       }
                   } else {
                       // Fallback vers localStorage
@@ -6412,9 +6412,9 @@
                       if (existingData) {
                           try {
                               const existing = JSON.parse(existingData);
-                              existingVolume = existing.volume !== undefined ? existing.volume : 0;
+                              existingVolume = existing.volume !== undefined ? existing.volume : 35;
                           } catch (e) {
-                              existingVolume = 0;
+                              existingVolume = 35;
                           }
                       }
                   }
@@ -6498,7 +6498,7 @@
                                       localStorage.setItem('profile_banner_' + user.email, JSON.stringify({
                                           type: bannerData.type,
                                           url: bannerData.url,
-                                          volume: bannerData.volume !== undefined ? bannerData.volume : 0
+                                          volume: bannerData.volume !== undefined ? bannerData.volume : 35
                                       }));
                                   } catch (e) {}
                               }
@@ -6555,7 +6555,7 @@
                                       localStorage.setItem('profile_banner_' + user.email, JSON.stringify({
                                           type: bannerData.type,
                                           url: bannerData.url,
-                                          volume: bannerData.volume !== undefined ? bannerData.volume : 0
+                                          volume: bannerData.volume !== undefined ? bannerData.volume : 35
                                       }));
                                   } catch (e) {}
                               }
@@ -6609,7 +6609,7 @@
                                   const volumeSlider = document.getElementById('banner-volume-slider');
                                   const volumeValue = document.getElementById('banner-volume-value');
                                   if (volumeSlider && volumeValue) {
-                                      const savedVolume = banner.volume !== undefined ? banner.volume : 0;
+                                      const savedVolume = banner.volume !== undefined ? banner.volume : 35;
                                       volumeSlider.value = savedVolume;
                                       volumeValue.textContent = savedVolume + '%';
                                   }
@@ -7326,7 +7326,7 @@
                           }
                           // Sauvegarder le File directement (Firebase Storage) au lieu de la data URL
                           if (typeof saveBanner === 'function') {
-                              saveBanner('video', file, 0); // Passer le File, pas la data URL
+                              saveBanner('video', file, 35); // Volume par défaut activé
                           } else {
                               console.error('❌ saveBanner n\'est pas définie !');
                           }
@@ -7347,25 +7347,25 @@
                               }
                           });
                           
-                          // Réinitialiser les sliders de volume
+                          // Réinitialiser les sliders de volume (son activé par défaut)
                           if (volumeSlider && volumeValue) {
-                              volumeSlider.value = 0;
-                              volumeValue.textContent = '0%';
+                              volumeSlider.value = 35;
+                              volumeValue.textContent = '35%';
                           }
                           const volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
                           const volumeSettingValue = document.getElementById('banner-volume-setting-value');
                           if (volumeSettingSlider && volumeSettingValue) {
-                              volumeSettingSlider.value = 0;
-                              volumeSettingValue.textContent = '0%';
+                              volumeSettingSlider.value = 35;
+                              volumeSettingValue.textContent = '35%';
                           }
                           
                           // Afficher le contrôle de volume dans les paramètres
                           const volumeSetting = document.getElementById('banner-volume-setting');
                           if (volumeSetting) volumeSetting.style.display = 'block';
                           
-                          // Appliquer le volume (muted car volume = 0)
-                          bannerVideo.volume = 0;
-                          bannerVideo.muted = true;
+                          // Appliquer le volume par défaut (son actif)
+                          bannerVideo.volume = 0.35;
+                          bannerVideo.muted = false;
                           
                           // Démarrer la lecture de la vidéo
                           bannerVideo.play().catch(e => {
