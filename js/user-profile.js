@@ -551,7 +551,7 @@ function loadUserBanner(userEmail, retryCount) {
             window.bannerService.getBanner(userEmail).then(function(banner) {
                 if (banner && banner.url) {
                     tryApply(banner);
-                    try { localStorage.setItem('profile_banner_' + userEmail, JSON.stringify({ type: banner.type, url: banner.url, volume: banner.volume !== undefined ? banner.volume : 0 })); } catch (e) {}
+                    try { localStorage.setItem('profile_banner_' + userEmail, JSON.stringify({ type: banner.type, url: banner.url, volume: banner.volume !== undefined ? banner.volume : 35 })); } catch (e) {}
                 }
             }).catch(function() {});
             return true;

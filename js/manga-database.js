@@ -1068,49 +1068,18 @@ function displayContentList(contentList) {
     
     console.log('Affichage de', contentList.length, 'éléments');
     
-    // Trier par statut si un statut est sélectionné
+    // Filtrer par statut si un statut est sélectionné
     let sortedContentList = [...contentList];
     if (elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '') {
         const selectedStatus = elements.statusFilter.value;
-        console.log('🔍 Tri par statut personnel:', selectedStatus);
+        console.log('🔍 Filtrage par statut personnel:', selectedStatus);
         
-        // Debug: afficher les statuts personnels pour les premiers éléments
-        contentList.slice(0, 5).forEach((item, index) => {
-            const personalStatus = getPersonalStatus(item.mal_id);
-            console.log(`  ${index + 1}. ${item.title} (ID: ${item.mal_id}) -> Statut personnel: ${personalStatus || 'Aucun'}`);
+        sortedContentList = sortedContentList.filter(item => {
+            const personalStatus = getPersonalStatus(item.mal_id) || '';
+            return personalStatus === selectedStatus;
         });
         
-        sortedContentList.sort((a, b) => {
-            // Récupérer UNIQUEMENT les statuts personnels
-            const aPersonalStatus = getPersonalStatus(a.mal_id);
-            const bPersonalStatus = getPersonalStatus(b.mal_id);
-            
-            // Utiliser SEULEMENT les statuts personnels, pas ceux de l'API
-            const aStatus = aPersonalStatus || '';
-            const bStatus = bPersonalStatus || '';
-            
-            console.log(`🔄 Comparaison: ${a.title} (${aStatus}) vs ${b.title} (${bStatus})`);
-            
-            // Si a a le statut sélectionné et b non, a vient en premier
-            if (aStatus === selectedStatus && bStatus !== selectedStatus) {
-                console.log(`  ✅ ${a.title} prioritaire (a le statut ${selectedStatus})`);
-                return -1;
-            }
-            // Si b a le statut sélectionné et a non, b vient en premier
-            if (bStatus === selectedStatus && aStatus !== selectedStatus) {
-                console.log(`  ✅ ${b.title} prioritaire (a le statut ${selectedStatus})`);
-                return 1;
-            }
-            // Sinon, garder l'ordre original
-            return 0;
-        });
-        
-        // Debug: afficher le résultat du tri
-        console.log('📋 Résultat du tri:');
-        sortedContentList.slice(0, 10).forEach((item, index) => {
-            const personalStatus = getPersonalStatus(item.mal_id);
-            console.log(`  ${index + 1}. ${item.title} -> Statut: ${personalStatus || 'Aucun'}`);
-        });
+        console.log(`📋 Résultat du filtrage statut "${selectedStatus}": ${sortedContentList.length} élément(s)`);
     }
     
     // Vider la grille

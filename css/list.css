@@ -418,7 +418,8 @@ body {
     position: relative;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
     min-height: 450px;
-    height: 100%;
+    height: 450px;
+    max-height: 450px;
     display: flex;
     flex-direction: column;
 }
@@ -528,6 +529,7 @@ body {
     position: relative;
     z-index: 1;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
 }
 
 .item-title {
@@ -592,6 +594,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 .change-status-btn {
@@ -910,6 +914,8 @@ body {
 
     .list-item {
         min-height: 320px;
+        height: 320px;
+        max-height: 320px;
     }
 
     .item-content {
@@ -1016,6 +1022,8 @@ body {
 
     .list-item {
         min-height: 285px;
+        height: 285px;
+        max-height: 285px;
     }
 
     .item-content {

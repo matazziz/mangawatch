@@ -2202,6 +2202,26 @@
                 margin-bottom: 0.45rem !important;
             }
 
+            #banner-volume-setting .volume-control-compact,
+            #banner-volume-control .volume-control-compact {
+                gap: 0.35rem !important;
+                padding: 0.35rem 0.45rem !important;
+            }
+
+            #banner-volume-setting .volume-slider-compact,
+            #banner-volume-control .volume-slider-compact {
+                height: 3px !important;
+                min-width: 0 !important;
+            }
+
+            #banner-volume-setting .volume-value-compact,
+            #banner-volume-control .volume-value-compact {
+                min-width: 22px !important;
+                font-size: 0.62rem !important;
+                margin-left: 0.25rem !important;
+                letter-spacing: 0 !important;
+            }
+
             .setting-item select,
             .setting-item input,
             .settings-card input,
@@ -2922,7 +2942,7 @@
                                     <i class="fas fa-volume-mute"></i>
                                 </button>
                                 <div style="flex: 1; position: relative; margin: 0 -4px; padding: 0;">
-                                    <input type="range" id="banner-volume-setting-slider" min="0" max="100" value="35" class="volume-slider-compact" style="width: calc(100% + 8px); margin: 0; padding: 0;">
+                                    <input type="range" id="banner-volume-setting-slider" min="0" max="100" value="35" class="volume-slider-compact" style="width: 100%; margin: 0; padding: 0;">
                                 </div>
                                 <span id="banner-volume-setting-value" class="volume-value-compact" style="margin-left: 0.5rem;">35%</span>
                             </div>
@@ -6341,8 +6361,9 @@
                               bannerVidEl.onloadeddata = function() { this.classList.add('active'); };
                               bannerVidEl.addEventListener('timeupdate', function() { if (this.currentTime >= 45) this.currentTime = 0; });
                               var savedVolume = banner.volume !== undefined ? banner.volume : 35;
+                              if (!savedVolume || savedVolume <= 0) savedVolume = 35;
                               bannerVidEl.volume = savedVolume / 100;
-                              bannerVidEl.muted = savedVolume === 0;
+                              bannerVidEl.muted = false;
                               var volumeSetting = document.getElementById('banner-volume-setting');
                               var volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
                               var volumeSettingValue = document.getElementById('banner-volume-setting-value');
