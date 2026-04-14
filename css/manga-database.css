@@ -339,6 +339,28 @@ main.manga-database {
     transform: scale(0.95);
 }
 
+/* Bouton mobile pour afficher/masquer les filtres */
+.mobile-filters-toggle {
+    display: none;
+    width: 100%;
+    margin-bottom: 12px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.mobile-filters-toggle i {
+    font-size: 0.85rem;
+}
+
 /* Filtres */
 .filters {
     display: flex;
@@ -1065,6 +1087,18 @@ main.manga-database {
 }
 
 @media (max-width: 768px) {
+    .mobile-filters-toggle {
+        display: inline-flex;
+    }
+
+    .search-container:not(.mobile-filters-open) .filters {
+        display: none;
+    }
+
+    .search-container:not(.mobile-filters-open) #genre-container {
+        display: none !important;
+    }
+
     .filters {
         flex-direction: column;
     }
@@ -1094,6 +1128,12 @@ main.manga-database {
     
     .search-container {
         padding: 20px 15px;
+    }
+
+    .mobile-filters-toggle {
+        font-size: 0.85rem;
+        padding: 9px 12px;
+        border-radius: 9px;
     }
     
     .manga-grid {

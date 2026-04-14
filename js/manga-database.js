@@ -581,6 +581,14 @@ function wireMangaDatabaseEventListeners() {
     if (genreSortBtn) {
         genreSortBtn.addEventListener('click', toggleGenreSort);
     }
+    const mobileFiltersToggle = document.getElementById('mobile-filters-toggle');
+    const searchContainer = document.querySelector('.search-container');
+    if (mobileFiltersToggle && searchContainer) {
+        mobileFiltersToggle.addEventListener('click', () => {
+            const isOpen = searchContainer.classList.toggle('mobile-filters-open');
+            mobileFiltersToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    }
     if (elements.prevPage) elements.prevPage.addEventListener('click', () => changePage(currentPage - 1));
     if (elements.nextPage) elements.nextPage.addEventListener('click', () => changePage(currentPage + 1));
     let scrollTimeout;
@@ -1971,7 +1979,8 @@ window.updateItemStatus = function(status) {
             updateItemStatusWithStoppedAt(status, stoppedAt);
         });
     } else {
-        // Pour les autres statuts, mettre à jour directement
+        // Pour les autres statuts, fermer puis mettre à jour directement
+        closeStatusModal();
         updateItemStatusWithStoppedAt(status, null);
     }
 };
@@ -2736,8 +2745,18 @@ function changePage(page) {
         }, 2000);
     }
     
-    // Faire défiler vers le haut
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Sur téléphone, remonter au début de la grille (pas tout en haut de page).
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) {
+        const grid = document.getElementById('manga-grid');
+        if (grid) {
+            const headerOffset = window.matchMedia('(max-width: 480px)').matches ? 76 : 82;
+            const top = grid.getBoundingClientRect().top + window.scrollY - headerOffset;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+        }
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     
     // Réappliquer la traduction après le changement de page
     setTimeout(() => {

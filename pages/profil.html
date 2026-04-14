@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
-    <link rel="stylesheet" href="/css/profile.css">
     <link rel="stylesheet" href="/css/footer-unified.css">
-    <link rel="stylesheet" href="/css/anime-card.css">
+    <link rel="stylesheet" href="/css/profile.css?v=2.2">
+    <link rel="stylesheet" href="/css/anime-card.css?v=2.35">
     <link rel="stylesheet" href="/css/messaging.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières -->
@@ -25,6 +25,17 @@
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
     <script>
         (function() {
+            window.upgradeProfileAvatarUrl = function (url) {
+                if (!url || typeof url !== 'string') return url;
+                if (url.indexOf('data:') === 0 || url.indexOf('blob:') === 0) return url;
+                if (url.indexOf('googleusercontent.com') !== -1) {
+                    return url.replace(/=s\d+(-c)?/gi, '=s512-c');
+                }
+                if (url.indexOf('gravatar.com') !== -1 && /[?&]s=\d+/.test(url)) {
+                    return url.replace(/([?&]s=)\d+/, '$1128');
+                }
+                return url;
+            };
             // Charger l'avatar avant que la page ne s'affiche
             try {
                 const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -53,13 +64,13 @@
                     if (avatarUrl && avatarUrl !== '') {
                         // Précharger l'image
                         const img = new Image();
-                        img.src = avatarUrl;
+                        img.src = window.upgradeProfileAvatarUrl(avatarUrl);
                         
                         // Mettre à jour le src de l'image dans le DOM dès qu'il est disponible
                         function updateAvatarSrc() {
                             const avatarElement = document.getElementById('user-avatar');
                             if (avatarElement) {
-                                avatarElement.src = avatarUrl;
+                                avatarElement.src = window.upgradeProfileAvatarUrl(avatarUrl);
                             } else {
                                 // Si l'élément n'existe pas encore, réessayer
                                 setTimeout(updateAvatarSrc, 10);
@@ -82,22 +93,37 @@
     
     <script src="/js/localization.js"></script>
     <style>
+        /* Ne pas utiliser padding:0 sur body : il écrase le padding-top du header fixe (header-unified-new.css) et casse header/footer mobile comme sur les autres pages */
         body {
             background-color: #181a20;
             color: #f5f6fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             margin: 0;
-            padding: 0;
         }
         
         .profile-container {
             max-width: 2000px;
-            margin: 2rem auto;
-            padding: 2rem;
+            margin: 0.55rem auto 2rem;
+            padding: 0.55rem 1.35rem 2rem;
             background-color: #23262f;
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        @media (min-width: 769px) {
+            .profile-container {
+                max-width: 1600px;
+                padding-left: 7rem;
+                padding-right: 7rem;
+            }
+
+            #reviews-section,
+            #tierlist-section {
+                padding-left: 3rem;
+                padding-right: 3rem;
+                box-sizing: border-box;
+            }
         }
         
         .banner-edit-menu {
@@ -376,13 +402,19 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
+            flex-shrink: 0;
             gap: 2rem;
-            margin-top: 0.75rem;
+            margin-top: 0;
             margin-bottom: 2rem;
+            margin-left: calc(-1.35rem + 6px);
+            margin-right: calc(-1.35rem + 6px);
+            width: calc(100% + 2.7rem - 12px);
+            max-width: none;
+            box-sizing: border-box;
             padding: 2rem;
             border-radius: 12px;
             overflow: hidden;
-            min-height: 410px;
+            min-height: 535px;
             border-bottom: 1px solid #2f3542;
         }
         
@@ -442,18 +474,17 @@
             z-index: 3;
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
+            align-items: flex-start;
+            justify-content: flex-start;
             gap: 2rem;
             width: 100%;
         }
-        
+
         .profile-follow-section {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             gap: 1rem;
-            margin-left: auto;
         }
         
         .profile-avatar-wrapper {
@@ -462,16 +493,22 @@
         }
         
         .profile-avatar {
-            width: 150px;
-            height: 150px;
+            width: 172px;
+            height: 172px;
             border-radius: 50%;
             object-fit: cover;
+            object-position: center center;
             border: 4px solid #00b894;
             transition: transform 0.3s;
             position: relative;
             z-index: 4;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             display: block;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            transform: translateZ(0);
+            image-rendering: auto;
+            image-rendering: high-quality;
         }
         
         .profile-avatar:hover {
@@ -484,8 +521,11 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            align-self: flex-start;
+            justify-content: flex-start;
+            padding-top: 1.75rem;
         }
-        
+
         .profile-info h1 {
             margin: 0;
             color: #f5f6fa;
@@ -494,7 +534,7 @@
             font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
             letter-spacing: 0.5px;
             text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 184, 148, 0.3);
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.42rem;
             line-height: 1.2;
             display: inline-flex;
             align-items: center;
@@ -590,6 +630,11 @@
         .profile-continent-badge i, .profile-country-badge i {
             font-size: 0.8rem;
             opacity: 0.9;
+        }
+
+        .profile-info .profile-continent-badge,
+        .profile-info .profile-country-badge {
+            margin-top: 0.38rem;
         }
         
         /* Bloc pays (paramètres) : barre de recherche + menu déroulant — style classe */
@@ -748,30 +793,6 @@
         
         .profile-follow-btn i {
             font-size: 0.9rem;
-        }
-        
-        @media (max-width: 768px) {
-            .profile-follow-section {
-                width: 100%;
-                align-items: flex-start;
-            }
-            
-            .profile-follow-stats {
-                gap: 1rem;
-            }
-            
-            .follow-stat-number {
-                font-size: 1.3rem;
-            }
-            
-            .follow-stat-label {
-                font-size: 0.8rem;
-            }
-            
-            .profile-follow-btn {
-                padding: 0.5rem 1.2rem;
-                font-size: 0.9rem;
-            }
         }
         
         /* Popup modal pour les abonnés/abonnements */
@@ -982,15 +1003,51 @@
             opacity: 0.5;
         }
         
-        /* Description du profil dans la bannière */
-        .profile-description-wrapper {
+        /* Ligne basse bannière : description (largeur limitée) + abonnés à droite */
+        .profile-banner-bottom {
             position: absolute;
-            bottom: 1.5rem;
+            bottom: 1.25rem;
             left: 2rem;
-            width: calc(100% - 4rem);
-            max-width: 600px;
+            right: 2rem;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
             z-index: 4;
             pointer-events: none;
+        }
+
+        .profile-banner-bottom > * {
+            pointer-events: auto;
+        }
+
+        .profile-banner-bottom .profile-description-wrapper {
+            position: static;
+            bottom: auto;
+            left: auto;
+            right: auto;
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: min(520px, 58%);
+            margin: 0;
+            z-index: auto;
+        }
+
+        .profile-banner-bottom .profile-follow-section {
+            margin-left: 0;
+            margin-top: 0;
+            flex-shrink: 0;
+            align-items: flex-end;
+        }
+
+        .profile-banner-bottom .follow-stat-number {
+            font-size: 1.75rem;
+        }
+
+        .profile-banner-bottom .follow-stat-label {
+            font-size: 0.92rem;
         }
         
         .profile-description-wrapper > * {
@@ -998,33 +1055,44 @@
         }
         
         @media (max-width: 768px) {
-            .profile-description-wrapper {
-                left: 1rem;
-                right: 1rem;
-                bottom: 1rem;
+            .profile-banner-bottom {
+                left: 0.65rem;
+                right: 0.65rem;
+                bottom: 0.55rem;
+                gap: 0.5rem;
+            }
+
+            .profile-banner-bottom .profile-description-wrapper {
+                max-width: min(100%, 54%);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-banner-bottom .profile-description-wrapper {
+                max-width: min(100%, 50%);
             }
         }
         
         .profile-description {
             display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.32rem 0.65rem;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
+            border-radius: 10px;
             color: #f5f6fa;
-            font-size: 0.9rem;
+            font-size: 0.78rem;
             font-weight: 400;
             font-style: italic;
             font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
             letter-spacing: 0.2px;
-            line-height: 1.5;
+            line-height: 1.2;
             text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
             transition: none;
-            min-height: 50px;
+            min-height: 0;
             width: 100%;
             box-sizing: border-box;
         }
@@ -1053,9 +1121,12 @@
         
         .profile-description #profile-description-text {
             flex: 1;
+            min-width: 0;
             word-wrap: break-word;
-            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            white-space: normal;
             font-style: italic;
+            line-height: inherit;
         }
         
         .profile-description-edit-btn {
@@ -1265,7 +1336,7 @@
             max-width: 1075px;
             width: 100%;
             margin: 2rem auto;
-            padding: 2rem 1.5rem;
+            padding: 2rem 2.3rem;
         }
         
         /* Styles modernes pour la section Paramètres */
@@ -2084,6 +2155,81 @@
                 max-width: 100%;
             }
         }
+
+        /* Ajustements mobile dédiés à la section Paramètres (profil perso) */
+        @media (max-width: 768px) {
+            #settings-section {
+                padding: 1rem 0 0.5rem !important;
+            }
+
+            #settings-section h2 {
+                font-size: 1.75rem !important;
+                margin-bottom: 1.2rem !important;
+            }
+
+            .profile-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.9rem !important;
+                margin-bottom: 1rem !important;
+            }
+
+            .profile-item,
+            .settings-card {
+                border-radius: 14px !important;
+                padding: 1rem 0.85rem !important;
+                margin-top: 0.8rem !important;
+            }
+
+            .profile-item h3,
+            .settings-card h3 {
+                font-size: 1.1rem !important;
+                margin-bottom: 0.9rem !important;
+                gap: 0.5rem !important;
+            }
+
+            .profile-item h3::before,
+            .settings-card h3::before {
+                height: 18px !important;
+            }
+
+            .setting-item {
+                margin-bottom: 1rem !important;
+            }
+
+            .setting-item label,
+            .settings-card label {
+                font-size: 0.78rem !important;
+                margin-bottom: 0.45rem !important;
+            }
+
+            .setting-item select,
+            .setting-item input,
+            .settings-card input,
+            .info-item input {
+                padding: 0.72rem 0.85rem !important;
+                font-size: 0.9rem !important;
+                border-radius: 10px !important;
+            }
+
+            .setting-item .edit-btn {
+                width: 100% !important;
+                justify-content: center !important;
+                padding: 0.72rem 0.9rem !important;
+                font-size: 0.95rem !important;
+            }
+
+            .account-actions {
+                gap: 0.65rem !important;
+            }
+
+            .account-actions .edit-btn,
+            .account-actions .logout-btn {
+                width: 100% !important;
+                justify-content: center !important;
+                padding: 0.8rem 1rem !important;
+                font-size: 0.92rem !important;
+            }
+        }
         
         .username-info-tooltip {
             color: #00b894;
@@ -2195,10 +2341,125 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
+        /* Mobile : même disposition PC (avatar | infos | abonnés), échelle réduite */
         @media (max-width: 768px) {
+            .profile-container {
+                margin: 0.35rem auto 1.25rem;
+                padding: 0.45rem 12px 1.25rem;
+                box-sizing: border-box;
+            }
+
+            /* Garder la même dimension de bannière en onglet Paramètres */
+            .profile-container.settings-active {
+                max-width: none !important;
+                width: 100% !important;
+                margin: 0.35rem auto 1.25rem !important;
+                padding: 0.45rem 12px 1.25rem !important;
+                box-sizing: border-box !important;
+            }
+
             .profile-header {
-                flex-direction: column;
-                text-align: center;
+                flex-shrink: 0;
+                align-self: stretch;
+                min-height: clamp(305px, 52vw, 420px);
+                min-height: clamp(305px, max(52vw, 28svh), 420px);
+                padding: 0.85rem 0.65rem 5.5rem;
+                margin-top: 0;
+                margin-bottom: 1.25rem;
+                margin-left: 0;
+                margin-right: 0;
+                width: 100%;
+                max-width: none;
+                box-sizing: border-box;
+            }
+
+            .profile-header-banner {
+                object-fit: cover;
+                object-position: center center;
+            }
+
+            .profile-header-content {
+                flex-direction: row;
+                flex-wrap: nowrap;
+                align-items: flex-start;
+                justify-content: flex-start;
+                gap: 0.65rem;
+                width: 100%;
+            }
+
+            .profile-avatar-wrapper {
+                flex-shrink: 0;
+            }
+
+            .profile-avatar {
+                width: 102px;
+                height: 102px;
+                border-width: 3px;
+            }
+
+            .profile-info {
+                align-items: flex-start;
+                text-align: left;
+                align-self: flex-start;
+                flex: 1;
+                min-width: 0;
+                padding-top: 1.35rem;
+            }
+
+            .profile-info h1 {
+                font-size: clamp(1.2rem, 4.35vw, 1.85rem);
+                margin-bottom: 0.2rem;
+                line-height: 1.15;
+            }
+
+            .verified-badge {
+                width: 1.32rem;
+                height: 1.32rem;
+                font-size: 0.65rem;
+            }
+
+            .profile-info .profile-continent-badge,
+            .profile-info .profile-country-badge {
+                margin-top: 0.48rem;
+                font-size: 0.62rem;
+                padding: 0.2rem 0.42rem;
+                gap: 0.28rem;
+                border-radius: 14px;
+            }
+
+            .profile-info .profile-continent-badge i,
+            .profile-info .profile-country-badge i {
+                font-size: 0.56rem;
+            }
+
+            .profile-banner-bottom .profile-follow-section {
+                width: auto;
+                max-width: 52%;
+                margin: 0;
+                align-items: flex-end;
+                flex-shrink: 0;
+                gap: 0.35rem;
+            }
+
+            .profile-banner-bottom .profile-follow-stats {
+                gap: 0.45rem;
+            }
+
+            .profile-banner-bottom .follow-stat-item {
+                align-items: flex-end;
+            }
+
+            .profile-banner-bottom .follow-stat-number {
+                font-size: 1.08rem;
+            }
+
+            .profile-banner-bottom .follow-stat-label {
+                font-size: 0.68rem;
+            }
+
+            .profile-banner-bottom .profile-follow-btn {
+                padding: 0.3rem 0.65rem;
+                font-size: 0.66rem;
             }
             
             .profile-actions {
@@ -2217,6 +2478,124 @@
                 padding: 1rem;
                 white-space: nowrap;
             }
+
+            /* Email: texte plus petit pour ne pas passer sous les boutons */
+            .email-wrapper input#email-display,
+            .info-edit-wrapper input#email-display {
+                font-size: clamp(0.68rem, 2.9vw, 0.78rem) !important;
+                letter-spacing: 0 !important;
+                padding-right: 3.2rem !important;
+            }
+
+            .email-wrapper input#email-display.email-revealed,
+            .info-edit-wrapper input#email-display.email-revealed {
+                font-size: clamp(0.62rem, 2.65vw, 0.72rem) !important;
+                padding-right: 3rem !important;
+            }
+
+            .email-reveal-btn,
+            .info-edit-wrapper .email-reveal-btn {
+                width: 26px !important;
+                height: 26px !important;
+                padding: 0.22rem !important;
+                font-size: 0.7rem !important;
+                right: 0.42rem !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-container {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .profile-header {
+                flex-shrink: 0;
+                align-self: stretch;
+                min-height: clamp(295px, 54vw, 380px);
+                min-height: clamp(295px, max(54vw, 26svh), 380px);
+                padding: 0.6rem 0.5rem 5rem;
+                margin-left: 0;
+                margin-right: 0;
+                width: 100%;
+                max-width: none;
+                border-radius: 10px;
+            }
+
+            .profile-header-content {
+                gap: 0.45rem;
+            }
+
+            .profile-avatar {
+                width: 86px;
+                height: 86px;
+                border-width: 2px;
+            }
+
+            .profile-info {
+                padding-top: 1.5rem;
+            }
+
+            .profile-info h1 {
+                font-size: clamp(1.1rem, 4.5vw, 1.42rem);
+                margin-bottom: 0.18rem;
+            }
+
+            .profile-info .profile-continent-badge,
+            .profile-info .profile-country-badge {
+                margin-top: 0.52rem;
+                font-size: 0.56rem;
+                padding: 0.18rem 0.38rem;
+                gap: 0.24rem;
+                border-radius: 12px;
+            }
+
+            .profile-info .profile-continent-badge i,
+            .profile-info .profile-country-badge i {
+                font-size: 0.52rem;
+            }
+
+            .profile-banner-bottom .profile-follow-section {
+                max-width: 54%;
+                gap: 0.3rem;
+            }
+
+            .profile-banner-bottom .profile-follow-stats {
+                gap: 0.38rem;
+            }
+
+            .profile-banner-bottom .follow-stat-number {
+                font-size: 0.98rem;
+            }
+
+            .profile-banner-bottom .follow-stat-label {
+                font-size: 0.62rem;
+            }
+
+            .profile-banner-bottom .profile-follow-btn {
+                padding: 0.26rem 0.52rem;
+                font-size: 0.62rem;
+            }
+
+            .profile-description {
+                font-size: 0.72rem;
+                padding: 0.26rem 0.45rem;
+                min-height: 0;
+                line-height: 1.15;
+            }
+        }
+
+        /* Suppression de la description sur le profil perso */
+        .profile-description-wrapper,
+        .profile-description,
+        .profile-description-edit,
+        .profile-description-edit-btn {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        .profile-banner-bottom {
+            justify-content: flex-end !important;
         }
 
         .star-pagination button {
@@ -2314,75 +2693,75 @@
     </style>
 </head>
 <body>
-  <!-- En-tête unifié -->
-  <header class="main-header">
-    <a href="acceuil.html" class="logo-link">
-      <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
-      <span>MangaWatch</span>
-    </a>
-    
-    <div class="search-wrapper">
-      <form class="search-bar" id="searchForm">
-        <select id="searchType" class="search-type-selector">
-          <option value="manga" selected data-i18n="search.type.manga">Manga</option>
-          <option value="anime" data-i18n="search.type.anime">Anime</option>
-          <option value="movie" data-i18n="search.type.movie">Film</option>
-          <option value="user" data-i18n="search.type.user">Utilisateur</option>
-        </select>
-        <input type="text" id="searchInput" data-i18n-placeholder="search.placeholder.manga" placeholder="" autocomplete="new-password" name="profile-search" spellcheck="false">
-        <button type="submit" aria-label="" data-i18n-aria-label="profile.search_aria" id="search-submit-btn">
-          <i class="fas fa-search"></i>
-        </button>
-      </form>
-      <!-- Résultats de recherche -->
-      <div id="search-results" class="search-results-dropdown"></div>
-    </div>
-    
-    <!-- Navigation desktop (visible sur grand écran) -->
-            <nav class="nav-links">
+    <!-- En-tête unifié (même bloc que list.html / manga-database.html) -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+            <select id="searchType" class="search-type-selector">
+                <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                <option value="anime" data-i18n="search.type.anime">Anime</option>
+                <option value="movie" data-i18n="search.type.movie">Film</option>
+                <option value="user" data-i18n="search.type.user">Utilisateur</option>
+            </select>
+                <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="profile-search" spellcheck="false">
+                <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <!-- Résultats de recherche -->
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
             <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
             <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
             <a href="list.html" data-i18n="nav.collection">Collection</a>
             <a href="profil.html" class="active" data-i18n="nav.profile">Profil</a>
         </nav>
-    
-    <!-- Conteneur pour les éléments de droite -->
-    <div class="header-right">
-      <!-- Bouton hamburger pour mobile -->
-      <button class="hamburger-btn" aria-label="" data-i18n-aria-label="profile.menu_aria">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      
-      <!-- Avatar utilisateur -->
-      <a href="profil.html" class="avatar-link">
-        <img id="user-avatar" src="" alt="" class="user-avatar" data-i18n-alt="profile.avatar_alt" onerror="this.onerror=null; this.src='/images/logo.png';">
-      </a>
-    </div>
-  </header>
+        
+        <!-- Conteneur pour les éléments de droite -->
+        <div class="header-right">
+            <!-- Bouton hamburger pour mobile -->
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <!-- Avatar utilisateur -->
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
 
-  <!-- Menu mobile -->
-  <div class="mobile-menu">
-    <nav class="nav-links">
-      <a href="acceuil.html">
-        <i class="fas fa-home"></i>
-        <span data-i18n="nav.home">Accueil</span>
-      </a>
-      <a href="manga-database.html">
-        <i class="fas fa-tv"></i>
-        <span data-i18n="nav.manga_anime">Mangas & Anime</span>
-      </a>
-      <a href="list.html">
-        <i class="fas fa-bookmark"></i>
-        <span data-i18n="nav.collection">Collection</span>
-      </a>
-      <a href="profil.html" class="active">
-        <i class="fas fa-user"></i>
-        <span data-i18n="nav.profile">Profil</span>
-      </a>
-    </nav>
-  </div>
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html" class="active">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+        </nav>
+    </div>
 
     <!-- Container pour les notifications toast -->
     <div class="toast-container" id="toast-container"></div>
@@ -2447,7 +2826,7 @@
             <!-- Contenu du header (avatar et pseudo) -->
             <div class="profile-header-content">
                 <div class="profile-avatar-wrapper" id="profile-avatar-wrapper">
-                    <img src="" alt="" id="profile-avatar" class="profile-avatar" data-i18n-alt="profile.avatar_alt" onerror="this.onerror=null; this.src='/images/logo.png';">
+                    <img src="" alt="" id="profile-avatar" class="profile-avatar" data-i18n-alt="profile.avatar_alt" decoding="async" fetchpriority="high" onerror="this.onerror=null; this.src='/images/logo.png';">
                 </div>
                 <div class="profile-info">
                     <h1 id="user-name">
@@ -2461,7 +2840,22 @@
                         <span id="profile-country-text">Non renseigné</span>
                     </div>
                 </div>
-                <!-- Système d'abonnements à droite -->
+            </div>
+            
+            <!-- Description + abonnés : une seule ligne en bas de bannière -->
+            <div class="profile-banner-bottom">
+                <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: block;">
+                    <div class="profile-description" id="profile-description-display">
+                        <span id="profile-description-text" data-i18n="profile.description_placeholder">Écrivez votre description ici...</span>
+                        <button class="profile-description-edit-btn" id="profile-description-edit-btn" title="" data-i18n-title="profile.edit_description">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="profile-description-edit" id="profile-description-edit" style="display: none;">
+                        <textarea id="profile-description-textarea" data-i18n-placeholder="profile.description_placeholder" placeholder="Écrivez votre description ici..." maxlength="80"></textarea>
+                        <div class="profile-description-char-count" id="profile-description-char-count">0 / 80</div>
+                    </div>
+                </div>
                 <div class="profile-follow-section" id="profile-follow-section">
                     <div class="profile-follow-stats" id="profile-follow-stats">
                         <div class="follow-stat-item" id="followers-stat">
@@ -2478,21 +2872,6 @@
                         <span id="follow-btn-text" data-i18n="profile.subscribe">S'abonner</span>
                     </button>
                 </div>
-            </div>
-            
-            <!-- Description en bas de la bannière -->
-            <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: block;">
-                <div class="profile-description" id="profile-description-display">
-                    <span id="profile-description-text" data-i18n="profile.description_placeholder">Écrivez votre description ici...</span>
-                    <button class="profile-description-edit-btn" id="profile-description-edit-btn" title="" data-i18n-title="profile.edit_description">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </div>
-                <div class="profile-description-edit" id="profile-description-edit" style="display: none;">
-                    <textarea id="profile-description-textarea" data-i18n-placeholder="profile.description_placeholder" placeholder="Écrivez votre description ici..." maxlength="80"></textarea>
-                    <div class="profile-description-char-count" id="profile-description-char-count">0 / 80</div>
-                </div>
-            </div>
             </div>
         </div>
 
@@ -2583,17 +2962,6 @@
 <button class="email-reveal-btn" id="email-reveal-btn" title="" data-i18n-title="profile.reveal_email">
                                 <i class="fas fa-eye"></i>
                             </button>
-                                <button class="info-edit-btn" id="email-edit-btn" title="" data-i18n-title="profile.edit_email">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                            </div>
-                            <div class="info-edit-actions" id="email-edit-actions" style="display: none;">
-                                <button class="info-save-btn" id="email-save-btn">
-                                    <i class="fas fa-check"></i> <span data-i18n="profile.save">Enregistrer</span>
-                                </button>
-                                <button class="info-cancel-btn" id="email-cancel-btn">
-                                    <i class="fas fa-times"></i> <span data-i18n="profile.cancel">Annuler</span>
-                                </button>
                             </div>
                         </div>
                         <div class="info-item">
@@ -2865,8 +3233,9 @@
                                 // Mettre à jour l'affichage avec l'URL Firebase
                                 const userAvatar = document.getElementById('user-avatar');
                                 const profileAvatar = document.getElementById('profile-avatar');
-                                if (userAvatar) userAvatar.src = avatarUrl;
-                                if (profileAvatar) profileAvatar.src = avatarUrl;
+                                const dispUrl = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
+                                if (userAvatar) userAvatar.src = dispUrl;
+                                if (profileAvatar) profileAvatar.src = dispUrl;
                                 
                                 // Mettre à jour l'objet user
                                 user.customAvatar = avatarUrl;
@@ -2938,8 +3307,9 @@
                                 const avatarUrl = await window.avatarService.saveAvatar(user.email, file);
                                 const userAvatar = document.getElementById('user-avatar');
                                 const profileAvatar = document.getElementById('profile-avatar');
-                                if (userAvatar) userAvatar.src = avatarUrl;
-                                if (profileAvatar) profileAvatar.src = avatarUrl;
+                                const dispUrlFb = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
+                                if (userAvatar) userAvatar.src = dispUrlFb;
+                                if (profileAvatar) profileAvatar.src = dispUrlFb;
                                 user.customAvatar = avatarUrl;
                                 user.avatar = avatarUrl;
                                 localStorage.setItem('user', JSON.stringify(user));
@@ -3874,8 +4244,9 @@
                 
                 // Appliquer l'avatar trouvé
                 if (avatarUrl) {
-                    if (userAvatar) userAvatar.src = avatarUrl;
-                    if (profileAvatar) profileAvatar.src = avatarUrl;
+                    const dispUrl = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
+                    if (userAvatar) userAvatar.src = dispUrl;
+                    if (profileAvatar) profileAvatar.src = dispUrl;
                     
                     // Mettre à jour le localStorage avec l'avatar le plus récent
                     if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
@@ -4102,13 +4473,14 @@
                 const userAvatar = document.getElementById('user-avatar');
                 const profileAvatar = document.getElementById('profile-avatar');
                 const avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || '';
+                const dispUrl = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
                 if (avatarUrl && (userAvatar || profileAvatar)) {
                     console.log('🔄 Mise à jour forcée de l\'avatar:', avatarUrl.substring(0, 50) + '...');
-                    if (userAvatar && userAvatar.src !== avatarUrl) {
-                        userAvatar.src = avatarUrl;
+                    if (userAvatar && userAvatar.src !== dispUrl) {
+                        userAvatar.src = dispUrl;
                     }
-                    if (profileAvatar && profileAvatar.src !== avatarUrl) {
-                        profileAvatar.src = avatarUrl;
+                    if (profileAvatar && profileAvatar.src !== dispUrl) {
+                        profileAvatar.src = dispUrl;
                     }
                 }
             }, 100);
@@ -4200,7 +4572,7 @@
                     imgElement.onload = null;
                     
                     // Définir directement l'URL
-                    imgElement.src = url;
+                    imgElement.src = (window.upgradeProfileAvatarUrl || function (u) { return u; })(url);
                     
                     // Gestionnaire de succès
                     imgElement.onload = function() {
@@ -4335,7 +4707,7 @@
             // Langue
             const languageDisplay = document.getElementById('language-display');
             if (languageDisplay) {
-                const languageCode = account?.language || account?.langue || user.language || user.langue || 'fr';
+                const languageCode = (localStorage.getItem('mangaWatchLanguage') || account?.langue || account?.language || user.langue || user.language || 'fr').toLowerCase();
                 
                 // Convertir le code langue en nom complet
                 const langueNames = {
@@ -5028,8 +5400,9 @@
                                     // Mettre à jour l'affichage avec l'URL Firebase
                                     const userAvatar = document.getElementById('user-avatar');
                                     const profileAvatar = document.getElementById('profile-avatar');
-                                    if (userAvatar) userAvatar.src = avatarUrl;
-                                    if (profileAvatar) profileAvatar.src = avatarUrl;
+                                    const dispUrl2 = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
+                                    if (userAvatar) userAvatar.src = dispUrl2;
+                                    if (profileAvatar) profileAvatar.src = dispUrl2;
                                     
                                     // Mettre à jour l'objet user
                                     user.customAvatar = avatarUrl;
@@ -5101,8 +5474,9 @@
                                     const avatarUrl = await window.avatarService.saveAvatar(user.email, file);
                                     const userAvatar = document.getElementById('user-avatar');
                                     const profileAvatar = document.getElementById('profile-avatar');
-                                    if (userAvatar) userAvatar.src = avatarUrl;
-                                    if (profileAvatar) profileAvatar.src = avatarUrl;
+                                    const dispUrlFb2 = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
+                                    if (userAvatar) userAvatar.src = dispUrlFb2;
+                                    if (profileAvatar) profileAvatar.src = dispUrlFb2;
                                     user.customAvatar = avatarUrl;
                                     user.avatar = avatarUrl;
                                     localStorage.setItem('user', JSON.stringify(user));
@@ -5318,8 +5692,9 @@
             
             // Appliquer l'avatar trouvé
             if (avatarUrl) {
-              if (userAvatar) userAvatar.src = avatarUrl;
-              if (profileAvatar) profileAvatar.src = avatarUrl;
+              const dispUrl = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
+              if (userAvatar) userAvatar.src = dispUrl;
+              if (profileAvatar) profileAvatar.src = dispUrl;
               
               // Mettre à jour le localStorage avec l'avatar le plus récent
               if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
@@ -5515,7 +5890,7 @@
           if (languageDisplay) {
               const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
               const account = accounts.find(acc => acc.email === user.email);
-              const userLangue = account?.langue || user.langue || user.language || 'Non renseigné';
+              const userLangue = (localStorage.getItem('mangaWatchLanguage') || account?.langue || account?.language || user.langue || user.language || 'fr').toLowerCase();
               
               // Convertir le code langue en nom complet
               const langueNames = {
@@ -7125,6 +7500,7 @@
                               : '***';
                           emailDisplay.value = maskedLocal + '@' + domain;
                           emailDisplay.classList.add('email-masked');
+                          emailDisplay.classList.remove('email-revealed');
                           emailRevealBtn.innerHTML = '<i class="fas fa-eye"></i>';
                           emailRevealBtn.title = "Afficher l'email";
                           emailRevealed = false;
@@ -7132,6 +7508,7 @@
                           // Révéler l'email
                           emailDisplay.value = fullEmail;
                           emailDisplay.classList.remove('email-masked');
+                          emailDisplay.classList.add('email-revealed');
                           emailRevealBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
                           emailRevealBtn.title = "Masquer l'email";
                           emailRevealed = true;
@@ -7187,6 +7564,7 @@
                   originalEmail = emailDisplay.dataset.fullEmail || emailDisplay.value;
                   emailDisplay.removeAttribute('readonly');
                   emailDisplay.classList.remove('email-masked');
+                  emailDisplay.classList.remove('email-revealed');
                   emailDisplay.value = originalEmail;
                   emailEditBtn.style.display = 'none';
                   if (emailEditActions) emailEditActions.style.display = 'flex';
@@ -7216,6 +7594,7 @@
                       emailDisplay.dataset.fullEmail = newEmail;
                       emailDisplay.setAttribute('readonly', 'readonly');
                       emailDisplay.classList.add('email-masked');
+                      emailDisplay.classList.remove('email-revealed');
                       const [localPart, domain] = newEmail.split('@');
                       const maskedLocal = localPart.length > 2 ? localPart.substring(0, 2) + '***' : '***';
                       emailDisplay.value = maskedLocal + '@' + domain;
@@ -7231,6 +7610,7 @@
                       emailDisplay.value = originalEmail;
                       emailDisplay.setAttribute('readonly', 'readonly');
                       emailDisplay.classList.add('email-masked');
+                      emailDisplay.classList.remove('email-revealed');
                       const [localPart, domain] = originalEmail.split('@');
                       const maskedLocal = localPart.length > 2 ? localPart.substring(0, 2) + '***' : '***';
                       emailDisplay.value = maskedLocal + '@' + domain;
@@ -7286,6 +7666,7 @@
                       const accountIndex = accounts.findIndex(acc => acc.email === user.email);
                       if (accountIndex !== -1) {
                           accounts[accountIndex].langue = newLangueCode;
+                          accounts[accountIndex].language = newLangueCode;
                           localStorage.setItem('accounts', JSON.stringify(accounts));
                       }
                       
@@ -7680,7 +8061,7 @@
     <script src="/js/profile-sync.js"></script>
     <script src="/js/fake-users-generator.js"></script>
     <script src="/js/minorContentFilter.js"></script>
-    <script src="/js/profile-anime-cards.js?v=2.0" onerror="console.error('❌ ERREUR DE CHARGEMENT DU SCRIPT profile-anime-cards.js');"></script>
+    <script src="/js/profile-anime-cards.js?v=2.17" onerror="console.error('❌ ERREUR DE CHARGEMENT DU SCRIPT profile-anime-cards.js');"></script>
     <script src="/js/search.js"></script>
     <script>
         // Vérifier immédiatement si le script s'est chargé
@@ -7863,3 +8244,9 @@
     <script src="/js/help-ticket.js"></script>
 </body>
 </html>
+
+
+
+
+
+

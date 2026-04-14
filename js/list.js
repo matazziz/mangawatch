@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusModal = document.getElementById('status-modal');
     const closeModal = document.querySelector('.close-modal');
     const statusOptions = document.querySelectorAll('.status-option');
+    const mobileFiltersToggle = document.getElementById('mobile-collection-filters-toggle');
+    const listContainer = document.querySelector('.list-container .container');
     
     // Variables de pagination
     const paginationContainer = document.getElementById('pagination-container');
@@ -22,12 +24,32 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTypeFilter = 'all';
     let currentItemId = null;
     let currentPage = 1;
-    let itemsPerPage = 120; // 4 cartes par ligne × 30 lignes
+    let itemsPerPage = window.matchMedia('(max-width: 768px)').matches ? 50 : 120;
     let allItems = []; // Tous les items filtrés
     let currentPageItems = []; // Items de la page actuelle
+
+    function getResponsiveItemsPerPage() {
+        return window.matchMedia('(max-width: 768px)').matches ? 50 : 120;
+    }
+
+    function applyResponsivePagination() {
+        const nextItemsPerPage = getResponsiveItemsPerPage();
+        if (itemsPerPage === nextItemsPerPage) return;
+
+        itemsPerPage = nextItemsPerPage;
+        currentPage = 1;
+
+        if (allItems.length > 0) {
+            displayCurrentPage();
+        } else {
+            updatePagination();
+        }
+    }
     
     // Initialiser la page
     initList();
+
+    window.addEventListener('resize', applyResponsivePagination);
     
     // Mettre à jour les cartes (badges type + épisodes/volumes) au changement de langue
     document.addEventListener('languageChanged', function() {
@@ -72,6 +94,14 @@ document.addEventListener('DOMContentLoaded', function() {
             await filterItems(currentFilter);
         });
     });
+
+    // Toggle mobile pour afficher/masquer les filtres (comme manga/anime)
+    if (mobileFiltersToggle && listContainer) {
+        mobileFiltersToggle.addEventListener('click', () => {
+            const isOpen = listContainer.classList.toggle('mobile-filters-open');
+            mobileFiltersToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    }
     
     // Gestionnaires d'événements pour le modal
     closeModal.addEventListener('click', closeStatusModal);
@@ -348,6 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentPage > 1) {
             currentPage--;
             displayCurrentPage();
+            scrollToListTopOnMobile();
         }
     });
     
@@ -356,8 +387,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentPage < totalPages) {
             currentPage++;
             displayCurrentPage();
+            scrollToListTopOnMobile();
         }
     });
+
+    function scrollToListTopOnMobile() {
+        if (!window.matchMedia('(max-width: 768px)').matches) return;
+        const listTop = document.getElementById('list-items');
+        if (!listTop) return;
+        const headerOffset = window.matchMedia('(max-width: 480px)').matches ? 76 : 82;
+        const top = listTop.getBoundingClientRect().top + window.scrollY - headerOffset;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }
     
     // Fonction pour afficher la page actuelle
     function displayCurrentPage() {

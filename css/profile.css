@@ -24,9 +24,17 @@
     margin: 0 auto;
 }
 
+@media (min-width: 769px) {
+    .profile-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
 .profile-header {
     display: flex;
     align-items: center;
+    flex-shrink: 0;
     gap: 2rem;
     margin-bottom: 3rem;
     padding: 2rem;
@@ -36,12 +44,18 @@
 }
 
 .profile-avatar {
-    width: 150px;
-    height: 150px;
+    width: 172px;
+    height: 172px;
     border-radius: 50%;
     object-fit: cover;
+    object-position: center center;
     border: 3px solid var(--primary-color);
     box-shadow: 0 4px 15px var(--shadow);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    image-rendering: auto;
+    image-rendering: high-quality;
 }
 
 .profile-info {
@@ -591,15 +605,50 @@
     animation: fadeIn 0.5s ease-out;
 }
 
-/* Responsive */
+/* Mobile : même ligne que desktop (avatar | infos | zone droite), textes plus petits */
 @media (max-width: 768px) {
     .profile-header {
-        flex-direction: column;
-        text-align: center;
+        flex-shrink: 0;
+        align-self: stretch;
+        min-height: clamp(305px, 52vw, 420px);
+        min-height: clamp(305px, max(52vw, 28svh), 420px);
+        padding: 0.85rem 0.65rem 5.5rem;
+        margin-left: 0;
+        margin-right: 0;
+        margin-bottom: 1.25rem;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
     }
-    
+
+    .profile-header-content {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.65rem;
+    }
+
+    .profile-avatar-wrapper {
+        flex-shrink: 0;
+    }
+
+    .profile-info {
+        align-items: flex-start;
+        text-align: left;
+        align-self: center;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .profile-info h1 {
+        font-size: clamp(1.2rem, 4.35vw, 1.85rem);
+    }
+
     .profile-avatar {
-        margin-bottom: 1.5rem;
+        width: 102px;
+        height: 102px;
+        border-width: 3px;
     }
     
     .profile-tabs {
@@ -611,17 +660,40 @@
         display: inline-block;
         min-width: 120px;
     }
-    
+}
+
+@media (max-width: 480px) {
+    .profile-header {
+        flex-shrink: 0;
+        align-self: stretch;
+        min-height: clamp(295px, 54vw, 380px);
+        min-height: clamp(295px, max(54vw, 26svh), 380px);
+        padding: 0.6rem 0.5rem 5rem;
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+    }
+
+    .profile-header-content {
+        gap: 0.45rem;
+    }
+
     .profile-avatar {
-        width: 120px;
-        height: 120px;
-        min-width: 120px;
-        min-height: 120px;
-        margin: 0 auto 1.5rem auto;
-        border-width: 3px;
+        width: 86px;
+        height: 86px;
     }
-    
+
     .profile-info h1 {
-        font-size: 1.5rem;
+        font-size: clamp(1.1rem, 4.5vw, 1.42rem);
     }
+}
+
+/* Même colonne flex que list.html (footer-unified sur body) : le contenu principal occupe l’espace */
+main.profile-container {
+    flex: 1 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }

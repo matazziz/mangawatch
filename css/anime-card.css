@@ -51,4 +51,528 @@
 
 #sort-by-genre-btn.genre-open {
   margin-bottom: 24px !important;
-} 
+}
+
+/* Évite le saut de largeur quand la barre de défilement apparaît (marges instables au rafraîchissement) */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Zone notes / Top 10 : pas de padding horizontal variable imposé par le JS */
+#reviews-section {
+  box-sizing: border-box;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Section notes : recherche au-dessus, bouton Filtres (mobile), puis type / ordre / tri genre */
+.profile-reviews-toolbar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  max-width: min(920px, 100%);
+  margin: 2rem auto 0 auto;
+  position: sticky;
+  top: 80px;
+  z-index: 999;
+  box-sizing: border-box;
+  padding: 0 0.75rem;
+}
+
+.profile-reviews-toolbar-wrap--static {
+  position: relative;
+  top: auto;
+  z-index: 1002;
+}
+
+.profile-reviews-search-wrap input[type="text"] {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.mobile-profile-filters-toggle {
+  display: none;
+  width: 100%;
+  margin: 0 0 10px 0;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #00b894 0%, #00a085 100%);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mobile-profile-filters-toggle i {
+  font-size: 0.95rem;
+}
+
+/* Desktop: conserver les dimensions/marges d'origine des containers étoiles */
+@media (min-width: 769px) {
+  .all-star-containers {
+    width: min(1140px, 99%) !important;
+    max-width: 1140px !important;
+    margin: 2.5rem auto 0 auto !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  [id^="star-containers"] {
+    max-width: 1140px !important;
+    padding: 2rem 1.5rem !important;
+    margin: 0 auto 1.5rem auto !important;
+  }
+}
+
+/* Menus déroulants: fond opaque pour masquer le contenu dessous */
+#filter-by-type-menu,
+#order-desc-menu {
+  background: #23262f !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+#filter-by-type-menu {
+  z-index: 20050 !important;
+}
+
+#order-desc-menu {
+  z-index: 20040 !important;
+}
+
+#filter-by-type-menu .type-menu-item,
+#order-desc-menu .order-menu-item {
+  background: #23262f;
+}
+
+/* Top 10 (profil / profil public) : 2 cartes par ligne — téléphone, cartes un peu plus grandes, marges latérales minimales */
+@media (max-width: 768px) {
+  .mobile-profile-filters-toggle {
+    display: inline-flex;
+  }
+
+  .profile-reviews-toolbar-wrap:not(.mobile-profile-filters-open) #sort-btn-container {
+    display: none !important;
+  }
+
+  .profile-reviews-toolbar-wrap.mobile-profile-filters-open #sort-btn-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .profile-reviews-toolbar-wrap.mobile-profile-filters-open #sort-btn-container > div,
+  .profile-reviews-toolbar-wrap.mobile-profile-filters-open #sort-btn-container > button {
+    width: 100%;
+  }
+
+  .profile-reviews-toolbar-wrap.mobile-profile-filters-open #sort-btn-container button {
+    width: 100% !important;
+    margin: 0 !important;
+    text-align: center;
+  }
+
+  .all-star-containers {
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 0.8rem !important;
+    margin-top: 0.9rem !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  .star-rating-group {
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  [id^="star-containers"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.65rem !important;
+    padding: 0.75rem 0.3rem !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    justify-items: stretch !important;
+    align-items: start !important;
+  }
+
+  [id^="star-containers"] .catalogue-card {
+    flex: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 390px !important;
+    min-height: 390px !important;
+    max-height: 390px !important;
+    padding: 0.75rem 0.5rem 0.65rem !important;
+    border-radius: 12px !important;
+  }
+
+  [id^="star-containers"] .catalogue-card img {
+    width: 104px !important;
+    height: 142px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  [id^="star-containers"] .catalogue-card a {
+    font-size: 0.76rem !important;
+    margin-bottom: 0.35rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    display: block !important;
+    line-height: 1.2 !important;
+    min-height: calc(1.2em * 2) !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .content-synopsis.profile-card-synopsis {
+    font-size: 0.72rem !important;
+    line-height: 1.28 !important;
+    margin-bottom: 0.4rem !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+    overflow: hidden !important;
+    height: auto !important;
+    max-height: calc(1.28em * 3) !important;
+    padding-right: 0 !important;
+    text-overflow: ellipsis !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .anime-genres a,
+  [id^="star-containers"] .catalogue-card .profile-genre-link {
+    font-size: 0.58rem !important;
+    padding: 0.01rem 0.22rem !important;
+    border-radius: 7px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: top !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .anime-genres {
+    gap: 0.18rem !important;
+    margin-bottom: 0.2rem !important;
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+    line-height: 1 !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    white-space: normal !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .card-more-btn {
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    top: 4px !important;
+    right: 4px !important;
+    font-size: 0.9rem !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .card-more-menu,
+  [id^="star-containers"] .catalogue-card .dropdown-menu {
+    width: auto !important;
+    min-width: 118px !important;
+    max-width: 150px !important;
+    right: 4px !important;
+    left: auto !important;
+    padding: 4px 0 !important;
+    border-radius: 8px !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .card-more-menu button,
+  [id^="star-containers"] .catalogue-card .dropdown-menu button {
+    width: auto !important;
+    min-width: 100% !important;
+    padding: 6px 10px !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+  }
+
+  #reviews-section .card-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(5, auto) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    box-sizing: border-box !important;
+  }
+
+  #reviews-section .card-list > [id^="catalogue-card-"] {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    flex: none !important;
+    height: auto !important;
+    min-height: 218px !important;
+    max-height: 288px !important;
+    padding: 0.5rem 0.35rem 0.4rem !important;
+    box-sizing: border-box !important;
+  }
+
+  #reviews-section .card-list .catalogue-image-placeholder {
+    width: 96px !important;
+    height: 126px !important;
+    font-size: 1.45rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  #reviews-section .card-list .catalogue-position {
+    margin-bottom: 0.35rem !important;
+  }
+
+  #reviews-section .card-list .catalogue-position > div {
+    font-size: 1.3rem !important;
+  }
+
+  #reviews-section .card-list .anime-title,
+  #reviews-section .card-list a[data-card-link="true"] {
+    font-size: 0.76rem !important;
+    line-height: 1.15 !important;
+    margin-top: 0.25rem !important;
+  }
+
+  #reviews-section .card-list [id^="catalogue-card-"] > img {
+    width: 96px !important;
+    height: 126px !important;
+    max-width: 100% !important;
+    object-fit: cover !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  #reviews-section .card-list .card-more-btn {
+    top: 6px !important;
+    right: 6px !important;
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    font-size: 0.95rem !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+  }
+
+  /* Toasts/confirmations (top 10, succès/erreur) en version compacte mobile */
+  body > div[style*="position:fixed"][style*="top:30px"][style*="left:50%"][style*="translateX(-50%)"] {
+    top: 18px !important;
+    max-width: min(240px, calc(100vw - 24px)) !important;
+    padding: 7px 12px !important;
+    border-radius: 9px !important;
+    font-size: 0.82rem !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    z-index: 20050 !important;
+  }
+
+  /* Popup choix d’emplacement Top 10 : fenêtre étroite, petites cases */
+  #top10-mini-interface.top10-mini-interface {
+    width: min(228px, calc(100vw - 40px)) !important;
+    max-width: min(228px, calc(100vw - 40px)) !important;
+    padding: 6px !important;
+    box-sizing: border-box !important;
+    border-width: 1px !important;
+    border-radius: 10px !important;
+  }
+
+  .top10-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: repeat(5, auto) !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  .mini-top10-slot {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 66px !important;
+    min-height: 66px !important;
+    max-height: 66px !important;
+    padding-top: 2px !important;
+    border-width: 1px !important;
+    border-radius: 5px !important;
+  }
+
+  .star-pagination {
+    gap: 6px !important;
+    padding: 5px !important;
+    margin-top: 10px !important;
+  }
+
+  .star-pagination button,
+  .star-pagination .star-page-btn {
+    min-width: 26px !important;
+    height: 26px !important;
+    padding: 4px 7px !important;
+    font-size: 0.72rem !important;
+    border-radius: 7px !important;
+    line-height: 1 !important;
+  }
+
+  /* Conteneurs de recherche (profil + profil public) : même rendu que containers étoiles */
+  #search-cards-container,
+  #genre-cards-container,
+  #search-cards-container-public,
+  #genre-cards-container-public,
+  .genre-filtered-cards {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.65rem !important;
+    padding: 0.75rem 0.3rem !important;
+    box-sizing: border-box !important;
+  }
+
+  #search-cards-container .catalogue-card,
+  #genre-cards-container .catalogue-card,
+  #search-cards-container-public .catalogue-card,
+  #genre-cards-container-public .catalogue-card,
+  .genre-filtered-cards .catalogue-card,
+  #genre-filtered-container .catalogue-card,
+  #search-results-container .catalogue-card,
+  #search-results-container-public .catalogue-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: 390px !important;
+    min-height: 390px !important;
+    max-height: 390px !important;
+    padding: 0.75rem 0.5rem 0.65rem !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  #search-cards-container .catalogue-card img,
+  #genre-cards-container .catalogue-card img,
+  #search-cards-container-public .catalogue-card img,
+  #genre-cards-container-public .catalogue-card img,
+  .genre-filtered-cards .catalogue-card img,
+  #genre-filtered-container .catalogue-card img,
+  #search-results-container .catalogue-card img,
+  #search-results-container-public .catalogue-card img {
+    width: 104px !important;
+    height: 142px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  #search-cards-container .catalogue-card a,
+  #genre-cards-container .catalogue-card a,
+  #search-cards-container-public .catalogue-card a,
+  #genre-cards-container-public .catalogue-card a,
+  .genre-filtered-cards .catalogue-card a,
+  #genre-filtered-container .catalogue-card a,
+  #search-results-container .catalogue-card a,
+  #search-results-container-public .catalogue-card a {
+    font-size: 0.76rem !important;
+    line-height: 1.2 !important;
+    min-height: calc(1.2em * 2) !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  #search-cards-container .catalogue-card .content-synopsis.profile-card-synopsis,
+  #genre-cards-container .catalogue-card .content-synopsis.profile-card-synopsis,
+  #search-cards-container-public .catalogue-card .content-synopsis.profile-card-synopsis,
+  #genre-cards-container-public .catalogue-card .content-synopsis.profile-card-synopsis,
+  .genre-filtered-cards .catalogue-card .content-synopsis.profile-card-synopsis,
+  #genre-filtered-container .catalogue-card .content-synopsis.profile-card-synopsis,
+  #search-results-container .catalogue-card .content-synopsis.profile-card-synopsis,
+  #search-results-container-public .catalogue-card .content-synopsis.profile-card-synopsis {
+    font-size: 0.72rem !important;
+    line-height: 1.28 !important;
+    margin-bottom: 0.4rem !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+    overflow: hidden !important;
+    max-height: calc(1.28em * 3) !important;
+  }
+
+  #search-cards-container .catalogue-card .anime-genres,
+  #genre-cards-container .catalogue-card .anime-genres,
+  #search-cards-container-public .catalogue-card .anime-genres,
+  #genre-cards-container-public .catalogue-card .anime-genres,
+  .genre-filtered-cards .catalogue-card .anime-genres,
+  #genre-filtered-container .catalogue-card .anime-genres,
+  #search-results-container .catalogue-card .anime-genres,
+  #search-results-container-public .catalogue-card .anime-genres {
+    gap: 0.18rem !important;
+    margin-bottom: 0.2rem !important;
+    align-items: flex-start !important;
+    line-height: 1 !important;
+  }
+
+  #search-cards-container .catalogue-card .anime-genres a,
+  #genre-cards-container .catalogue-card .anime-genres a,
+  #search-cards-container .catalogue-card .profile-genre-link,
+  #genre-cards-container .catalogue-card .profile-genre-link,
+  #search-cards-container-public .catalogue-card .anime-genres a,
+  #genre-cards-container-public .catalogue-card .anime-genres a,
+  #search-cards-container-public .catalogue-card .profile-genre-link,
+  #genre-cards-container-public .catalogue-card .profile-genre-link,
+  .genre-filtered-cards .catalogue-card .anime-genres a,
+  .genre-filtered-cards .catalogue-card .profile-genre-link,
+  #genre-filtered-container .catalogue-card .anime-genres a,
+  #genre-filtered-container .catalogue-card .profile-genre-link,
+  #search-results-container .catalogue-card .anime-genres a,
+  #search-results-container .catalogue-card .profile-genre-link,
+  #search-results-container-public .catalogue-card .anime-genres a,
+  #search-results-container-public .catalogue-card .profile-genre-link {
+    font-size: 0.58rem !important;
+    padding: 0.01rem 0.22rem !important;
+    border-radius: 7px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    vertical-align: top !important;
+  }
+
+  #search-cards-container .catalogue-card .card-more-btn,
+  #genre-cards-container .catalogue-card .card-more-btn,
+  #search-cards-container-public .catalogue-card .card-more-btn,
+  #genre-cards-container-public .catalogue-card .card-more-btn,
+  .genre-filtered-cards .catalogue-card .card-more-btn,
+  #genre-filtered-container .catalogue-card .card-more-btn,
+  #search-results-container .catalogue-card .card-more-btn,
+  #search-results-container-public .catalogue-card .card-more-btn {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    top: 4px !important;
+    right: 4px !important;
+    font-size: 0.95rem !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+  }
+}

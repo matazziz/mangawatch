@@ -39,6 +39,37 @@ let viewedUserEmail = null;
     else document.addEventListener('DOMContentLoaded', setupUserProfileSynopsisObserver);
 })();
 
+function enforceMobileSearchGenreCardsLayoutPublic(containerEl) {
+    if (!containerEl || typeof window.matchMedia !== 'function' || !window.matchMedia('(max-width: 768px)').matches) return;
+    containerEl.style.setProperty('display', 'grid', 'important');
+    containerEl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+    containerEl.style.setProperty('gap', '0.65rem', 'important');
+    containerEl.style.setProperty('padding', '0.75rem 0.3rem', 'important');
+    containerEl.style.setProperty('justify-items', 'stretch', 'important');
+    containerEl.style.setProperty('align-items', 'start', 'important');
+    containerEl.querySelectorAll('.catalogue-card').forEach(function(card) {
+        card.style.setProperty('width', '100%', 'important');
+        card.style.setProperty('max-width', '100%', 'important');
+        card.style.setProperty('min-width', '0', 'important');
+        card.style.setProperty('height', '390px', 'important');
+        card.style.setProperty('min-height', '390px', 'important');
+        card.style.setProperty('max-height', '390px', 'important');
+        card.style.removeProperty('flex');
+    });
+}
+
+function upgradeProfileAvatarUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (url.indexOf('data:') === 0 || url.indexOf('blob:') === 0) return url;
+    if (url.indexOf('googleusercontent.com') !== -1) {
+        return url.replace(/=s\d+(-c)?/gi, '=s512-c');
+    }
+    if (url.indexOf('gravatar.com') !== -1 && /[?&]s=\d+/.test(url)) {
+        return url.replace(/([?&]s=)\d+/, '$1128');
+    }
+    return url;
+}
+
 // --- Règle "un seul par série" dans le Top 10 (comme le Top 10 perso) ---
 // Extraire le titre de base (sans saison/partie) pour comparer les séries
 function extractBaseTitleForSeries(title, contentType) {
@@ -214,6 +245,7 @@ function resolvePseudoToEmail(pseudo) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    initBannerMuteButton();
     const urlParams = new URLSearchParams(window.location.search);
     viewedUserEmail = urlParams.get('user');
     const pseudoParam = urlParams.get('pseudo');
@@ -318,17 +350,17 @@ function displayProfileInfo(user, userEmail) {
     const storedAvatar = localStorage.getItem(avatarKey);
     
     if (profileAvatar) {
+        var rawAvatar = '';
         if (storedAvatar) {
-            profileAvatar.src = storedAvatar;
+            rawAvatar = storedAvatar;
         } else if (user.customAvatar) {
-            profileAvatar.src = user.customAvatar;
+            rawAvatar = user.customAvatar;
         } else if (user.originalAvatar) {
-            profileAvatar.src = user.originalAvatar;
+            rawAvatar = user.originalAvatar;
         } else if (user.picture) {
-            profileAvatar.src = user.picture;
-        } else {
-            profileAvatar.src = '';
+            rawAvatar = user.picture;
         }
+        profileAvatar.src = rawAvatar ? upgradeProfileAvatarUrl(rawAvatar) : '';
     }
     
     // Afficher le nom avec le badge certifié
@@ -381,7 +413,29 @@ function displayProfileInfo(user, userEmail) {
     // Afficher la description
     const profileDescriptionText = document.getElementById('profile-description-text');
     const profileDescription = document.getElementById('profile-description');
+    const profileDescriptionWrapper = document.getElementById('profile-description-wrapper');
     if (profileDescriptionText && profileDescription) {
+        function isMeaningfulDescription(value) {
+            var text = (value || '').toString().replace(/\u00a0/g, ' ').trim();
+            if (!text) return false;
+            var normalized = text
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[“”"'`´’]/g, '')
+                .replace(/[.!?:;,]+/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (!normalized) return false;
+            if (normalized === 'profile.no_description') return false;
+            if (normalized === 'aucune description') return false;
+            if (normalized === 'pas de description') return false;
+            if (normalized === 'non renseigne') return false;
+            if (normalized === 'none' || normalized === 'null' || normalized === 'undefined') return false;
+            return true;
+        }
+
         // Vérifier d'abord dans localStorage, puis dans le profil
         const descriptionKey = 'profile_description_' + userEmail;
         let description = localStorage.getItem(descriptionKey) || user.description || '';
@@ -399,12 +453,14 @@ function displayProfileInfo(user, userEmail) {
             }
         }
         
-        if (description && description.trim()) {
+        if (isMeaningfulDescription(description)) {
             profileDescriptionText.textContent = description;
             profileDescription.classList.remove('empty');
+            if (profileDescriptionWrapper) profileDescriptionWrapper.style.display = '';
         } else {
-            profileDescriptionText.textContent = (window.t && window.t('profile.no_description')) || 'Aucune description';
+            profileDescriptionText.textContent = '';
             profileDescription.classList.add('empty');
+            if (profileDescriptionWrapper) profileDescriptionWrapper.style.display = 'none';
         }
     }
     
@@ -422,6 +478,7 @@ function displayProfileInfo(user, userEmail) {
 // Applique les données bannière (image ou vidéo) aux éléments DOM (profil public / top 10 utilisateur)
 function applyBannerToDom(banner, bannerImage, bannerVideo) {
     if (!banner || !banner.url || !bannerImage || !bannerVideo) return;
+    var muteBtn = document.getElementById('banner-mute-btn');
     var type = (banner.type || '').toLowerCase();
     if (type === 'image') {
         bannerVideo.pause();
@@ -430,6 +487,7 @@ function applyBannerToDom(banner, bannerImage, bannerVideo) {
         bannerVideo.classList.remove('active');
         bannerImage.src = banner.url;
         bannerImage.classList.add('active');
+        if (muteBtn) muteBtn.style.display = 'none';
         return;
     }
     if (type === 'video') {
@@ -442,20 +500,22 @@ function applyBannerToDom(banner, bannerImage, bannerVideo) {
         bannerVideo.addEventListener('timeupdate', function() {
             if (bannerVideo.currentTime >= 45) bannerVideo.currentTime = 0;
         });
-        var savedVolume = banner.volume !== undefined ? banner.volume : 0;
-        bannerVideo.volume = savedVolume / 100;
-        bannerVideo.muted = true;
+        var savedVolume = banner.volume !== undefined ? banner.volume : 35;
+        bannerVideo.volume = Math.max(0.1, Math.min(1, savedVolume / 100));
+        bannerVideo.muted = false;
         bannerVideo.playsInline = true;
+        if (muteBtn) {
+            muteBtn.style.display = 'inline-flex';
+            muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            muteBtn.title = 'Couper le son de la bannière';
+            muteBtn.setAttribute('aria-label', 'Couper le son de la bannière');
+        }
         bannerVideo.play().then(function() {
             setTimeout(function() {
-                if (savedVolume > 0) {
-                    bannerVideo.muted = false;
-                } else {
-                    bannerVideo.muted = true;
-                }
+                bannerVideo.muted = false;
             }, 100);
         }).catch(function(e) {
-            bannerVideo.muted = true;
+            bannerVideo.muted = false;
         });
         bannerVideo.addEventListener('error', function onVideoError() {
             console.warn('Bannière vidéo non chargée (profil public)', banner.url && banner.url.substring(0, 50));
@@ -514,6 +574,25 @@ function loadUserBanner(userEmail, retryCount) {
             if (retryCount < maxRetries) loadUserBanner(userEmail, retryCount + 1);
         }, 200);
     }
+}
+
+function initBannerMuteButton() {
+    var muteBtn = document.getElementById('banner-mute-btn');
+    var bannerVideo = document.getElementById('banner-video');
+    if (!muteBtn || !bannerVideo) return;
+    muteBtn.addEventListener('click', function() {
+        var willMute = !bannerVideo.muted;
+        bannerVideo.muted = willMute;
+        if (willMute) {
+            muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            muteBtn.title = 'Activer le son de la bannière';
+            muteBtn.setAttribute('aria-label', 'Activer le son de la bannière');
+        } else {
+            muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            muteBtn.title = 'Couper le son de la bannière';
+            muteBtn.setAttribute('aria-label', 'Couper le son de la bannière');
+        }
+    });
 }
 
 function setupTabs() {
@@ -587,6 +666,31 @@ function setupTabs() {
 }
 
 function setupCollectionFilters() {
+    const collectionSection = document.getElementById('collection-section');
+    const mobileFiltersToggle = document.getElementById('mobile-collection-filters-toggle-public');
+
+    function syncCollectionMobileFiltersState() {
+        if (!collectionSection) return;
+        const isMobile = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+        if (!isMobile) {
+            collectionSection.classList.add('mobile-filters-open');
+            if (mobileFiltersToggle) mobileFiltersToggle.setAttribute('aria-expanded', 'true');
+            return;
+        }
+        collectionSection.classList.remove('mobile-filters-open');
+        if (mobileFiltersToggle) mobileFiltersToggle.setAttribute('aria-expanded', 'false');
+    }
+
+    if (mobileFiltersToggle && collectionSection) {
+        mobileFiltersToggle.addEventListener('click', function() {
+            const isOpen = collectionSection.classList.toggle('mobile-filters-open');
+            mobileFiltersToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    }
+
+    syncCollectionMobileFiltersState();
+    window.addEventListener('resize', syncCollectionMobileFiltersState);
+
     // Filtres par statut
     const statusFilters = document.querySelectorAll('.status-filter');
     statusFilters.forEach(filter => {
@@ -619,17 +723,6 @@ async function loadUserCollection(statusFilter = 'all', typeFilter = 'all') {
     const collectionSection = document.getElementById('collection-section');
     const collectionContainer = document.getElementById('collection-items');
     const emptyMessage = document.getElementById('empty-collection');
-    
-    // Appliquer les styles pour la section collection (exactement comme la vraie page collection)
-    // S'assurer que le container garde toujours sa largeur même sans résultats
-    if (collectionSection) {
-        collectionSection.style.maxWidth = '2000px';
-        collectionSection.style.margin = '0 auto';
-        collectionSection.style.width = '100%';
-        collectionSection.style.padding = '20px';
-        collectionSection.style.overflow = 'visible';
-        collectionSection.style.boxSizing = 'border-box';
-    }
     
     if (!collectionContainer) return;
     
@@ -668,27 +761,9 @@ async function loadUserCollection(statusFilter = 'all', typeFilter = 'all') {
     // Mettre à jour les statistiques
     updateCollectionStats(userList);
     
-    // S'assurer que le container principal garde toujours sa largeur maximale (comme la vraie page collection)
-    if (collectionSection) {
-        collectionSection.style.maxWidth = '2000px';
-        collectionSection.style.margin = '0 auto';
-        collectionSection.style.width = '100%';
-        collectionSection.style.padding = '20px';
-        collectionSection.style.overflow = 'visible';
-        collectionSection.style.boxSizing = 'border-box';
-    }
-    
     if (filteredList.length === 0) {
         collectionContainer.style.display = 'none';
         emptyMessage.style.display = 'block';
-        // S'assurer que le message vide garde aussi la largeur du container (comme la vraie page collection)
-        if (emptyMessage) {
-            emptyMessage.style.maxWidth = '2000px';
-            emptyMessage.style.margin = '0 auto';
-            emptyMessage.style.padding = '20px';
-            emptyMessage.style.width = '100%';
-            emptyMessage.style.boxSizing = 'border-box';
-        }
         return;
     }
     
@@ -865,25 +940,9 @@ function createPublicListItem(item) {
     // Créer l'élément image d'abord (exactement comme list.js)
     itemDiv.innerHTML = htmlContent;
     
-    // Créer l'élément content séparément (exactement comme list.js)
+    // Créer l'élément content séparément
     const contentDiv = document.createElement('div');
     contentDiv.className = 'item-content';
-    // Utiliser exactement les mêmes styles inline que list.js
-    contentDiv.style.cssText = `
-        padding: 20px;
-        background: rgba(0, 0, 0, 0.9);
-        backdrop-filter: blur(10px);
-        border-radius: 0 0 12px 12px;
-        display: flex !important;
-        flex-direction: column !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        min-height: 200px;
-        flex: 1;
-        position: relative;
-        z-index: 1;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-    `;
     
     const itemId = item.mal_id || item.id;
     const itemType = item.type || 'anime';
@@ -1038,6 +1097,18 @@ function loadUserAnimeNotes() {
     setTimeout(() => {
         displayUserAnimeNotesPublic();
     }, 100);
+
+    // Correctif: certains styles se stabilisent après le premier paint
+    // (évite un Top 10 "tout petit" au tout premier chargement)
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            const activeTab = document.querySelector('.profile-tab.active')?.getAttribute('data-tab');
+            if (activeTab === 'reviews') {
+                createStarBadgesPublic();
+                displayUserAnimeNotesPublic();
+            }
+        }, 450);
+    });
 }
 
 // Créer les containers à étoiles (version publique)
@@ -1051,8 +1122,12 @@ function createStarBadgesPublic() {
     }
     
     reviewsSection.style.maxWidth = '2000px';
-    reviewsSection.style.margin = '0 1rem';
+    reviewsSection.style.width = '100%';
+    reviewsSection.style.margin = '0 auto';
+    const sectionDesktopPadding = (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches) ? '0' : '0 3rem';
+    reviewsSection.style.padding = sectionDesktopPadding;
     reviewsSection.style.overflow = 'visible';
+    reviewsSection.style.boxSizing = 'border-box';
     
     // Supprimer les anciens containers
     reviewsSection.querySelectorAll('.all-star-containers').forEach(el => el.remove());
@@ -1061,23 +1136,27 @@ function createStarBadgesPublic() {
     // Créer le conteneur des cartes Top 10 (même style et taille que le Top 10 perso)
     const catalogueContainer = document.createElement('div');
     catalogueContainer.className = 'card-list';
+    const narrowTop10Public = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
     catalogueContainer.style.cssText = `
         display: grid;
         grid-template-columns: repeat(5, 175px);
         grid-template-rows: repeat(2, auto);
         gap: 1.5rem;
         margin: 1.5rem auto 2.5rem auto;
-        padding: 0 1.5rem;
+        padding: ${narrowTop10Public ? '0' : '0 1.5rem'};
         position: relative;
         z-index: 1;
-        width: fit-content;
-        max-width: calc(100% - 3rem);
+        width: ${narrowTop10Public ? '100%' : 'fit-content'};
+        max-width: ${narrowTop10Public ? '100%' : 'calc(100% - 3rem)'};
         justify-content: center;
         justify-items: center;
         box-sizing: border-box;
     `;
-    
-    if (window.innerWidth < 1200) {
+    if (narrowTop10Public) {
+        catalogueContainer.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+        catalogueContainer.style.gridTemplateRows = 'repeat(5, auto)';
+        catalogueContainer.style.gap = '8px';
+    } else if (window.innerWidth < 1200) {
         catalogueContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
         catalogueContainer.style.maxWidth = '100%';
     }
@@ -1208,16 +1287,18 @@ function createStarBadgesPublic() {
     // Créer les boutons de tri (Trier par genre et Ordre décroissant)
     createSortButtonsPublic(reviewsSection);
     
+    const compactStarsMobile = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+
     // Créer le conteneur principal des étoiles
     const allContainers = document.createElement('div');
     allContainers.className = 'all-star-containers';
     allContainers.style.cssText = `
-        width: 98%;
-        max-width: 98%;
-        margin: 2.5rem auto 0 auto;
+        width: ${compactStarsMobile ? '100%' : '98%'};
+        max-width: ${compactStarsMobile ? '100%' : '98%'};
+        margin: ${compactStarsMobile ? '1rem auto 0 auto' : '2.5rem auto 0 auto'};
         display: flex;
         flex-direction: column;
-        gap: 2rem;
+        gap: ${compactStarsMobile ? '0.9rem' : '2rem'};
         box-sizing: border-box;
     `;
     
@@ -1230,9 +1311,9 @@ function createStarBadgesPublic() {
             max-width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: ${compactStarsMobile ? '0.55rem' : '1.5rem'};
             box-sizing: border-box;
-            margin-bottom: 1.5rem;
+            margin-bottom: ${compactStarsMobile ? '0.8rem' : '1.5rem'};
         `;
         
         const badge = document.createElement('div');
@@ -1240,18 +1321,18 @@ function createStarBadgesPublic() {
         badge.style.cssText = `
             position: relative;
             background: #23262f;
-            border-radius: 14px;
-            min-width: 90px;
-            max-width: 120px;
-            padding: 0.7rem 1.3rem;
+            border-radius: ${compactStarsMobile ? '10px' : '14px'};
+            min-width: ${compactStarsMobile ? '62px' : '90px'};
+            max-width: ${compactStarsMobile ? '84px' : '120px'};
+            padding: ${compactStarsMobile ? '0.35rem 0.6rem' : '0.7rem 1.3rem'};
             box-shadow: 0 2px 12px #0007;
             display: flex;
             align-items: flex-start;
-            margin-bottom: 1.5rem;
+            margin-bottom: ${compactStarsMobile ? '0.5rem' : '1.5rem'};
         `;
         badge.innerHTML = `
-            <span style="font-size:2.1rem;color:#ffd700;font-weight:700;display:flex;align-items:center;gap:0;">
-                ${i}<i class="fas fa-star" style="margin-left:0.1rem;"></i>
+            <span style="font-size:${compactStarsMobile ? '1.25rem' : '2.1rem'};color:#ffd700;font-weight:700;display:flex;align-items:center;gap:0;">
+                ${i}<i class="fas fa-star" style="margin-left:0.1rem;font-size:${compactStarsMobile ? '0.95em' : '1em'};"></i>
             </span>
         `;
         
@@ -1260,12 +1341,12 @@ function createStarBadgesPublic() {
         starContainer.style.cssText = `
             width: 100%;
             max-width: 100%;
-            min-height: 340px;
+            min-height: ${compactStarsMobile ? '150px' : '340px'};
             background: #23262f;
-            border-radius: 18px;
+            border-radius: ${compactStarsMobile ? '12px' : '18px'};
             box-shadow: 0 2px 16px #0006;
-            padding: 2rem 1.5rem;
-            margin: 0 auto 1.5rem auto;
+            padding: ${compactStarsMobile ? '0.75rem 0.55rem' : '2rem 1.5rem'};
+            margin: ${compactStarsMobile ? '0 auto 0.8rem auto' : '0 auto 1.5rem auto'};
             box-sizing: border-box;
             overflow-x: hidden;
         `;
@@ -1475,8 +1556,9 @@ async function displayUserAnimeNotesPublic() {
         return;
     }
     
-    // Max 3 cartes sur la page 1, le surplus va aux pages suivantes (comme le profil perso)
-    const MAX_CARDS_PAGE1 = 3;
+    // Mobile: 2 cartes max sur la page 1, Desktop: 3
+    const isMobile = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+    const MAX_CARDS_PAGE1 = isMobile ? 2 : 3;
     const CARDS_PER_PAGE_AFTER = 100;
     if (!window.starCurrentPagesPublic) window.starCurrentPagesPublic = {};
     
@@ -1681,8 +1763,7 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
 
 // Créer les boutons de tri pour la page utilisateur publique (identique au profil perso)
 function createSortButtonsPublic(reviewsSection) {
-    // Vérifier si les boutons existent déjà
-    if (reviewsSection.querySelector('#sort-btn-container')) {
+    if (reviewsSection.querySelector('#profile-reviews-toolbar-wrap') || reviewsSection.querySelector('#sort-btn-container')) {
         return;
     }
     
@@ -1795,15 +1876,20 @@ function createSortButtonsPublic(reviewsSection) {
     var tOrderAsc = (window.t && window.t('profile.order_asc')) || 'Ordre croissant';
     orderMenu.innerHTML = '<div class="order-menu-item" data-order="desc" data-i18n="profile.order_desc" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">' + tOrderDesc + '</div><div class="order-menu-item" data-order="asc" data-i18n="profile.order_asc" style="padding: 10px 22px; cursor: pointer;">' + tOrderAsc + '</div>';
     
-    // Barre de recherche pour filtrer les animes dans la section reviews
     const searchContainer = document.createElement('div');
-    searchContainer.style.cssText = 'position: relative; display: inline-block; width: 250px; max-width: 250px; flex-shrink: 0;';
+    searchContainer.className = 'profile-reviews-search-wrap';
+    searchContainer.style.cssText = 'position: relative; display: block; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0 auto 12px auto;';
     
     const searchInput = document.createElement('input');
     searchInput.id = 'profile-search-input-public';
     searchInput.type = 'text';
     searchInput.setAttribute('data-i18n-placeholder', 'search.placeholder.generic');
-    searchInput.placeholder = (window.t && window.t('search.placeholder.generic')) || 'Rechercher...';
+    const getTypeSearchPlaceholderPublic = function(type) {
+        if (type === 'anime') return 'Rechercher un anime...';
+        if (type === 'film') return 'Rechercher un film...';
+        return 'Rechercher un manga...';
+    };
+    searchInput.placeholder = getTypeSearchPlaceholderPublic(window.selectedType);
     searchInput.style.cssText = `
         padding: 12px 40px 12px 16px;
         font-size: 1rem;
@@ -1915,31 +2001,48 @@ function createSortButtonsPublic(reviewsSection) {
     
     searchContainer.appendChild(searchInput);
     searchContainer.appendChild(clearButton);
-    
-    // Conteneur pour aligner les boutons côte à côte
+
+    const filtersToggle = document.createElement('button');
+    filtersToggle.type = 'button';
+    filtersToggle.id = 'mobile-profile-filters-toggle';
+    filtersToggle.className = 'mobile-profile-filters-toggle';
+    filtersToggle.setAttribute('aria-expanded', 'false');
+    var filtersLabelPublic = (window.t && window.t('filters')) || 'Filtres';
+    filtersToggle.innerHTML = '<i class="fas fa-sliders-h" aria-hidden="true"></i><span data-i18n="filters">' + filtersLabelPublic + '</span>';
+
     const sortBtnContainer = document.createElement('div');
     sortBtnContainer.id = 'sort-btn-container';
-    
-    // Position normale (pas sticky) - les boutons restent à leur place et passent sous le header lors du scroll
-    sortBtnContainer.style.cssText = `display: flex; flex-direction: row; align-items: center; gap: 12px; position: relative; width: fit-content; margin: 2rem auto 0 auto; justify-content: center; z-index: 1002; background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);`;
+    sortBtnContainer.className = 'profile-reviews-filters-row';
+    sortBtnContainer.style.cssText = 'display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; width: 100%; justify-content: center; background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); box-sizing: border-box;';
+
+    const toolbarWrap = document.createElement('div');
+    toolbarWrap.id = 'profile-reviews-toolbar-wrap';
+    toolbarWrap.className = 'profile-reviews-toolbar-wrap profile-reviews-toolbar-wrap--static';
+    toolbarWrap.appendChild(searchContainer);
+    toolbarWrap.appendChild(filtersToggle);
+    toolbarWrap.appendChild(sortBtnContainer);
+
+    filtersToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const open = toolbarWrap.classList.toggle('mobile-profile-filters-open');
+        filtersToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
     
     // Créer un conteneur relatif pour le bouton type et son menu
     const typeButtonContainer = document.createElement('div');
-    typeButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1001;';
+    typeButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1200;';
     typeButtonContainer.appendChild(typeButton);
     typeButtonContainer.appendChild(typeMenu);
     
     // Créer un conteneur relatif pour le menu d'ordre
     const orderButtonContainer = document.createElement('div');
-    orderButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1001;';
+    orderButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1100;';
     orderButtonContainer.appendChild(orderButton);
     orderButtonContainer.appendChild(orderMenu);
     
-    // Ajouter les éléments dans l'ordre
     sortBtnContainer.appendChild(typeButtonContainer);
     sortBtnContainer.appendChild(orderButtonContainer);
     sortBtnContainer.appendChild(sortButton);
-    sortBtnContainer.appendChild(searchContainer);
 
     // Créer le container de genres
     const genreContainer = document.createElement('div');
@@ -1987,8 +2090,8 @@ function createSortButtonsPublic(reviewsSection) {
             color: #00b894;
             border: 2px solid #00b894;
             border-radius: 8px;
-            padding: 8px 14px;
-            font-size: 1.2rem;
+            padding: 6px 10px;
+            font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -2317,6 +2420,7 @@ function createSortButtonsPublic(reviewsSection) {
             const type = item.dataset.type;
             window.selectedType = type;
             typeButton.textContent = typeTexts[type] || item.textContent.trim();
+            searchInput.placeholder = getTypeSearchPlaceholderPublic(type);
             typeMenu.querySelectorAll('.type-menu-item').forEach(opt => {
                 if (opt.dataset.type === type) {
                     opt.style.background = '#00b89422';
@@ -2356,8 +2460,10 @@ function createSortButtonsPublic(reviewsSection) {
             const isInTypeMenu = typeMenuEl && typeMenuEl.contains(e.target);
             const isInGenreContainer = genreContainerEl && genreContainerEl.contains(e.target);
             const isOnGenreButton = sortButtonEl && (sortButtonEl.contains(e.target) || e.target === sortButtonEl);
+            const filtersToggleEl = document.getElementById('mobile-profile-filters-toggle');
+            const isOnFiltersToggle = filtersToggleEl && (filtersToggleEl.contains(e.target) || e.target === filtersToggleEl);
             
-            if (!isOnOrderButton && !isOnTypeButton && !isInOrderMenu && !isInTypeMenu && !isInGenreContainer && !isOnGenreButton) {
+            if (!isOnOrderButton && !isOnTypeButton && !isInOrderMenu && !isInTypeMenu && !isInGenreContainer && !isOnGenreButton && !isOnFiltersToggle) {
                 if (typeMenuEl) typeMenuEl.style.display = 'none';
                 if (orderMenuEl) orderMenuEl.style.display = 'none';
             }
@@ -2373,8 +2479,7 @@ function createSortButtonsPublic(reviewsSection) {
         window.menuCloseHandlerAddedPublic = true;
     }
     
-    // Ajouter le conteneur à la section reviews
-    reviewsSection.appendChild(sortBtnContainer);
+    reviewsSection.appendChild(toolbarWrap);
     reviewsSection.appendChild(genreContainer);
     
     // Au changement de langue : mettre à jour bouton ordre, badges type, synopsis
@@ -2398,7 +2503,9 @@ function createSortButtonsPublic(reviewsSection) {
                 });
             }
             var searchInputEl = document.getElementById('profile-search-input-public');
-            if (searchInputEl && typeof window.t === 'function') searchInputEl.placeholder = window.t('search.placeholder.generic') || 'Rechercher...';
+            if (searchInputEl && typeof window.t === 'function') searchInputEl.placeholder = getTypeSearchPlaceholderPublic(window.selectedType || 'manga');
+            var filtersSpan = document.querySelector('#mobile-profile-filters-toggle span[data-i18n="filters"]');
+            if (filtersSpan && typeof window.t === 'function') filtersSpan.textContent = window.t('filters') || 'Filtres';
             if (typeof window.translateSynopses === 'function') window.translateSynopses(localStorage.getItem('mangaWatchLanguage') || 'fr');
         });
     }
@@ -2843,8 +2950,9 @@ function performSearchPublic(query) {
                 const cardsWrapper = document.createElement('div');
                 cardsWrapper.id = 'genre-cards-container';
                 cardsWrapper.className = 'genre-filtered-cards';
-                cardsWrapper.style.cssText = 'display:flex !important;flex-wrap:wrap;gap:15px;justify-content:center;align-items:flex-start;padding:2rem;min-height:400px;max-width:1114px;width:100%;overflow:visible;background:#23262f;border-radius:18px;margin:0 auto;box-sizing:border-box;position:relative;visibility:visible !important;opacity:1 !important;';
+                cardsWrapper.style.cssText = 'display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:flex-start;padding:2rem;min-height:400px;max-width:1114px;width:100%;overflow:visible;background:#23262f;border-radius:18px;margin:0 auto;box-sizing:border-box;position:relative;visibility:visible !important;opacity:1 !important;';
                 genreFilteredContainer.appendChild(cardsWrapper);
+                enforceMobileSearchGenreCardsLayoutPublic(cardsWrapper);
                 reviewsSection.appendChild(genreFilteredContainer);
             }
 
@@ -2878,6 +2986,7 @@ function performSearchPublic(query) {
                                 const card = createAnimeStarCard(note);
                                 cardsContainer.appendChild(card);
                             });
+                            enforceMobileSearchGenreCardsLayoutPublic(cardsContainer);
                         }
                         setTimeout(function() {
                             if (typeof window.translateSynopses === 'function') {
@@ -2972,12 +3081,14 @@ function performSearchPublic(query) {
                     card.style.maxHeight = '520px';
                     cardsContainer.appendChild(card);
                 });
+                enforceMobileSearchGenreCardsLayoutPublic(cardsContainer);
                 setTimeout(function() {
                     if (typeof window.translateSynopses === 'function') {
                         window.translateSynopses(localStorage.getItem('mangaWatchLanguage') || 'fr');
                     }
                 }, 250);
             }
+            enforceMobileSearchGenreCardsLayoutPublic(cardsContainer);
             resultsContainer.appendChild(cardsContainer);
 
             document.querySelectorAll('.star-rating-group').forEach(group => {
@@ -2985,7 +3096,7 @@ function performSearchPublic(query) {
             });
             if (reviewsSection) {
                 const genreFilteredContainer = document.getElementById('genre-filtered-container');
-                const sortBtnContainer = reviewsSection.querySelector('div[style*="sticky"]');
+                const sortBtnContainer = reviewsSection.querySelector('#profile-reviews-toolbar-wrap');
                 if (genreFilteredContainer && genreFilteredContainer.parentNode === reviewsSection) {
                     if (genreFilteredContainer.nextSibling) {
                         reviewsSection.insertBefore(resultsContainer, genreFilteredContainer.nextSibling);
@@ -3029,6 +3140,7 @@ window.renderGenreContainerPagePublic = function(page) {
             cardsContainer.appendChild(card);
         });
     }
+    enforceMobileSearchGenreCardsLayoutPublic(cardsContainer);
 
     const genreFilteredContainer = document.getElementById('genre-filtered-container');
     if (!genreFilteredContainer) return;
@@ -3857,3 +3969,4 @@ function showNotification(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+

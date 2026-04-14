@@ -518,6 +518,153 @@ document.addEventListener('DOMContentLoaded', async function() {
                 font-size: 14px;
                 pointer-events: none;
             }
+
+            @media (max-width: 768px) {
+                #auth-popup-overlay {
+                    align-items: flex-start !important;
+                    justify-content: center !important;
+                    padding: 14px !important;
+                    padding-top: 18px !important;
+                    overflow: hidden !important;
+                    overflow-x: hidden !important;
+                }
+
+                #auth-main-popup {
+                    width: min(420px, calc(100vw - 64px)) !important;
+                    max-width: min(420px, calc(100vw - 64px)) !important;
+                    max-height: calc(100dvh - 28px) !important;
+                    border-radius: 16px !important;
+                    padding: 0.45rem 0.55rem 0.75rem 0.55rem !important;
+                    overflow-y: auto !important;
+                    overflow-x: hidden !important;
+                    box-sizing: border-box !important;
+                    margin: 0 auto !important;
+                }
+
+                #auth-main-popup * {
+                    max-width: 100% !important;
+                    box-sizing: border-box !important;
+                }
+
+                #auth-main-popup h2 {
+                    font-size: 1.08rem !important;
+                    margin-bottom: 0.4rem !important;
+                    line-height: 1.25 !important;
+                }
+
+                #auth-main-popup p {
+                    font-size: 0.8rem !important;
+                    line-height: 1.35 !important;
+                }
+
+                #tab-connexion,
+                #tab-inscription {
+                    padding: 0.56rem 0.4rem !important;
+                    font-size: 0.76rem !important;
+                    border-radius: 10px !important;
+                }
+
+                #form-connexion,
+                #form-inscription {
+                    margin-top: 0.4rem !important;
+                }
+
+                #form-inscription {
+                    max-height: 58dvh !important;
+                    padding-right: 2px !important;
+                    padding-bottom: 0.6rem !important;
+                }
+
+                #auth-main-popup label {
+                    font-size: 0.75rem !important;
+                    margin-bottom: 0.35rem !important;
+                    letter-spacing: 0.2px !important;
+                }
+
+                #auth-main-popup input[type="email"],
+                #auth-main-popup input[type="password"],
+                #auth-main-popup input[type="text"],
+                #auth-main-popup select {
+                    padding: 7px 8px !important;
+                    border-radius: 10px !important;
+                    font-size: 0.78rem !important;
+                }
+
+                #auth-main-popup .country-search-input {
+                    padding: 7px 8px 7px 30px !important;
+                    font-size: 0.76rem !important;
+                }
+
+                #auth-main-popup .country-picker-wrapper .country-select {
+                    padding: 7px 26px 7px 8px !important;
+                    font-size: 0.76rem !important;
+                    background-size: 12px !important;
+                    background-position: right 8px center !important;
+                }
+
+                #auth-main-popup button[type="submit"] {
+                    padding: 0.72rem 0.65rem !important;
+                    border-radius: 10px !important;
+                    font-size: 0.82rem !important;
+                }
+
+                #auth-main-popup #forgot-password-link {
+                    font-size: 0.74rem !important;
+                }
+
+                #auth-main-popup #forgot-password-modal {
+                    border-radius: 14px !important;
+                    padding: 0.7rem !important;
+                }
+
+                #auth-main-popup .logo-float {
+                    width: 54px !important;
+                    height: 54px !important;
+                    margin-bottom: 0.7rem !important;
+                }
+            }
+
+            @media (max-width: 480px) {
+                #auth-main-popup {
+                    width: calc(100vw - 52px) !important;
+                    max-width: calc(100vw - 52px) !important;
+                    max-height: calc(100dvh - 22px) !important;
+                    border-radius: 14px !important;
+                    padding: 0.35rem 0.45rem 0.65rem 0.45rem !important;
+                    margin: 0 auto !important;
+                }
+
+                #auth-main-popup h2 {
+                    font-size: 0.98rem !important;
+                }
+
+                #auth-main-popup p {
+                    font-size: 0.74rem !important;
+                }
+
+                #tab-connexion,
+                #tab-inscription {
+                    font-size: 0.7rem !important;
+                    padding: 0.5rem 0.3rem !important;
+                }
+
+                #auth-main-popup input[type="email"],
+                #auth-main-popup input[type="password"],
+                #auth-main-popup input[type="text"],
+                #auth-main-popup select {
+                    padding: 6px 7px !important;
+                    font-size: 0.72rem !important;
+                }
+
+                #auth-main-popup button[type="submit"] {
+                    padding: 0.65rem 0.6rem !important;
+                    font-size: 0.76rem !important;
+                }
+
+                #auth-main-popup #form-inscription {
+                    max-height: 54dvh !important;
+                }
+            }
             `;
             document.head.appendChild(style);
         }
@@ -539,6 +686,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             overflow-x: hidden;
             animation: zoomInPop 0.5s ease-out;
         `;
+        popup.id = 'auth-main-popup';
 
         // Effet de bordure lumineuse animée
         const borderGlow = document.createElement('div');

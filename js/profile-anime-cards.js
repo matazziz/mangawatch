@@ -6,6 +6,24 @@ function _profileT(key) {
     return (typeof window.t === 'function' && window.t(key)) || (window.localization && window.localization.get(key)) || key;
 }
 
+function enforceMobileSearchGenreCardsLayout(containerEl) {
+    if (!containerEl || typeof window.matchMedia !== 'function' || !window.matchMedia('(max-width: 768px)').matches) return;
+    containerEl.style.setProperty('display', 'grid', 'important');
+    containerEl.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
+    containerEl.style.setProperty('gap', '0.65rem', 'important');
+    containerEl.style.setProperty('padding', '0.75rem 0.3rem', 'important');
+    containerEl.style.setProperty('justify-items', 'stretch', 'important');
+    containerEl.style.setProperty('align-items', 'start', 'important');
+    containerEl.querySelectorAll('.catalogue-card').forEach(function(card) {
+        card.style.setProperty('width', '100%', 'important');
+        card.style.setProperty('max-width', '100%', 'important');
+        card.style.setProperty('min-width', '0', 'important');
+        card.style.setProperty('height', '390px', 'important');
+        card.style.setProperty('min-height', '390px', 'important');
+        card.style.setProperty('max-height', '390px', 'important');
+    });
+}
+
 // Intercepter localStorage.setItem pour détecter les suppressions de notes
 (function() {
     const originalSetItem = Storage.prototype.setItem;
@@ -517,7 +535,8 @@ window.createStarBadges = function createStarBadges() {
         reviewsSection.style.margin = '0 auto';
         reviewsSection.style.overflow = 'hidden';
         reviewsSection.style.boxSizing = 'border-box';
-        reviewsSection.style.padding = '0 0.25rem';
+        const sectionDesktopPadding = (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches) ? '0' : '0 3rem';
+        reviewsSection.style.padding = sectionDesktopPadding;
         reviewsSection.style.position = 'relative';
 
     // Supprimer tous les anciens containers étoiles AVANT de les recréer (évite les doublons et bugs d'insertion)
@@ -525,10 +544,14 @@ window.createStarBadges = function createStarBadges() {
     // Supprimer aussi toutes les anciennes listes de cartes
     reviewsSection.querySelectorAll('.card-list').forEach(el => el.remove());
     
-    // Supprimer le conteneur de boutons existant s'il existe (pour éviter les doublons)
-    const existingSortBtnContainer = reviewsSection.querySelector('#sort-btn-container');
-    if (existingSortBtnContainer) {
-        existingSortBtnContainer.remove();
+    const existingToolbar = reviewsSection.querySelector('#profile-reviews-toolbar-wrap');
+    if (existingToolbar) {
+        existingToolbar.remove();
+    } else {
+        const existingSortBtnContainer = reviewsSection.querySelector('#sort-btn-container');
+        if (existingSortBtnContainer) {
+            existingSortBtnContainer.remove();
+        }
     }
     
     // Supprimer aussi le conteneur de genres s'il existe
@@ -540,24 +563,28 @@ window.createStarBadges = function createStarBadges() {
     // Créer le conteneur des cartes
     const catalogueContainer = document.createElement('div');
     catalogueContainer.className = 'card-list';
+    const narrowTop10 = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
     catalogueContainer.style.cssText = `
         display: grid;
         grid-template-columns: repeat(5, 175px);
         grid-template-rows: repeat(2, auto);
         gap: 1.5rem;
         margin: 1.5rem auto 2.5rem auto;
-        padding: 0 1.5rem;
+        padding: ${narrowTop10 ? '0' : '0 1.5rem'};
         position: relative;
         z-index: 1;
-        width: fit-content;
-        max-width: calc(100% - 3rem);
+        width: ${narrowTop10 ? '100%' : 'fit-content'};
+        max-width: ${narrowTop10 ? '100%' : 'calc(100% - 3rem)'};
         justify-content: center;
         justify-items: center;
         box-sizing: border-box;
     `;
     
-    // Ajouter une media query pour les petits écrans
-    if (window.innerWidth < 1200) {
+    if (narrowTop10) {
+        catalogueContainer.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+        catalogueContainer.style.gridTemplateRows = 'repeat(5, auto)';
+        catalogueContainer.style.gap = '8px';
+    } else if (window.innerWidth < 1200) {
         catalogueContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
         catalogueContainer.style.maxWidth = '100%';
     }
@@ -784,16 +811,18 @@ window.createStarBadges = function createStarBadges() {
     
 
 
+    const compactStarsMobile = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+
     // Créer un container principal pour tous les badges et containers
     const allContainers = document.createElement('div');
     allContainers.className = 'all-star-containers';
     allContainers.style.cssText = `
-        width: 98%;
-        max-width: 98%;
-        margin: 2.5rem auto 0 auto;
+        width: ${compactStarsMobile ? '100%' : '98%'};
+        max-width: ${compactStarsMobile ? '100%' : '98%'};
+        margin: ${compactStarsMobile ? '1rem auto 0 auto' : '2.5rem auto 0 auto'};
         display: flex;
         flex-direction: column;
-        gap: 2rem;
+        gap: ${compactStarsMobile ? '0.9rem' : '2rem'};
         box-sizing: border-box;
     `;
 
@@ -806,9 +835,9 @@ window.createStarBadges = function createStarBadges() {
             max-width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: ${compactStarsMobile ? '0.55rem' : '1.5rem'};
             box-sizing: border-box;
-            margin-bottom: 1.5rem;
+            margin-bottom: ${compactStarsMobile ? '0.8rem' : '1.5rem'};
         `;
 
         // Badge d'étoiles
@@ -817,18 +846,18 @@ window.createStarBadges = function createStarBadges() {
         badge.style.cssText = `
             position: relative;
             background: #23262f;
-            border-radius: 14px;
-            min-width: 90px;
-            max-width: 120px;
-            padding: 0.7rem 1.3rem;
+            border-radius: ${compactStarsMobile ? '10px' : '14px'};
+            min-width: ${compactStarsMobile ? '62px' : '90px'};
+            max-width: ${compactStarsMobile ? '84px' : '120px'};
+            padding: ${compactStarsMobile ? '0.35rem 0.6rem' : '0.7rem 1.3rem'};
             box-shadow: 0 2px 12px #0007;
             display: flex;
             align-items: flex-start;
-            margin-bottom: 1.5rem;
+            margin-bottom: ${compactStarsMobile ? '0.5rem' : '1.5rem'};
         `;
         badge.innerHTML = `
-            <span style="font-size:2.1rem;color:#ffd700;font-weight:700;display:flex;align-items:center;gap:0;">
-                ${i}<i class="fas fa-star" style="margin-left:0.1rem;"></i>
+            <span style="font-size:${compactStarsMobile ? '1.25rem' : '2.1rem'};color:#ffd700;font-weight:700;display:flex;align-items:center;gap:0;">
+                ${i}<i class="fas fa-star" style="margin-left:0.1rem;font-size:${compactStarsMobile ? '0.95em' : '1em'};"></i>
             </span>
         `;
 
@@ -838,12 +867,12 @@ window.createStarBadges = function createStarBadges() {
         starContainer.style.cssText = `
             width: 100%;
             max-width: 100%;
-            min-height: 340px;
+            min-height: ${compactStarsMobile ? '150px' : '340px'};
             background: #23262f;
-            border-radius: 18px;
+            border-radius: ${compactStarsMobile ? '12px' : '18px'};
             box-shadow: 0 2px 16px #0006;
-            padding: 2rem 1.5rem;
-            margin: 0 auto 1.5rem auto;
+            padding: ${compactStarsMobile ? '0.75rem 0.55rem' : '2rem 1.5rem'};
+            margin: ${compactStarsMobile ? '0 auto 0.8rem auto' : '0 auto 1.5rem auto'};
             box-sizing: border-box;
             overflow-x: hidden;
         `;
@@ -964,12 +993,18 @@ window.createStarBadges = function createStarBadges() {
     `;
     // Barre de recherche pour filtrer les animes dans la section reviews
     const searchContainer = document.createElement('div');
-    searchContainer.style.cssText = 'position: relative; display: inline-block; width: 250px; max-width: 250px; flex-shrink: 0;';
+    searchContainer.className = 'profile-reviews-search-wrap';
+    searchContainer.style.cssText = 'position: relative; display: block; width: 100%; max-width: 100%; box-sizing: border-box; margin: 0 auto 12px auto;';
     
     const searchInput = document.createElement('input');
     searchInput.id = 'profile-search-input';
     searchInput.type = 'text';
-    searchInput.placeholder = _pt('profile.search_placeholder') || 'Rechercher...';
+    const getTypeSearchPlaceholder = function(type) {
+        if (type === 'anime') return 'Rechercher un anime...';
+        if (type === 'film') return 'Rechercher un film...';
+        return 'Rechercher un manga...';
+    };
+    searchInput.placeholder = getTypeSearchPlaceholder(window.selectedType);
     searchInput.style.cssText = `
         padding: 12px 40px 12px 16px;
         font-size: 1rem;
@@ -1068,20 +1103,43 @@ window.createStarBadges = function createStarBadges() {
     searchContainer.appendChild(searchInput);
     searchContainer.appendChild(clearButton);
 
-    // Conteneur pour aligner les trois boutons côte à côte
+    const filtersToggle = document.createElement('button');
+    filtersToggle.type = 'button';
+    filtersToggle.id = 'mobile-profile-filters-toggle';
+    filtersToggle.className = 'mobile-profile-filters-toggle';
+    filtersToggle.setAttribute('aria-expanded', 'false');
+    var filtersLabel = (typeof window.t === 'function' && window.t('filters')) || _profileT('filters');
+    if (!filtersLabel || filtersLabel === 'filters') filtersLabel = 'Filtres';
+    filtersToggle.innerHTML = '<i class="fas fa-sliders-h" aria-hidden="true"></i><span data-i18n="filters">' + filtersLabel + '</span>';
+
+    // Conteneur pour aligner les trois boutons côte à côte (type, ordre, tri genre)
     const sortBtnContainer = document.createElement('div');
     sortBtnContainer.id = 'sort-btn-container'; // Ajouter un ID pour faciliter la suppression
-    sortBtnContainer.style.cssText = 'display: flex; flex-direction: row; align-items: center; gap: 12px; position: sticky; top: 80px; width: fit-content; margin: 2rem auto 0 auto; justify-content: center; z-index: 999; background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);';
+    sortBtnContainer.className = 'profile-reviews-filters-row';
+    sortBtnContainer.style.cssText = 'display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; width: 100%; justify-content: center; background: rgba(18, 18, 18, 0.98); backdrop-filter: blur(10px); padding: 1rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); box-sizing: border-box;';
+
+    const toolbarWrap = document.createElement('div');
+    toolbarWrap.id = 'profile-reviews-toolbar-wrap';
+    toolbarWrap.className = 'profile-reviews-toolbar-wrap';
+    toolbarWrap.appendChild(searchContainer);
+    toolbarWrap.appendChild(filtersToggle);
+    toolbarWrap.appendChild(sortBtnContainer);
+
+    filtersToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const open = toolbarWrap.classList.toggle('mobile-profile-filters-open');
+        filtersToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
     
     // Créer un conteneur relatif pour le bouton type et son menu pour qu'il soit positionné correctement
     const typeButtonContainer = document.createElement('div');
-    typeButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1001;';
+    typeButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1200;';
     typeButtonContainer.appendChild(typeButton);
     typeButtonContainer.appendChild(typeMenu);
     
     // Créer un conteneur relatif pour le menu d'ordre pour qu'il soit positionné correctement
     const orderButtonContainer = document.createElement('div');
-    orderButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1001;';
+    orderButtonContainer.style.cssText = 'position: relative; display: inline-block; z-index: 1100;';
     orderButtonContainer.appendChild(orderButton);
     orderButtonContainer.appendChild(orderMenu);
     
@@ -1089,7 +1147,6 @@ window.createStarBadges = function createStarBadges() {
     sortBtnContainer.appendChild(typeButtonContainer);
     sortBtnContainer.appendChild(orderButtonContainer);
     sortBtnContainer.appendChild(sortButton);
-    sortBtnContainer.appendChild(searchContainer);
 
     // Créer le container de genres
     const genreContainer = document.createElement('div');
@@ -1138,8 +1195,8 @@ window.createStarBadges = function createStarBadges() {
             color: #00b894;
             border: 2px solid #00b894;
             border-radius: 8px;
-            padding: 8px 14px;
-            font-size: 1.2rem;
+            padding: 6px 10px;
+            font-size: 0.95rem;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -1163,11 +1220,20 @@ window.createStarBadges = function createStarBadges() {
         window._profileGenreLanguageListener = true;
         document.addEventListener('languageChanged', function() {
             var container = document.getElementById('genre-sort-container');
-            if (!container) return;
-            container.querySelectorAll('button[data-genre]').forEach(function(btn) {
-                var g = btn.getAttribute('data-genre');
-                if (g) btn.textContent = getTranslatedGenreForProfile(g);
-            });
+            if (container) {
+                container.querySelectorAll('button[data-genre]').forEach(function(btn) {
+                    var g = btn.getAttribute('data-genre');
+                    if (g) btn.textContent = getTranslatedGenreForProfile(g);
+                });
+            }
+            var filtersSpan = document.querySelector('#mobile-profile-filters-toggle span[data-i18n="filters"]');
+            if (filtersSpan && typeof window.t === 'function') {
+                filtersSpan.textContent = window.t('filters') || 'Filtres';
+            }
+            var searchIn = document.getElementById('profile-search-input');
+            if (searchIn && typeof window.t === 'function') {
+                searchIn.placeholder = getTypeSearchPlaceholder(window.selectedType || 'manga');
+            }
         });
     }
     
@@ -1696,17 +1762,15 @@ window.createStarBadges = function createStarBadges() {
     const allStarContainers = reviewsSection.querySelector('.all-star-containers');
 
     if (allStarContainers) {
-        // Insérer le conteneur de boutons (ordre + genre) avant le bloc des évaluations
-        allStarContainers.parentNode.insertBefore(sortBtnContainer, allStarContainers);
+        allStarContainers.parentNode.insertBefore(toolbarWrap, allStarContainers);
         allStarContainers.parentNode.insertBefore(genreContainer, allStarContainers);
     } else {
-        // Fallback si aucun groupe d'étoiles n'existe encore
         const top10list = reviewsSection.querySelector('.card-list');
         if (top10list) {
-             top10list.parentNode.insertBefore(sortBtnContainer, top10list);
-             top10list.parentNode.insertBefore(genreContainer, top10list);
+            top10list.parentNode.insertBefore(toolbarWrap, top10list);
+            top10list.parentNode.insertBefore(genreContainer, top10list);
         } else {
-            reviewsSection.appendChild(sortBtnContainer);
+            reviewsSection.appendChild(toolbarWrap);
             reviewsSection.appendChild(genreContainer);
         }
     }
@@ -1781,10 +1845,12 @@ window.createStarBadges = function createStarBadges() {
             const isInMoreMenu = clickEl && clickEl.closest && clickEl.closest('.card-more-menu, .dropdown-menu');
             const isOnMoreButton = clickEl && clickEl.closest && clickEl.closest('.card-more-btn, .more-button, .card-more-button');
             const isInTop10Interface = clickEl && clickEl.closest && clickEl.closest('.top10-mini-interface');
+            const filtersToggleEl = document.getElementById('mobile-profile-filters-toggle');
+            const isOnFiltersToggle = filtersToggleEl && (filtersToggleEl.contains(e.target) || e.target === filtersToggleEl);
             
             // Si le clic n'est sur aucun élément de menu, fermer tous les menus (sauf genres)
             if (!isOnOrderButton && !isOnTypeButton && !isInOrderMenu && !isInTypeMenu && !isOnTypeMenuItem &&
-                !isInGenreContainer && !isOnGenreButton && !isInMoreMenu && !isOnMoreButton && !isInTop10Interface) {
+                !isInGenreContainer && !isOnGenreButton && !isInMoreMenu && !isOnMoreButton && !isInTop10Interface && !isOnFiltersToggle) {
                 // Fermer le menu type explicitement
                 if (typeMenuEl) {
                     typeMenuEl.style.display = 'none';
@@ -1946,6 +2012,7 @@ window.createStarBadges = function createStarBadges() {
             // Ne plus sauvegarder dans localStorage car on veut toujours revenir au défaut
             // Met à jour le texte du bouton
             typeButton.textContent = item.textContent;
+            searchInput.placeholder = getTypeSearchPlaceholder(type);
             // Met à jour le style des options
             typeMenu.querySelectorAll('.type-menu-item').forEach(opt => {
                 if(opt.dataset.type === type) {
@@ -2384,9 +2451,10 @@ window.createStarBadges = function createStarBadges() {
                 const cardsWrapper = document.createElement('div');
                 cardsWrapper.id = 'genre-cards-container';
                 cardsWrapper.className = 'genre-filtered-cards';
-                cardsWrapper.style.cssText = 'display:flex !important;flex-wrap:wrap;gap:15px;justify-content:center;align-items:flex-start;padding:2rem;min-height:400px;max-width:1114px;width:100%;overflow:visible;background:#23262f;border-radius:18px;margin:0 auto;box-sizing:border-box;position:relative;visibility:visible !important;opacity:1 !important;';
+                cardsWrapper.style.cssText = 'display:flex;flex-wrap:wrap;gap:15px;justify-content:center;align-items:flex-start;padding:2rem;min-height:400px;max-width:1114px;width:100%;overflow:visible;background:#23262f;border-radius:18px;margin:0 auto;box-sizing:border-box;position:relative;visibility:visible !important;opacity:1 !important;';
+                enforceMobileSearchGenreCardsLayout(cardsWrapper);
                 genreFilteredContainer.appendChild(cardsWrapper);
-                const sortBtnContainer = reviewsSection.querySelector('div[style*="sticky"]');
+                const sortBtnContainer = reviewsSection.querySelector('#profile-reviews-toolbar-wrap');
                 const genreSortContainer = document.getElementById('genre-sort-container');
                 if (genreSortContainer && genreSortContainer.parentNode === reviewsSection) {
                     if (genreSortContainer.nextSibling) reviewsSection.insertBefore(genreFilteredContainer, genreSortContainer.nextSibling);
@@ -2428,6 +2496,7 @@ window.createStarBadges = function createStarBadges() {
                             cardsContainer.appendChild(card);
                             updateCardMoreButtonForSearch(card);
                         });
+                        enforceMobileSearchGenreCardsLayout(cardsContainer);
                         setTimeout(function() {
                             if (typeof window.translateSynopses === 'function') {
                                 window.translateSynopses(localStorage.getItem('mangaWatchLanguage') || 'fr');
@@ -2496,6 +2565,7 @@ window.createStarBadges = function createStarBadges() {
                 box-sizing: border-box;
                 position: relative;
             `;
+            enforceMobileSearchGenreCardsLayout(cardsContainer);
             if (filteredNotes.length === 0) {
                 var noResMsg = (_profileT('search.no_results') || 'Aucun résultat trouvé pour "{query}"').replace('{query}', query);
                 cardsContainer.innerHTML = '<div style="width: 100%; text-align: center; color: #a5b1c2; padding: 3rem;"><i class="fas fa-search" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i><p style="font-size: 1.2rem;">' + noResMsg.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p></div>';
@@ -2505,6 +2575,7 @@ window.createStarBadges = function createStarBadges() {
                     cardsContainer.appendChild(card);
                     updateCardMoreButtonForSearch(card);
                 });
+                enforceMobileSearchGenreCardsLayout(cardsContainer);
                 setTimeout(function() {
                     if (typeof window.translateSynopses === 'function') {
                         window.translateSynopses(localStorage.getItem('mangaWatchLanguage') || 'fr');
@@ -2521,7 +2592,7 @@ window.createStarBadges = function createStarBadges() {
                         reviewsSection.appendChild(resultsContainer);
                     }
                 } else {
-                    const sortBtnContainer = reviewsSection.querySelector('div[style*="sticky"]');
+                    const sortBtnContainer = reviewsSection.querySelector('#profile-reviews-toolbar-wrap');
                     if (sortBtnContainer && sortBtnContainer.nextSibling) {
                         reviewsSection.insertBefore(resultsContainer, sortBtnContainer.nextSibling);
                     } else {
@@ -4158,7 +4229,7 @@ function applyGenreFilter() {
         cardsContainer.id = 'genre-cards-container';
         cardsContainer.className = 'genre-filtered-cards';
         cardsContainer.style.cssText = `
-        display: flex !important;
+        display: flex;
         flex-wrap: wrap;
         gap: 15px;
         justify-content: center;
@@ -4744,7 +4815,7 @@ function applyGenreFilter() {
         if (reviewsSection) {
             console.log('✅ [APPLY GENRE FILTER] reviews-section trouvé');
             // Toujours insérer après le container de sélection de genres (genre-sort-container) mais avant le container de recherche
-            const sortBtnContainer = reviewsSection.querySelector('div[style*="sticky"]');
+            const sortBtnContainer = reviewsSection.querySelector('#profile-reviews-toolbar-wrap');
             const genreSortContainer = document.getElementById('genre-sort-container'); // Conteneur de sélection de genres
             const searchResultsContainer = document.getElementById('search-results-container');
             
@@ -6615,12 +6686,14 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             }
         }
         
+        const firstPageSize = (typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches) ? 2 : 3;
+
         // Calculer dynamiquement le pageSize
-        // Page 1 : 3 cartes (affichage compact)
+        // Page 1 : 2 cartes sur mobile, 3 sur desktop
         // Pages suivantes : calculer pour remplir le conteneur
         function calculatePageSize(page) {
             if (page === 1) {
-                return 3; // Page 1 : garder 3 cartes
+                return firstPageSize;
             }
             
             // Pour les pages suivantes, calculer combien de cartes peuvent tenir dans le conteneur
@@ -6636,7 +6709,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             // Hauteur totale par ligne : 520 + 32 = 552px
             // Nombre de lignes : 13000 / 552 ≈ 23 lignes
             
-            // Nombre de cartes par page pour remplir le conteneur : 3 * 23 = 69 cartes
+            // Nombre de cartes par page pour remplir le conteneur
             // Utiliser un nombre légèrement supérieur pour être sûr de remplir
             return 100; // Nombre suffisant pour remplir plusieurs écrans
         }
@@ -6648,6 +6721,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
         renderStarPage(window.starCurrentPages[note]);
 
         function renderStarPage(page) {
+            const isMobileStarCards = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
             // Récupérer le container pour cette note
             const container = document.getElementById(note === 10 ? 'star-containers' : `star-containers-${note}`);
             if (!container) {
@@ -6807,20 +6881,22 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 // Style du container paginé
                 container.style.display = 'flex';
                 container.style.flexWrap = 'wrap';
-                container.style.columnGap = '2rem'; // Gap horizontal entre les colonnes
-                container.style.rowGap = '0.5rem'; // Gap vertical minimal entre les lignes
+                container.style.columnGap = isMobileStarCards ? '0.5rem' : '2rem'; // Gap horizontal entre les colonnes
+                container.style.rowGap = isMobileStarCards ? '0.65rem' : '0.5rem'; // Gap vertical entre les lignes
                 container.style.justifyContent = 'flex-start';
                 container.style.alignItems = 'flex-start';
                 container.style.alignContent = 'flex-start'; // Aligner le contenu en haut
                 container.style.width = '100%';
-                container.style.maxWidth = '1400px';
-                container.style.minHeight = '13000px'; // même hauteur avec ou sans genre
+                container.style.maxWidth = isMobileStarCards ? '100%' : '1400px';
+                container.style.minHeight = isMobileStarCards ? '340px' : '13000px'; // même hauteur avec ou sans genre
                 container.style.margin = '0 auto';
-                container.style.padding = '2rem';
+                container.style.padding = isMobileStarCards ? '0.75rem 0.3rem' : '2rem';
                 container.style.background = '#23262f';
                 container.style.borderRadius = '18px';
                 container.style.boxShadow = '0 2px 16px #0006';
-                setTimeout(() => { container.style.minHeight = '13000px'; }, 50);
+                if (!isMobileStarCards) {
+                    setTimeout(() => { container.style.minHeight = '13000px'; }, 50);
+                }
             } else {
                 // Retirer le bouton "Bas" si on revient à la page 1
                 const oldTopBtn = container.parentNode.querySelector('.star-scroll-to-bottom-btn');
@@ -6828,18 +6904,18 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 // Mettre à jour la visibilité de tous les conteneurs (pour réafficher si nécessaire)
                 updateAllStarContainersVisibility();
                 
-                if (mainContainer) mainContainer.style.gap = '2rem';
+                if (mainContainer) mainContainer.style.gap = isMobileStarCards ? '0.9rem' : '2rem';
                 // Restaure le style du container
                 container.style.display = 'flex';
                 container.style.flexWrap = 'wrap';
                 container.style.flexDirection = 'row';
-                container.style.gap = '2rem';
+                container.style.gap = isMobileStarCards ? '0.65rem' : '2rem';
                 container.style.justifyContent = 'flex-start';
                 container.style.alignItems = 'flex-start';
-                container.style.maxWidth = '1100px';
-                container.style.minHeight = '340px';
+                container.style.maxWidth = isMobileStarCards ? '100%' : '1100px';
+                container.style.minHeight = isMobileStarCards ? '240px' : '340px';
                 container.style.margin = '0 auto';
-                container.style.padding = '2rem 1.5rem';
+                container.style.padding = isMobileStarCards ? '0.75rem 0.3rem' : '2rem 1.5rem';
                 container.style.background = '#23262f';
                 container.style.borderRadius = '18px';
                 container.style.boxShadow = '0 2px 16px #0006';
@@ -6851,10 +6927,10 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             // Calculer le pageSize pour cette page
             let currentPageSize;
             if (page === 1) {
-                currentPageSize = 3; // Page 1 : 3 cartes
+                currentPageSize = firstPageSize;
             } else {
-                // Calculer combien de cartes sont déjà affichées (page 1 = 3)
-                const page1Size = 3;
+                // Calculer combien de cartes sont déjà affichées (page 1 = firstPageSize)
+                const page1Size = firstPageSize;
                 // Pour la page 2+, calculer en fonction du conteneur
                 // Approximativement 100 cartes pour remplir le conteneur
                 currentPageSize = 100;
@@ -6865,8 +6941,8 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             if (page === 1) {
                 start = 0;
             } else {
-                // Page 1 a 3 cartes, donc page 2 commence à l'index 3
-                start = 3 + (page - 2) * currentPageSize;
+                // Page 1 a firstPageSize cartes
+                start = firstPageSize + (page - 2) * currentPageSize;
             }
             
             const end = start + currentPageSize;
@@ -6972,12 +7048,12 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 if (page === 1) {
                     card.style.display = "flex";
                     card.style.flexDirection = "column";
-                    card.style.flex = "0 0 calc(33.333% - 2rem)";
-                    card.style.maxWidth = "340px";
-                    card.style.width = "calc(33.333% - 2rem)";
-                    card.style.height = "520px"; // Hauteur fixe identique pour toutes les cartes
-                    card.style.minHeight = "520px"; // Hauteur minimale
-                    card.style.maxHeight = "520px"; // Hauteur maximale
+                    card.style.flex = isMobileStarCards ? "0 0 calc(50% - 0.2rem)" : "0 0 calc(33.333% - 2rem)";
+                    card.style.maxWidth = isMobileStarCards ? "calc(50% - 0.2rem)" : "340px";
+                    card.style.width = isMobileStarCards ? "calc(50% - 0.2rem)" : "calc(33.333% - 2rem)";
+                    card.style.height = isMobileStarCards ? "auto" : "520px"; // Hauteur fixe desktop
+                    card.style.minHeight = isMobileStarCards ? "350px" : "520px"; // Hauteur minimale
+                    card.style.maxHeight = isMobileStarCards ? "430px" : "520px"; // Hauteur maximale
                     card.style.boxSizing = "border-box";
                     card.style.visibility = "visible";
                     card.style.opacity = "1";
@@ -6985,13 +7061,13 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     // Pages 2+ : style pour que les cartes se suivent directement
                     card.style.display = "flex";
                     card.style.flexDirection = "column";
-                    card.style.flex = "0 0 auto"; // Taille fixe basée sur width/height
-                    card.style.flexBasis = "auto"; // Pas de base de croissance
-                    card.style.maxWidth = "340px";
-                    card.style.width = "340px";
-                    card.style.height = "520px"; // Hauteur fixe
-                    card.style.minHeight = "520px"; // Hauteur minimale
-                    card.style.maxHeight = "520px"; // Hauteur maximale
+                    card.style.flex = isMobileStarCards ? "0 0 calc(50% - 0.2rem)" : "0 0 auto"; // 2 colonnes mobile
+                    card.style.flexBasis = isMobileStarCards ? "calc(50% - 0.2rem)" : "auto"; // Pas de base de croissance desktop
+                    card.style.maxWidth = isMobileStarCards ? "calc(50% - 0.2rem)" : "340px";
+                    card.style.width = isMobileStarCards ? "calc(50% - 0.2rem)" : "340px";
+                    card.style.height = isMobileStarCards ? "auto" : "520px"; // Hauteur fixe desktop
+                    card.style.minHeight = isMobileStarCards ? "350px" : "520px"; // Hauteur minimale
+                    card.style.maxHeight = isMobileStarCards ? "430px" : "520px"; // Hauteur maximale
                     card.style.boxSizing = "border-box";
                     card.style.visibility = "visible";
                     card.style.opacity = "1";
@@ -7718,9 +7794,9 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             // Pagination pour ce container
             // Recalculer totalPages avec le bon pageSize pour chaque page
             let totalPagesForPagination = 1;
-            if (filteredAnimes.length > 3) {
-                // Page 1 : 3 cartes
-                const remainingCards = filteredAnimes.length - 3;
+            if (filteredAnimes.length > firstPageSize) {
+                // Page 1 : firstPageSize cartes
+                const remainingCards = filteredAnimes.length - firstPageSize;
                 // Pages suivantes : 100 cartes par page
                 if (remainingCards > 0) {
                     const pagesAfterFirst = Math.ceil(remainingCards / 100);
@@ -9465,7 +9541,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const reviewsSection = document.getElementById('reviews-section');
             if (reviewsSection) {
                 // Insérer après le container de boutons de tri, mais avant le container de recherche
-                const sortBtnContainer = reviewsSection.querySelector('div[style*="sticky"]');
+                const sortBtnContainer = reviewsSection.querySelector('#profile-reviews-toolbar-wrap');
                 const searchResultsContainer = document.getElementById('search-results-container');
                 const allStarContainers = document.querySelector('.all-star-containers');
                 
@@ -10524,29 +10600,28 @@ async function renderTop10Slots() {
     const reviewsSection = document.getElementById('reviews-section');
     if (!reviewsSection) return;
     
+    const narrowTop10Grid = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
     let top10Container = reviewsSection.querySelector('.card-list');
     if (!top10Container) {
         top10Container = document.createElement('div');
         top10Container.className = 'card-list';
         top10Container.style.cssText = `
             display: grid;
-            grid-template-columns: repeat(5, 175px);
-            grid-template-rows: repeat(2, auto);
-            gap: 1.5rem;
-            margin: 1.5rem auto 0 auto;
+            grid-template-columns: ${narrowTop10Grid ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, 175px)'};
+            grid-template-rows: ${narrowTop10Grid ? 'repeat(5, auto)' : 'repeat(2, auto)'};
+            gap: ${narrowTop10Grid ? '8px' : '1.5rem'};
+            margin: ${narrowTop10Grid ? '1rem auto 0 auto' : '1.5rem auto 0 auto'};
             justify-content: center;
             justify-items: center;
             min-height: 400px;
             align-content: flex-start;
-            width: fit-content;
-            max-width: calc(100% - 3rem);
+            width: ${narrowTop10Grid ? '100%' : 'fit-content'};
+            max-width: ${narrowTop10Grid ? '100%' : 'calc(100% - 3rem)'};
             overflow: visible;
-            padding: 0 1.5rem;
+            padding: ${narrowTop10Grid ? '0' : '0 1.5rem'};
             box-sizing: border-box;
         `;
-        
-        // Ajuster pour les petits écrans
-        if (window.innerWidth < 1200) {
+        if (!narrowTop10Grid && window.innerWidth < 1200) {
             top10Container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
             top10Container.style.maxWidth = '100%';
         }
@@ -10556,21 +10631,27 @@ async function renderTop10Slots() {
     // Vider le conteneur
     top10Container.innerHTML = '';
     
-    // S'assurer que le container est bien centré
-    top10Container.style.margin = '1.5rem auto 0 auto';
+    top10Container.style.margin = narrowTop10Grid ? '1rem auto 0 auto' : '1.5rem auto 0 auto';
     top10Container.style.display = 'grid';
-    top10Container.style.gridTemplateColumns = 'repeat(5, 175px)';
-    top10Container.style.gridTemplateRows = 'repeat(2, auto)';
-    top10Container.style.gap = '1.5rem';
+    if (narrowTop10Grid) {
+        top10Container.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
+        top10Container.style.gridTemplateRows = 'repeat(5, auto)';
+        top10Container.style.gap = '8px';
+        top10Container.style.width = '100%';
+        top10Container.style.maxWidth = '100%';
+        top10Container.style.padding = '0';
+    } else {
+        top10Container.style.gridTemplateColumns = 'repeat(5, 175px)';
+        top10Container.style.gridTemplateRows = 'repeat(2, auto)';
+        top10Container.style.gap = '1.5rem';
+        top10Container.style.width = 'fit-content';
+        top10Container.style.maxWidth = 'calc(100% - 3rem)';
+        top10Container.style.padding = '0 1.5rem';
+    }
     top10Container.style.justifyContent = 'center';
     top10Container.style.justifyItems = 'center';
-    top10Container.style.width = 'fit-content';
-    top10Container.style.maxWidth = 'calc(100% - 3rem)';
-    top10Container.style.padding = '0 1.5rem';
     top10Container.style.boxSizing = 'border-box';
-    
-    // Ajuster pour les petits écrans
-    if (window.innerWidth < 1200) {
+    if (!narrowTop10Grid && window.innerWidth < 1200) {
         top10Container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
         top10Container.style.maxWidth = '100%';
     }
@@ -14271,23 +14352,43 @@ async function showTop10MiniInterface() {
         top10.push(null);
     }
     
+    const mTop10Popup = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
     // Créer l'interface en miniature
     const miniInterface = document.createElement('div');
     miniInterface.id = 'top10-mini-interface';
-    miniInterface.style.cssText = `
+    miniInterface.className = 'top10-mini-interface';
+    miniInterface.style.cssText = mTop10Popup ? `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #23262f;
+        border: 1px solid #00b894;
+        border-radius: 10px;
+        padding: 6px;
+        z-index: 10000;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+        width: min(228px, calc(100vw - 40px));
+        max-width: min(228px, calc(100vw - 40px));
+        max-height: 86vh;
+        overflow-y: auto;
+        box-sizing: border-box;
+    ` : `
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         background: #23262f;
         border: 2px solid #00b894;
-        border-radius: 16px;
-        padding: 20px;
+        border-radius: 14px;
+        padding: 14px;
         z-index: 10000;
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
-        max-width: 90vw;
-        max-height: 80vh;
+        max-width: min(520px, 88vw);
+        width: auto;
+        max-height: 78vh;
         overflow-y: auto;
+        box-sizing: border-box;
     `;
     
     // Récupérer le titre de l'œuvre sélectionnée
@@ -14303,16 +14404,29 @@ async function showTop10MiniInterface() {
     title.style.cssText = `
         color: #00b894;
         text-align: center;
-        margin-bottom: 20px;
-        font-size: 1.2rem;
+        margin-bottom: ${mTop10Popup ? '6px' : '16px'};
+        font-size: ${mTop10Popup ? '0.8rem' : '1.1rem'};
         font-weight: bold;
+        line-height: 1.25;
+        padding: 0 4px;
     `;
     miniInterface.appendChild(title);
     
     // Ajouter une prévisualisation de l'œuvre sélectionnée
-    if (window.selectedTop10Card) {
+    if (window.selectedTop10Card && !mTop10Popup) {
         const previewContainer = document.createElement('div');
-        previewContainer.style.cssText = `
+        previewContainer.style.cssText = mTop10Popup ? `
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            padding: 6px 8px;
+            background: #2a2d36;
+            border-radius: 8px;
+            border: 1px solid #00b894;
+            gap: 4px;
+        ` : `
             display: flex;
             align-items: center;
             justify-content: center;
@@ -14329,9 +14443,15 @@ async function showTop10MiniInterface() {
             const img = document.createElement('img');
             img.src = previewImg.src;
             img.alt = selectedAnimeTitle;
-            img.style.cssText = `
-                width: 60px;
-                height: 80px;
+            img.style.cssText = mTop10Popup ? `
+                width: 40px;
+                height: 56px;
+                object-fit: cover;
+                border-radius: 6px;
+                margin-right: 0;
+            ` : `
+                width: 52px;
+                height: 70px;
                 object-fit: cover;
                 border-radius: 8px;
                 margin-right: 15px;
@@ -14344,9 +14464,11 @@ async function showTop10MiniInterface() {
         previewTitle.textContent = selectedAnimeTitle;
         previewTitle.style.cssText = `
             color: #00b894;
-            font-size: 1.1rem;
+            font-size: ${mTop10Popup ? '0.75rem' : '1.05rem'};
             font-weight: bold;
             text-align: center;
+            max-width: 100%;
+            overflow-wrap: anywhere;
         `;
         previewContainer.appendChild(previewTitle);
         
@@ -14355,11 +14477,21 @@ async function showTop10MiniInterface() {
     
     // Grille des emplacements
     const grid = document.createElement('div');
-    grid.style.cssText = `
+    grid.className = 'top10-mini-grid';
+    grid.style.cssText = mTop10Popup ? `
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-rows: repeat(5, auto);
+        gap: 4px;
+        margin-bottom: 8px;
+        width: 100%;
+        box-sizing: border-box;
+    ` : `
         display: grid;
         grid-template-columns: repeat(5, 1fr);
-        gap: 15px;
-        margin-bottom: 20px;
+        gap: 10px;
+        margin-bottom: 14px;
+        max-width: 100%;
     `;
     
     // Créer les 10 emplacements
@@ -14367,9 +14499,28 @@ async function showTop10MiniInterface() {
         const slot = document.createElement('div');
         slot.className = 'mini-top10-slot';
         slot.setAttribute('data-slot-index', i);
-        slot.style.cssText = `
-            width: 80px;
-            height: 100px;
+        slot.style.cssText = mTop10Popup ? `
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            height: 66px;
+            min-height: 66px;
+            max-height: 66px;
+            background: ${top10[i] ? '#00b89422' : '#2a2d36'};
+            border: 1px solid #00b894;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            box-sizing: border-box;
+        ` : `
+            width: 68px;
+            height: 86px;
             background: ${top10[i] ? '#00b89422' : '#2a2d36'};
             border: 2px solid #00b894;
             border-radius: 8px;
@@ -14380,23 +14531,38 @@ async function showTop10MiniInterface() {
             cursor: pointer;
             transition: all 0.2s ease;
             position: relative;
+            box-sizing: border-box;
         `;
         
         // Badge de position
         const badge = document.createElement('div');
-        badge.style.cssText = `
+        badge.style.cssText = mTop10Popup ? `
             position: absolute;
-            top: 4px;
-            left: 4px;
+            top: 2px;
+            left: 2px;
             background: #00b894;
             color: white;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.8rem;
+            font-size: 0.62rem;
+            font-weight: bold;
+        ` : `
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            background: #00b894;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
             font-weight: bold;
         `;
         badge.textContent = i + 1;
@@ -14407,12 +14573,18 @@ async function showTop10MiniInterface() {
             const img = document.createElement('img');
             img.src = top10[i].image || top10[i].img || top10[i].cover || '';
             img.alt = top10[i].titre || top10[i].title || top10[i].name || '';
-            img.style.cssText = `
-                width: 50px;
-                height: 60px;
+            img.style.cssText = mTop10Popup ? `
+                width: 32px;
+                height: 42px;
+                object-fit: cover;
+                border-radius: 3px;
+                margin-top: 14px;
+            ` : `
+                width: 44px;
+                height: 54px;
                 object-fit: cover;
                 border-radius: 4px;
-                margin-top: 15px;
+                margin-top: 12px;
             `;
             slot.appendChild(img);
             
@@ -14420,10 +14592,15 @@ async function showTop10MiniInterface() {
             titre.textContent = (top10[i].titre || top10[i].title || top10[i].name || '').substring(0, 8) + '...';
             titre.style.cssText = `
                 color: #00b894;
-                font-size: 0.7rem;
+                font-size: ${mTop10Popup ? '0.55rem' : '0.65rem'};
                 text-align: center;
                 margin-top: 4px;
                 font-weight: bold;
+                max-width: 100%;
+                padding: 0 2px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
             `;
             slot.appendChild(titre);
         } else {
@@ -14432,9 +14609,10 @@ async function showTop10MiniInterface() {
             emptyText.textContent = getTop10SlotEmptyLabel();
             emptyText.style.cssText = `
                 color: #666;
-                font-size: 0.8rem;
+                font-size: ${mTop10Popup ? '0.62rem' : '0.75rem'};
                 text-align: center;
-                margin-top: 15px;
+                margin-top: ${mTop10Popup ? '16px' : '14px'};
+                padding: 0 2px;
             `;
             slot.appendChild(emptyText);
         }
@@ -15047,4 +15225,5 @@ if (typeof window.displayUserAnimeNotes === 'function') {
 } else {
     console.error('❌ displayUserAnimeNotes NON exposée globalement');
 }
+
 

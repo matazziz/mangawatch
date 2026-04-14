@@ -9,11 +9,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
-    <link rel="stylesheet" href="/css/profile.css">
-    <link rel="stylesheet" href="/css/footer-unified.css">
-    <link rel="stylesheet" href="/css/anime-card.css">
-    <link rel="stylesheet" href="/css/messaging.css">
     <link rel="stylesheet" href="/css/list.css">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/profile.css?v=2.2">
+    <link rel="stylesheet" href="/css/anime-card.css?v=2.35">
+    <link rel="stylesheet" href="/css/messaging.css">
     <script src="/js/localization.js"></script>
     <!-- Import Firebase Service pour charger la bannière et les paramètres (confidentialité abonnements) -->
     <script type="module">
@@ -23,24 +23,38 @@
         window.dispatchEvent(new CustomEvent('bannerServiceReady'));
     </script>
     <style>
+        /* Ne pas fixer padding-top ici : header-unified-new.css gère 70px / 74px / 68px selon la largeur */
         body {
             background: #181a20;
             color: #f5f6fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             margin: 0;
-            padding: 0;
-            padding-top: 70px; /* Espace pour le header fixe (hauteur 70px) */
         }
         
         .profile-container {
             max-width: 2000px;
-            margin: 0 auto 4rem auto;
-            padding: 0.75rem 2rem 2rem 2rem;
+            margin: 0.35rem auto 3.5rem auto;
+            padding: 0.45rem 1.4rem 2rem;
             background-color: #23262f;
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             box-sizing: border-box;
+        }
+
+        @media (min-width: 769px) {
+            .profile-container {
+                max-width: 1600px;
+                padding-left: 7rem;
+                padding-right: 7rem;
+            }
+
+            #collection-section,
+            #tierlist-section {
+                padding-left: 3rem;
+                padding-right: 3rem;
+                box-sizing: border-box;
+            }
         }
         
         #profile-content {
@@ -53,16 +67,19 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
+            flex-shrink: 0;
             gap: 2rem;
             margin-top: 0;
             margin-bottom: 2rem;
+            margin-left: calc(-1.4rem + 6px);
+            margin-right: calc(-1.4rem + 6px);
+            width: calc(100% + 2.8rem - 12px);
+            max-width: none;
             padding: 2rem;
             border-radius: 12px;
             overflow: hidden;
-            min-height: 410px;
+            min-height: 535px;
             border-bottom: 1px solid #2f3542;
-            width: 100%;
-            max-width: 100%;
             box-sizing: border-box;
         }
         
@@ -122,8 +139,8 @@
             z-index: 3;
             display: flex;
             flex-wrap: wrap;
-            align-items: center;
-            justify-content: space-between;
+            align-items: flex-start;
+            justify-content: flex-start;
             gap: 2rem;
             width: 100%;
         }
@@ -134,16 +151,22 @@
         }
         
         .profile-avatar {
-            width: 150px;
-            height: 150px;
+            width: 172px;
+            height: 172px;
             border-radius: 50%;
             object-fit: cover;
+            object-position: center center;
             border: 4px solid #00b894;
             transition: transform 0.3s;
             position: relative;
             z-index: 4;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
             display: block;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            transform: translateZ(0);
+            image-rendering: auto;
+            image-rendering: high-quality;
         }
         
         .profile-avatar:hover {
@@ -156,8 +179,11 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            align-self: flex-start;
+            justify-content: flex-start;
+            padding-top: 1.75rem;
         }
-        
+
         /* Badge du pays dans la bannière */
         .profile-continent-badge, .profile-country-badge {
             display: inline-flex;
@@ -175,7 +201,11 @@
             text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.6);
             transition: all 0.3s ease;
             width: fit-content;
-            margin-top: 0.5rem;
+        }
+
+        .profile-info .profile-continent-badge,
+        .profile-info .profile-country-badge {
+            margin-top: 0.38rem;
         }
         
         .profile-continent-badge:hover, .profile-country-badge:hover {
@@ -190,15 +220,50 @@
             opacity: 0.9;
         }
         
-        /* Description du profil dans la bannière */
-        .profile-description-wrapper {
+        .profile-banner-bottom {
             position: absolute;
-            bottom: 1.5rem;
+            bottom: 1.25rem;
             left: 2rem;
-            width: calc(100% - 4rem);
-            max-width: 600px;
+            right: 2rem;
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
             z-index: 4;
             pointer-events: none;
+        }
+
+        .profile-banner-bottom > * {
+            pointer-events: auto;
+        }
+
+        .profile-banner-bottom .profile-description-wrapper {
+            position: static;
+            bottom: auto;
+            left: auto;
+            right: auto;
+            width: auto;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: min(520px, 58%);
+            margin: 0;
+            z-index: auto;
+        }
+
+        .profile-banner-bottom .profile-follow-section {
+            margin-left: 0;
+            margin-top: 0;
+            flex-shrink: 0;
+            align-items: flex-end;
+        }
+
+        .profile-banner-bottom .follow-stat-number {
+            font-size: 1.75rem;
+        }
+
+        .profile-banner-bottom .follow-stat-label {
+            font-size: 0.92rem;
         }
         
         .profile-description-wrapper > * {
@@ -206,33 +271,44 @@
         }
         
         @media (max-width: 768px) {
-            .profile-description-wrapper {
-                left: 1rem;
-                right: 1rem;
-                bottom: 1rem;
+            .profile-banner-bottom {
+                left: 0.65rem;
+                right: 0.65rem;
+                bottom: 0.55rem;
+                gap: 0.5rem;
+            }
+
+            .profile-banner-bottom .profile-description-wrapper {
+                max-width: min(100%, 54%);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-banner-bottom .profile-description-wrapper {
+                max-width: min(100%, 50%);
             }
         }
         
         .profile-description {
             display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem 1rem;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.32rem 0.65rem;
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
+            border-radius: 10px;
             color: #f5f6fa;
-            font-size: 0.9rem;
+            font-size: 0.78rem;
             font-weight: 400;
             font-style: italic;
             font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
             letter-spacing: 0.2px;
-            line-height: 1.5;
+            line-height: 1.2;
             text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.5);
             transition: none;
-            min-height: 50px;
+            min-height: 0;
             width: 100%;
             box-sizing: border-box;
         }
@@ -241,6 +317,7 @@
             background: rgba(255, 255, 255, 0.05);
             border-color: rgba(255, 255, 255, 0.1);
             opacity: 0.5;
+            display: none;
         }
         
         .profile-description.empty:hover {
@@ -261,9 +338,12 @@
         
         .profile-description #profile-description-text {
             flex: 1;
+            min-width: 0;
             word-wrap: break-word;
-            white-space: pre-wrap;
+            overflow-wrap: break-word;
+            white-space: normal;
             font-style: italic;
+            line-height: inherit;
         }
         
         .profile-info h1 {
@@ -274,7 +354,7 @@
             font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
             letter-spacing: 0.5px;
             text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 184, 148, 0.3);
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.42rem;
             line-height: 1.2;
             display: inline-flex;
             align-items: center;
@@ -329,7 +409,6 @@
             flex-direction: column;
             align-items: flex-end;
             gap: 1rem;
-            margin-left: auto;
         }
         
         .profile-follow-stats {
@@ -368,17 +447,17 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.6rem 1.5rem;
+            padding: 0.45rem 1.1rem;
             background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
             border: none;
             border-radius: 25px;
             color: #fff;
-            font-size: 0.95rem;
+            font-size: 0.82rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 184, 148, 0.4);
-            margin-top: 0.5rem;
+            margin-top: 0.35rem;
         }
         
         .profile-follow-btn:hover {
@@ -406,14 +485,15 @@
         }
         
         .profile-follow-btn i {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
         
         /* Bouton de signalement */
         .profile-report-btn {
             position: absolute;
-            bottom: 15px;
+            top: 15px;
             right: 15px;
+            bottom: auto;
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
@@ -449,6 +529,35 @@
         .profile-report-btn span {
             font-size: 0.7rem;
             letter-spacing: 0.3px;
+        }
+
+        .banner-mute-btn {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(20, 22, 30, 0.38);
+            color: #e9eef6;
+            cursor: pointer;
+            z-index: 6;
+            backdrop-filter: blur(6px);
+            opacity: 0.8;
+            transition: opacity 0.2s ease, background 0.2s ease;
+        }
+
+        .banner-mute-btn:hover {
+            opacity: 1;
+            background: rgba(20, 22, 30, 0.55);
+        }
+
+        .banner-mute-btn i {
+            font-size: 0.68rem;
         }
         
         /* Modal de signalement */
@@ -964,15 +1073,116 @@
             opacity: 0.5;
         }
         
+        /* Mobile : même disposition PC (avatar | infos | abonnés), échelle réduite */
         @media (max-width: 768px) {
+            .profile-container {
+                margin: 0.35rem auto 1.25rem;
+                padding: 0.45rem 12px 1.25rem;
+                box-sizing: border-box;
+            }
+
             .profile-header {
-                flex-direction: column;
-                text-align: center;
+                flex-shrink: 0;
+                align-self: stretch;
+                min-height: clamp(305px, 52vw, 420px);
+                min-height: clamp(305px, max(52vw, 28svh), 420px);
+                padding: 0.85rem 0.65rem 5.5rem;
+                margin-top: 0;
+                margin-bottom: 1.25rem;
+                margin-left: 0;
+                margin-right: 0;
+                width: 100%;
+                max-width: none;
+                box-sizing: border-box;
+            }
+
+            .profile-header-banner {
+                object-fit: cover;
+                object-position: center center;
+            }
+
+            .profile-header-content {
+                flex-direction: row;
+                flex-wrap: nowrap;
+                align-items: flex-start;
+                justify-content: flex-start;
+                gap: 0.65rem;
+                width: 100%;
+            }
+
+            .profile-avatar-wrapper {
+                flex-shrink: 0;
+            }
+
+            .profile-avatar {
+                width: 102px;
+                height: 102px;
+                border-width: 3px;
+            }
+
+            .profile-info {
+                align-items: flex-start;
+                text-align: left;
+                align-self: flex-start;
+                flex: 1;
+                min-width: 0;
+                padding-top: 1.35rem;
+            }
+
+            .profile-info h1 {
+                font-size: clamp(1.2rem, 4.35vw, 1.85rem);
+                margin-bottom: 0.2rem;
+                line-height: 1.15;
+            }
+
+            .verified-badge {
+                width: 1.32rem;
+                height: 1.32rem;
+                font-size: 0.65rem;
+            }
+
+            .profile-info .profile-continent-badge,
+            .profile-info .profile-country-badge {
+                margin-top: 0.48rem;
+                font-size: 0.62rem;
+                padding: 0.2rem 0.42rem;
+                gap: 0.28rem;
+                border-radius: 14px;
+            }
+
+            .profile-info .profile-continent-badge i,
+            .profile-info .profile-country-badge i {
+                font-size: 0.56rem;
             }
             
-            .profile-follow-section {
-                width: 100%;
-                align-items: flex-start;
+            .profile-banner-bottom .profile-follow-section {
+                width: auto;
+                max-width: 52%;
+                margin: 0;
+                align-items: flex-end;
+                flex-shrink: 0;
+                gap: 0.35rem;
+            }
+
+            .profile-banner-bottom .profile-follow-stats {
+                gap: 0.45rem;
+            }
+
+            .profile-banner-bottom .follow-stat-item {
+                align-items: flex-end;
+            }
+
+            .profile-banner-bottom .follow-stat-number {
+                font-size: 1.08rem;
+            }
+
+            .profile-banner-bottom .follow-stat-label {
+                font-size: 0.68rem;
+            }
+
+            .profile-banner-bottom .profile-follow-btn {
+                padding: 0.3rem 0.65rem;
+                font-size: 0.66rem;
             }
             
             .profile-tabs {
@@ -983,6 +1193,121 @@
             .profile-tab {
                 padding: 1rem;
                 white-space: nowrap;
+            }
+
+            .profile-report-btn {
+                top: 10px;
+                right: 10px;
+                bottom: auto;
+                padding: 0.22rem 0.34rem;
+                min-width: 24px;
+                min-height: 24px;
+                border-radius: 999px;
+                opacity: 0.62;
+                background: rgba(225, 112, 85, 0.08);
+                border-color: rgba(225, 112, 85, 0.24);
+                box-shadow: none;
+                gap: 0;
+            }
+
+            .profile-report-btn span {
+                display: none;
+            }
+
+            .profile-report-btn i {
+                font-size: 0.62rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .profile-container {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .profile-header {
+                flex-shrink: 0;
+                align-self: stretch;
+                min-height: clamp(295px, 54vw, 380px);
+                min-height: clamp(295px, max(54vw, 26svh), 380px);
+                padding: 0.6rem 0.5rem 5rem;
+                margin-left: 0;
+                margin-right: 0;
+                width: 100%;
+                max-width: none;
+                border-radius: 10px;
+            }
+
+            .profile-header-content {
+                gap: 0.45rem;
+            }
+
+            .profile-avatar {
+                width: 86px;
+                height: 86px;
+                border-width: 2px;
+            }
+
+            .profile-info {
+                padding-top: 1.5rem;
+            }
+
+            .profile-info h1 {
+                font-size: clamp(1.1rem, 4.5vw, 1.42rem);
+                margin-bottom: 0.18rem;
+            }
+
+            .profile-info .profile-continent-badge,
+            .profile-info .profile-country-badge {
+                margin-top: 0.52rem;
+                font-size: 0.56rem;
+                padding: 0.18rem 0.38rem;
+                gap: 0.24rem;
+                border-radius: 12px;
+            }
+
+            .profile-info .profile-continent-badge i,
+            .profile-info .profile-country-badge i {
+                font-size: 0.52rem;
+            }
+
+            .profile-banner-bottom .profile-follow-section {
+                max-width: 54%;
+                gap: 0.3rem;
+            }
+
+            .profile-banner-bottom .profile-follow-stats {
+                gap: 0.38rem;
+            }
+
+            .profile-banner-bottom .follow-stat-number {
+                font-size: 0.98rem;
+            }
+
+            .profile-banner-bottom .follow-stat-label {
+                font-size: 0.62rem;
+            }
+
+            .profile-banner-bottom .profile-follow-btn {
+                padding: 0.26rem 0.52rem;
+                font-size: 0.62rem;
+            }
+
+            .profile-description {
+                font-size: 0.72rem;
+                padding: 0.26rem 0.45rem;
+                min-height: 0;
+                line-height: 1.15;
+            }
+
+            .profile-report-btn {
+                top: 8px;
+                right: 8px;
+                bottom: auto;
+                padding: 0.2rem 0.3rem;
+                min-width: 22px;
+                min-height: 22px;
+                opacity: 0.58;
             }
         }
 
@@ -1050,148 +1375,414 @@
             color: #ff6b6b;
         }
 
-        /* Même taille et disposition que la collection perso (list.css / list.html) */
-        .collection-section {
-            padding: 20px;
-            max-width: 2000px;
-            margin: 0 auto;
+        /* Collection publique: utiliser le rendu natif partagé (list.css) */
+
+        #collection-section .mobile-collection-filters-toggle {
+            display: none;
             width: 100%;
-            box-sizing: border-box;
+            margin: 0 0 14px 0;
+            background: #00b894;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
         }
-        
-        .collection-section .list-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 25px;
-            margin-bottom: 40px;
-            align-items: stretch;
-        }
-        
-        .collection-section .list-item {
-            min-height: 450px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .collection-section .item-image {
-            width: 100%;
-            height: 300px;
-            flex-shrink: 0;
-        }
-        
-        .collection-section .item-content {
-            padding: 20px;
-            min-height: 200px;
-            flex: 1;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-        
-        .collection-section .item-synopsis {
-            flex: 1;
-            min-height: 60px;
-        }
-        
-        @media (max-width: 1100px) {
-            .collection-section .list-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
+
+        /* Harmonisation stricte mobile avec la page profil privée */
         @media (max-width: 768px) {
-            .collection-section .list-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
+            .profile-container {
+                margin: 0.35rem auto 1.25rem !important;
+                padding: 0.45rem 12px 1.25rem !important;
+                box-sizing: border-box !important;
+            }
+
+            .profile-header {
+                flex-shrink: 0 !important;
+                align-self: stretch !important;
+                min-height: clamp(305px, 52vw, 420px) !important;
+                min-height: clamp(305px, max(52vw, 28svh), 420px) !important;
+                padding: 0.85rem 0.65rem 5.5rem !important;
+                margin-top: 0 !important;
+                margin-bottom: 1.25rem !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+                box-sizing: border-box !important;
+            }
+
+            .profile-header-banner {
+                object-fit: cover !important;
+                object-position: center center !important;
+            }
+
+            .profile-header-content {
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                align-items: flex-start !important;
+                justify-content: flex-start !important;
+                gap: 0.65rem !important;
+                width: 100% !important;
+            }
+
+            .profile-avatar-wrapper { flex-shrink: 0 !important; }
+
+            .profile-avatar {
+                width: 102px !important;
+                height: 102px !important;
+                border-width: 3px !important;
+            }
+
+            .profile-info {
+                align-items: flex-start !important;
+                text-align: left !important;
+                align-self: flex-start !important;
+                flex: 1 !important;
+                min-width: 0 !important;
+                padding-top: 1.35rem !important;
+            }
+
+            .profile-info h1 {
+                font-size: clamp(1.2rem, 4.35vw, 1.85rem) !important;
+                margin-bottom: 0.2rem !important;
+                line-height: 1.15 !important;
+            }
+
+            .verified-badge {
+                width: 1.32rem !important;
+                height: 1.32rem !important;
+                font-size: 0.65rem !important;
+            }
+
+            .profile-info .profile-continent-badge,
+            .profile-info .profile-country-badge {
+                margin-top: 0.48rem !important;
+                font-size: 0.62rem !important;
+                padding: 0.2rem 0.42rem !important;
+                gap: 0.28rem !important;
+                border-radius: 14px !important;
+            }
+
+            .profile-info .profile-continent-badge i,
+            .profile-info .profile-country-badge i {
+                font-size: 0.56rem !important;
+            }
+
+            .profile-banner-bottom .profile-follow-section {
+                width: auto !important;
+                max-width: 52% !important;
+                margin: 0 !important;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: flex-end !important;
+                flex-shrink: 0 !important;
+                gap: 0.45rem !important;
+            }
+
+            .profile-banner-bottom .profile-follow-btn {
+                order: 0 !important;
+                align-self: flex-end !important;
+                padding: 0.22rem 0.48rem !important;
+                font-size: 0.6rem !important;
+                border-radius: 999px !important;
+                margin-bottom: 0 !important;
+            }
+
+            .profile-banner-bottom .profile-follow-btn i {
+                font-size: 0.58rem !important;
+            }
+
+            .profile-banner-bottom .profile-follow-stats {
+                order: 1 !important;
+                gap: 0.45rem !important;
+                margin-top: 0.62rem !important;
+                align-self: flex-end !important;
+            }
+            .profile-banner-bottom .follow-stat-item { align-items: flex-end !important; }
+            .profile-banner-bottom .follow-stat-number { font-size: 1.08rem !important; }
+            .profile-banner-bottom .follow-stat-label { font-size: 0.68rem !important; }
+
+            .profile-report-btn {
+                top: 10px !important;
+                right: 10px !important;
+                bottom: auto !important;
+                opacity: 0.84 !important;
+                background: rgba(225, 112, 85, 0.14) !important;
+                border-color: rgba(225, 112, 85, 0.34) !important;
+            }
+
+            .banner-mute-btn {
+                bottom: 10px;
+                left: 10px;
+                width: 24px;
+                height: 24px;
+                opacity: 0.84;
+            }
+
+            .profile-actions {
+                margin: 1rem 0 0 !important;
+                width: 100% !important;
+                justify-content: center !important;
+                flex-wrap: wrap !important;
+            }
+
+            .profile-tabs {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+
+            .profile-tab {
+                padding: 1rem !important;
+                white-space: nowrap !important;
+            }
+
+            #collection-section .mobile-collection-filters-toggle {
+                display: inline-flex;
+            }
+
+            #collection-section:not(.mobile-filters-open) .status-filters,
+            #collection-section:not(.mobile-filters-open) .type-filters {
+                display: none;
+            }
+
+            /* Cartes collection publique un peu plus grandes sur mobile */
+            #collection-section .list-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            #collection-section .item-meta {
+                gap: 6px;
+                font-size: 0.72rem;
+                margin-bottom: 6px;
+            }
+
+            #collection-section .item-type {
+                font-size: 0.7rem;
+                padding: 2px 6px;
+                border-radius: 8px;
+            }
+
+            #collection-section .item-status {
+                font-size: 0.68rem;
+                padding: 4px 8px;
+                border-radius: 12px;
+            }
+
+            #collection-section {
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: -8px !important;
+                margin-right: -8px !important;
+                width: calc(100% + 16px) !important;
             }
         }
 
-        /* Annuler les overrides de list.css pour le footer - même placement que profil perso */
-        body .footer-unified {
-            margin-bottom: 1rem;
-            padding-bottom: 2rem;
-            padding-left: 0;
-            padding-right: 0;
-            width: 100%;
-            box-sizing: border-box;
+        @media (max-width: 480px) {
+            #collection-section {
+                margin-left: -10px !important;
+                margin-right: -10px !important;
+                width: calc(100% + 20px) !important;
+            }
+
+            #collection-section .item-meta {
+                gap: 5px;
+                font-size: 0.68rem;
+            }
+
+            #collection-section .item-type {
+                font-size: 0.66rem;
+                padding: 2px 5px;
+            }
+
+            #collection-section .item-status {
+                font-size: 0.64rem;
+                padding: 3px 7px;
+            }
         }
-        body .footer-unified .footer-container {
-            padding: 0 1rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
+
+        @media (max-width: 480px) {
+            .profile-container {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            .profile-header {
+                flex-shrink: 0 !important;
+                align-self: stretch !important;
+                min-height: clamp(295px, 54vw, 380px) !important;
+                min-height: clamp(295px, max(54vw, 26svh), 380px) !important;
+                padding: 0.6rem 0.5rem 5rem !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                width: 100% !important;
+                max-width: none !important;
+                border-radius: 10px !important;
+            }
+
+            .profile-header-content { gap: 0.45rem !important; }
+
+            .profile-avatar {
+                width: 86px !important;
+                height: 86px !important;
+                border-width: 2px !important;
+            }
+
+            .profile-info { padding-top: 1.5rem !important; }
+
+            .profile-info h1 {
+                font-size: clamp(1.1rem, 4.5vw, 1.42rem) !important;
+                margin-bottom: 0.18rem !important;
+            }
+
+            .profile-info .profile-continent-badge,
+            .profile-info .profile-country-badge {
+                margin-top: 0.52rem !important;
+                font-size: 0.56rem !important;
+                padding: 0.18rem 0.38rem !important;
+                gap: 0.24rem !important;
+                border-radius: 12px !important;
+            }
+
+            .profile-info .profile-continent-badge i,
+            .profile-info .profile-country-badge i {
+                font-size: 0.52rem !important;
+            }
+
+            .profile-banner-bottom .profile-follow-section {
+                max-width: 54% !important;
+                gap: 0.3rem !important;
+            }
+
+            .profile-banner-bottom .profile-follow-btn {
+                padding: 0.2rem 0.4rem !important;
+                font-size: 0.56rem !important;
+                margin-bottom: 0.16rem !important;
+            }
+
+            .profile-banner-bottom .profile-follow-btn i { font-size: 0.54rem !important; }
+            .profile-banner-bottom .profile-follow-stats {
+                gap: 0.38rem !important;
+                margin-top: 0.56rem !important;
+                align-self: flex-end !important;
+            }
+            .profile-banner-bottom .follow-stat-number { font-size: 0.98rem !important; }
+            .profile-banner-bottom .follow-stat-label { font-size: 0.62rem !important; }
+
+            .profile-description {
+                font-size: 0.72rem !important;
+                padding: 0.26rem 0.45rem !important;
+                min-height: 0 !important;
+                line-height: 1.15 !important;
+            }
+
+            .profile-report-btn {
+                top: 8px !important;
+                right: 8px !important;
+                opacity: 0.8 !important;
+            }
+
+            .banner-mute-btn {
+                bottom: 8px;
+                left: 8px;
+                width: 22px;
+                height: 22px;
+            }
+
+            .banner-mute-btn i {
+                font-size: 0.62rem;
+            }
         }
+
+        /* Suppression de la description sur le profil public */
+        .profile-description-wrapper,
+        .profile-description {
+            display: none !important;
+            visibility: hidden !important;
+        }
+
+        .profile-banner-bottom {
+            justify-content: flex-end !important;
+        }
+
     </style>
 </head>
 <body>
-  <!-- En-tête unifié -->
-  <header class="main-header">
-    <a href="acceuil.html" class="logo-link">
-      <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
-      <span>MangaWatch</span>
-    </a>
-    
-    <div class="search-wrapper">
-      <form class="search-bar" id="searchForm">
-        <select id="searchType" class="search-type-selector">
-          <option value="manga" selected data-i18n="search.type.manga">Manga</option>
-          <option value="anime" data-i18n="search.type.anime">Anime</option>
-          <option value="movie" data-i18n="search.type.movie">Film</option>
-          <option value="user" data-i18n="search.type.user">Utilisateur</option>
-        </select>
-        <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="profile-search" spellcheck="false">
-        <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
-          <i class="fas fa-search"></i>
-        </button>
-      </form>
-      <!-- Résultats de recherche -->
-      <div id="search-results" class="search-results-dropdown"></div>
-    </div>
-    
-    <!-- Navigation desktop (visible sur grand écran) -->
-    <nav class="nav-links">
-        <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
-        <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
-        <a href="list.html" data-i18n="nav.collection">Collection</a>
-        <a href="profil.html" data-i18n="nav.profile">Profil</a>
-    </nav>
-    
-    <!-- Conteneur pour les éléments de droite -->
-    <div class="header-right">
-      <!-- Bouton hamburger pour mobile -->
-      <button class="hamburger-btn" aria-label="" data-i18n-aria-label="profile.menu_aria">
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-      
-      <!-- Avatar utilisateur -->
-      <a href="profil.html" class="avatar-link">
-        <img id="user-avatar" src="" alt="" class="user-avatar" data-i18n-alt="profile.avatar_alt" onerror="this.src=''">
-      </a>
-    </div>
-  </header>
+    <!-- En-tête unifié (même bloc que list.html / manga-database.html) -->
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/kame_house.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+            <select id="searchType" class="search-type-selector">
+                <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                <option value="anime" data-i18n="search.type.anime">Anime</option>
+                <option value="movie" data-i18n="search.type.movie">Film</option>
+                <option value="user" data-i18n="search.type.user">Utilisateur</option>
+            </select>
+                <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="user-profile-search" spellcheck="false">
+                <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <!-- Résultats de recherche -->
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+        
+        <!-- Navigation desktop (visible sur grand écran) -->
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="list.html" data-i18n="nav.collection">Collection</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+        
+        <!-- Conteneur pour les éléments de droite -->
+        <div class="header-right">
+            <!-- Bouton hamburger pour mobile -->
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <!-- Avatar utilisateur -->
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
 
-  <!-- Menu mobile -->
-  <div class="mobile-menu">
-    <nav class="nav-links">
-      <a href="acceuil.html">
-        <i class="fas fa-home"></i>
-        <span data-i18n="nav.home">Accueil</span>
-      </a>
-      <a href="manga-database.html">
-        <i class="fas fa-tv"></i>
-        <span data-i18n="nav.manga_anime">Mangas & Anime</span>
-      </a>
-      <a href="list.html">
-        <i class="fas fa-bookmark"></i>
-        <span data-i18n="nav.collection">Collection</span>
-      </a>
-      <a href="profil.html">
-        <i class="fas fa-user"></i>
-        <span data-i18n="nav.profile">Profil</span>
-      </a>
-    </nav>
-  </div>
+    <!-- Menu mobile -->
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html">
+                <i class="fas fa-home"></i>
+                <span data-i18n="nav.home">Accueil</span>
+            </a>
+            <a href="manga-database.html">
+                <i class="fas fa-tv"></i>
+                <span data-i18n="nav.manga_anime">Manga Anime</span>
+            </a>
+            <a href="list.html">
+                <i class="fas fa-bookmark"></i>
+                <span data-i18n="nav.collection">Collection</span>
+            </a>
+            <a href="profil.html">
+                <i class="fas fa-user"></i>
+                <span data-i18n="nav.profile">Profil</span>
+            </a>
+        </nav>
+    </div>
 
     <main class="profile-container">
         <div id="profile-content">
@@ -1206,11 +1797,15 @@
                     <i class="fas fa-flag"></i>
                     <span data-i18n="profile.report">Signaler</span>
                 </button>
+
+                <button class="banner-mute-btn" id="banner-mute-btn" style="display: none;" title="Couper le son de la bannière" aria-label="Couper le son de la bannière">
+                    <i class="fas fa-volume-up"></i>
+                </button>
                 
                 <!-- Contenu du header (avatar et pseudo) -->
                 <div class="profile-header-content">
                     <div class="profile-avatar-wrapper">
-                        <img src="" alt="Avatar utilisateur" id="profile-avatar" class="profile-avatar" onerror="this.src=''">
+                        <img src="" alt="Avatar utilisateur" id="profile-avatar" class="profile-avatar" decoding="async" fetchpriority="high" onerror="this.src=''">
                     </div>
                     <div class="profile-info">
                         <h1 id="user-name">
@@ -1224,7 +1819,14 @@
                             <span id="profile-country-text">Non renseigné</span>
                         </div>
                     </div>
-                    <!-- Système d'abonnements à droite -->
+                </div>
+                
+                <div class="profile-banner-bottom">
+                    <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: none;">
+                        <div class="profile-description" id="profile-description">
+                            <span id="profile-description-text" data-i18n="profile.no_description">Aucune description</span>
+                        </div>
+                    </div>
                     <div class="profile-follow-section" id="profile-follow-section">
                         <div class="profile-follow-stats" id="profile-follow-stats">
                             <div class="follow-stat-item" id="followers-stat">
@@ -1240,13 +1842,6 @@
                             <i class="fas fa-user-plus"></i>
                             <span id="follow-btn-text" data-i18n="profile.subscribe">S'abonner</span>
                         </button>
-                    </div>
-                </div>
-                
-                <!-- Description en bas de la bannière -->
-                <div class="profile-description-wrapper" id="profile-description-wrapper">
-                    <div class="profile-description" id="profile-description">
-                        <span id="profile-description-text" data-i18n="profile.no_description">Aucune description</span>
                     </div>
                 </div>
             </div>
@@ -1273,6 +1868,10 @@
             <div class="profile-content">
                 <!-- Section Collection -->
                 <div class="profile-section collection-section" id="collection-section" style="display: none;">
+                    <button id="mobile-collection-filters-toggle-public" class="mobile-collection-filters-toggle" type="button" aria-expanded="false">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                        <span data-i18n="filters">Filtres</span>
+                    </button>
                     <!-- Filtres par statut -->
                     <div class="status-filters">
                         <button class="status-filter active" data-status="all">
@@ -1425,7 +2024,7 @@
     </main>
 
     <script src="/js/fake-users-generator.js"></script>
-    <script src="/js/user-profile.js"></script>
+    <script src="/js/user-profile.js?v=2.4"></script>
     <script src="/js/search.js"></script>
     <script src="../js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>
@@ -1610,4 +2209,10 @@
     </div>
 </body>
 </html>
+
+
+
+
+
+
 
