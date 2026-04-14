@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Pages privees / compte
+Disallow: /pages/profil.html
+Disallow: /pages/list.html
+Disallow: /pages/reset-password.html
+Disallow: /pages/admin.html
+
+Sitemap: https://mangawatch.fr/sitemap.xml

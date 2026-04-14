@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-i18n="title">Détails de l'anime - MangaWatch</title>
+    <meta name="description" content="Consultez les details d'un manga ou anime : synopsis, genres, note, infos et evaluation utilisateur sur MangaWatch.">
+    <meta name="robots" content="index,follow,max-image-preview:large">
+    <link rel="canonical" href="https://mangawatch.fr/pages/anime-details.html">
+    <meta property="og:title" content="MangaWatch - Details Manga & Anime">
+    <meta property="og:description" content="Synopsis, infos, genres et notation utilisateur sur MangaWatch.">
+    <meta property="og:url" content="https://mangawatch.fr/pages/anime-details.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="MangaWatch">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/footer-unified.css">
@@ -1239,7 +1248,48 @@
                 ratingText.style.color = '#00b894';
             }
             
+            // Si Firebase n'etait pas pret, mettre en attente pour synchro inter-appareils
+            if (!firebaseSuccess) {
+                try {
+                    const pendingKey = 'pending_firebase_notes_' + user.email;
+                    const pending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
+                    pending.push(animeNote);
+                    localStorage.setItem(pendingKey, JSON.stringify(pending.slice(-80)));
+                } catch (e) {}
+            }
+
             return firebaseSuccess ? true : notes;
+        }
+
+        async function flushPendingFirebaseNotes() {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (!user || !user.email || !window.firebaseNotesService) return;
+            const pendingKey = 'pending_firebase_notes_' + user.email;
+            let pending = [];
+            try {
+                pending = JSON.parse(localStorage.getItem(pendingKey) || '[]');
+            } catch (e) {
+                pending = [];
+            }
+            if (!Array.isArray(pending) || pending.length === 0) return;
+
+            const remaining = [];
+            for (const note of pending) {
+                try {
+                    const ok = await window.firebaseNotesService.saveNote(user.email, note);
+                    if (!ok) remaining.push(note);
+                } catch (e) {
+                    remaining.push(note);
+                }
+            }
+            localStorage.setItem(pendingKey, JSON.stringify(remaining));
+        }
+
+        window.addEventListener('firebaseNotesServiceReady', () => {
+            flushPendingFirebaseNotes().catch(() => {});
+        });
+        if (window.firebaseNotesService) {
+            flushPendingFirebaseNotes().catch(() => {});
         }
         
         // Fonction pour supprimer la note
@@ -1925,6 +1975,7 @@
             await import('/js/firebase-service.js');
             await import('/js/firebaseNotesService.js');
             console.log('[Firebase] Modules chargés avec succès');
+            window.dispatchEvent(new CustomEvent('firebaseNotesServiceReady'));
         } catch (err) {
             console.warn('[Firebase] Erreur lors du chargement des modules (fallback vers localStorage):', err);
         }
