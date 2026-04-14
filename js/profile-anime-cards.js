@@ -1014,8 +1014,8 @@ window.createStarBadges = function createStarBadges() {
     // === AJOUT BOUTON FILTRAGE PAR TYPE ===
     let typeButton = document.createElement('button');
     typeButton.id = 'filter-by-type-btn';
-    // Type par défaut stable pour éviter les regressions de rendu Top10/containers
-    window.selectedType = 'manga';
+    // Afficher tous les types par défaut pour éviter les cartes manquantes selon l'appareil
+    window.selectedType = 'tous';
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
@@ -1027,7 +1027,7 @@ window.createStarBadges = function createStarBadges() {
         'film': _pt('profile.search_movie'),
         'tous': _pt('profile.type_all')
     };
-    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.search_manga');
+    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.type_all');
     typeButton.style.cssText = sortButton.style.cssText + 'margin-left: 0; margin-right: 8px;';
     typeButton.style.display = 'inline-block';
 
@@ -1053,7 +1053,8 @@ window.createStarBadges = function createStarBadges() {
         text-align: left;
     `;
     typeMenu.innerHTML = `
-        <div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">${_pt('profile.search_manga')}</div>
+        <div class="type-menu-item" data-type="tous" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">${_pt('profile.type_all')}</div>
+        <div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_manga')}</div>
         <div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_anime')}</div>
         <div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_movie')}</div>
     `;

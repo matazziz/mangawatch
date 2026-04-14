@@ -179,6 +179,15 @@ html {
     padding: 2rem 1.5rem !important;
     margin: 0 auto 1.5rem auto !important;
   }
+
+  [id^="star-containers"] .catalogue-card .select-top10-btn,
+  #reviews-section .card-list .select-top10-btn,
+  [id^="star-containers"] .catalogue-card .card-more-menu button,
+  #reviews-section .card-list .card-more-menu button {
+    font-size: 0.82rem !important;
+    padding: 8px 10px !important;
+    min-height: 34px !important;
+  }
 }
 
 /* Menus déroulants: fond opaque pour masquer le contenu dessous */
@@ -416,6 +425,18 @@ html {
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     min-height: calc(1.1em * 2) !important;
+  }
+
+  [id^="star-containers"] .catalogue-card .anime-title,
+  [id^="star-containers"] .catalogue-card a[data-card-link="true"] {
+    font-size: 0.66rem !important;
+    line-height: 1.08 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 3 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    min-height: calc(1.08em * 3) !important;
+    margin-bottom: 0.28rem !important;
   }
 
   #reviews-section .card-list [id^="catalogue-card-"] > img {
