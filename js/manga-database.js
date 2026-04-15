@@ -1362,6 +1362,7 @@ function displayContentList(contentList) {
     console.log('Affichage de', contentList.length, 'éléments');
     
     // Filtrer par statut si un statut est sélectionné
+    const originalContentList = [...contentList];
     let sortedContentList = [...contentList];
     if (elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '') {
         const selectedStatus = elements.statusFilter.value;
@@ -1373,6 +1374,15 @@ function displayContentList(contentList) {
         });
         
         console.log(`📋 Résultat du filtrage statut "${selectedStatus}": ${sortedContentList.length} élément(s)`);
+
+        // Évite l'effet "page vide" quand un statut sauvegardé ne matche rien
+        if (sortedContentList.length === 0 && originalContentList.length > 0) {
+            console.warn(`⚠️ Aucun résultat pour le statut "${selectedStatus}", fallback sur la liste complète`);
+            sortedContentList = [...originalContentList];
+            if (elements.statusFilter) {
+                elements.statusFilter.value = '';
+            }
+        }
     }
     
     // Vider la grille
@@ -1394,6 +1404,12 @@ function displayContentList(contentList) {
         // Retrouver les contenus originaux correspondants
         const filteredIds = new Set(filtered.map(f => f.id));
         contentToDisplay = sortedContentList.filter(c => filteredIds.has(c.mal_id));
+    }
+
+    // Sécurité finale : ne jamais afficher 0 carte si on avait des données valides
+    if (contentToDisplay.length === 0 && sortedContentList.length > 0) {
+        console.warn('⚠️ Filtrage final vide, fallback sur sortedContentList');
+        contentToDisplay = [...sortedContentList];
     }
 
     mwDebug('displayContentList:before-render', {
