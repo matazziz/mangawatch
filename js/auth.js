@@ -1,5 +1,5 @@
 // Configuration Google Sign-In
-const googleClientId = '669862191301-acapu82b61jp8tpnt3noet0lbsk6lk30.apps.googleusercontent.com';
+const googleClientId = window.__GOOGLE_CLIENT_ID__ || 'GOOGLE_CLIENT_ID_NOT_SET';
 
 // Décoder le token JWT
 function parseJwt(token) {
