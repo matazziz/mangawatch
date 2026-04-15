@@ -1693,7 +1693,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     ${translatedWorks.map(oeuvre => `
                         <div class="work-card">
                             <div class="work-image-container">
-                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyYTIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udCZhbXA7ZmFtaWx5PSJBcmlhbCIgZm9udCZhbXA7c2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg==" alt="${oeuvre.titre}" class="work-image" data-manga-title="${oeuvre.titre}" data-fallback-image="${oeuvre.image || ''}">
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyYTIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udCZhbXA7ZmFtaWx5PSJBcmlhbCIgZm9udCZhbXA7c2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg==" alt="${oeuvre.titre}" class="work-image" data-manga-title="${oeuvre.titre}">
                                 <div class="work-image-placeholder" style="display: none;">${oeuvre.titre}</div>
                         </div>
                         <div class="work-info">
@@ -1718,7 +1718,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const placeholder = card.querySelector('.work-image-placeholder');
                     const title = card.querySelector('.work-title');
                     const mangaTitle = image?.dataset?.mangaTitle;
-                    const fallbackImageUrl = image?.dataset?.fallbackImage || '';
                     
                     if (mangaTitle && image && placeholder) {
                         // Vérifier d'abord le cache pour l'URL de l'image
@@ -1797,15 +1796,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 };
                                     
                                     img.src = realImage;
-                            } else if (fallbackImageUrl.startsWith('https://')) {
-                                    // Fallback local depuis auteurs.json quand Jikan est indisponible
-                                    image.onerror = function() {
-                                        image.style.display = 'none';
-                                        placeholder.style.display = 'flex';
-                                    };
-                                    image.src = fallbackImageUrl;
-                                    image.style.display = 'block';
-                                    placeholder.style.display = 'none';
                             } else {
                                     // Si pas d'image trouvée, garder le placeholder
                                 image.style.display = 'none';
@@ -1813,19 +1803,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                             }
                         } catch (error) {
                                 console.warn(`Erreur lors du chargement de l'image pour ${mangaTitle}:`, error.message || error);
-                                if (fallbackImageUrl.startsWith('https://')) {
-                                    image.onerror = function() {
-                                        image.style.display = 'none';
-                                        placeholder.style.display = 'flex';
-                                    };
-                                    image.src = fallbackImageUrl;
-                                    image.style.display = 'block';
-                                    placeholder.style.display = 'none';
-                                } else {
-                                    // Garder le placeholder visible
-                                    image.style.display = 'none';
-                                    placeholder.style.display = 'flex';
-                                }
+                                // Garder le placeholder visible
+                            image.style.display = 'none';
+                            placeholder.style.display = 'flex';
                         }
                         }
                     } else if (placeholder) {
