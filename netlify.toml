@@ -21,6 +21,13 @@
   to = "/pages/acceuil.html"
   status = 200
 
+[[redirects]]
+  # Proxy Jikan via Netlify pour eviter les erreurs CORS navigateur
+  from = "/api/jikan/*"
+  to = "https://api.jikan.moe/v4/:splat"
+  status = 200
+  force = true
+
 # Headers pour la sécurité et les performances
 [[headers]]
   for = "/*"
