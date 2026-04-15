@@ -1,6 +1,18 @@
 // Configuration
 const ANILIST_API_URL = 'https://graphql.anilist.co';
 const ITEMS_PER_PAGE = 25; // Limite maximale qui fonctionne avec l'API Jikan
+const MW_DEBUG_ENABLED = new URLSearchParams(window.location.search).get('debug') === '1' ||
+    localStorage.getItem('mw_debug') === '1';
+
+function mwDebug(label, payload) {
+    if (!MW_DEBUG_ENABLED) return;
+    const ts = new Date().toISOString();
+    if (typeof payload === 'undefined') {
+        console.log(`[MW-DEBUG][${ts}] ${label}`);
+    } else {
+        console.log(`[MW-DEBUG][${ts}] ${label}`, payload);
+    }
+}
 
 // Fonction pour nettoyer le synopsis en supprimant les mentions MAL rewrite
 function cleanSynopsis(synopsis) {
@@ -926,6 +938,13 @@ function initializePage() {
 async function fetchContentList() {
     try {
         showLoading(true);
+        mwDebug('fetchContentList:start', {
+            currentContentType,
+            currentPage,
+            currentFilters: { ...currentFilters },
+            isGenreSortActive,
+            selectedGenres: [...selectedGenres]
+        });
         
         // Vérifier si un filtre de genre est actif
         if (isGenreSortActive && selectedGenres.length > 0) {
@@ -945,6 +964,12 @@ async function fetchContentList() {
         });
         
         const response = await fetchContentFromAPI(endpoint, params);
+        mwDebug('fetchContentList:response', {
+            hasResponse: !!response,
+            hasDataArray: !!(response && Array.isArray(response.data)),
+            dataLength: response?.data?.length || 0,
+            pagination: response?.pagination || null
+        });
         
         if (response && response.data) {
             console.log(`📚 ${response.data.length} éléments trouvés`);
@@ -969,6 +994,10 @@ async function fetchContentList() {
                 }
             }, 200);
         } else {
+            mwDebug('fetchContentList:empty-response', {
+                endpoint,
+                params: params.toString()
+            });
             showError('Aucune donnée reçue de l\'API. Réessayez dans un instant.');
             totalPages = 1;
             currentPage = 1;
@@ -976,6 +1005,10 @@ async function fetchContentList() {
             displayContentList([]);
         }
     } catch (error) {
+        mwDebug('fetchContentList:error', {
+            message: error?.message || String(error),
+            stack: error?.stack || null
+        });
         console.error('Erreur lors de la récupération des données:', error);
         showError('Erreur lors du chargement des données');
         totalPages = 1;
@@ -1116,6 +1149,12 @@ async function fetchContentFromAPI(endpoint, params) {
         sort: anilistSort
     };
 
+    mwDebug('AniList:request', {
+        endpoint,
+        mediaType,
+        variables
+    });
+
     const response = await fetch(ANILIST_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1124,10 +1163,17 @@ async function fetchContentFromAPI(endpoint, params) {
 
     if (!response.ok) {
         console.warn(`AniList HTTP ${response.status}`);
+        mwDebug('AniList:http-error', { status: response.status, statusText: response.statusText });
         return fetchAniListSimpleFallback(mediaType, page, perPage);
     }
 
     const payload = await response.json();
+    mwDebug('AniList:payload-meta', {
+        hasErrors: !!payload?.errors?.length,
+        errorCount: payload?.errors?.length || 0,
+        hasPage: !!payload?.data?.Page,
+        mediaCount: payload?.data?.Page?.media?.length || 0
+    });
     if (payload?.errors?.length) {
         console.warn('AniList GraphQL errors, fallback simple query:', payload.errors);
         return fetchAniListSimpleFallback(mediaType, page, perPage);
@@ -1137,6 +1183,11 @@ async function fetchContentFromAPI(endpoint, params) {
     }
 
     const pageData = payload.data.Page;
+    mwDebug('AniList:mapped-result', {
+        mappedCount: pageData.media?.length || 0,
+        currentPage: pageData.pageInfo?.currentPage || page,
+        lastPage: pageData.pageInfo?.lastPage || 1
+    });
     return {
         data: (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType)),
         pagination: {
@@ -1179,6 +1230,7 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
     `;
 
     try {
+        mwDebug('AniList:fallback-request', { mediaType, page, perPage });
         const fallbackResponse = await fetch(ANILIST_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1192,11 +1244,24 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
             })
         });
 
-        if (!fallbackResponse.ok) return null;
+        if (!fallbackResponse.ok) {
+            mwDebug('AniList:fallback-http-error', {
+                status: fallbackResponse.status,
+                statusText: fallbackResponse.statusText
+            });
+            return null;
+        }
         const payload = await fallbackResponse.json();
-        if (!payload?.data?.Page) return null;
+        if (!payload?.data?.Page) {
+            mwDebug('AniList:fallback-empty-payload');
+            return null;
+        }
 
         const pageData = payload.data.Page;
+        mwDebug('AniList:fallback-success', {
+            mediaCount: pageData.media?.length || 0,
+            currentPage: pageData.pageInfo?.currentPage || page
+        });
         return {
             data: (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType)),
             pagination: {
@@ -1207,6 +1272,9 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
         };
     } catch (error) {
         console.warn('AniList simple fallback failed:', error);
+        mwDebug('AniList:fallback-error', {
+            message: error?.message || String(error)
+        });
         return null;
     }
 }
@@ -1281,13 +1349,26 @@ function displayContentList(contentList) {
         const filteredIds = new Set(filtered.map(f => f.id));
         contentToDisplay = sortedContentList.filter(c => filteredIds.has(c.mal_id));
     }
+
+    mwDebug('displayContentList:before-render', {
+        incomingCount: contentList.length,
+        afterStatusFilterCount: sortedContentList.length,
+        finalDisplayCount: contentToDisplay.length
+    });
     
     // Créer et ajouter les cartes
+    let renderFailures = 0;
     contentToDisplay.forEach(content => {
         const card = createContentCard(content);
         if (card) {
             mangaGrid.appendChild(card);
+        } else {
+            renderFailures++;
         }
+    });
+    mwDebug('displayContentList:after-render', {
+        renderedCount: mangaGrid.children.length,
+        renderFailures
     });
     
     // Afficher la grille avec une transition fluide
