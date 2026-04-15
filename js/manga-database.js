@@ -1,6 +1,43 @@
 // Configuration
 const API_BASE_URL = 'https://api.jikan.moe/v4';
 const ITEMS_PER_PAGE = 25; // Limite maximale qui fonctionne avec l'API Jikan
+const API_FETCH_RETRY_COUNT = 2;
+const API_FETCH_RETRY_DELAY_MS = 1200;
+const API_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+const API_CACHE_STALE_MAX_MS = 24 * 60 * 60 * 1000; // 24 heures
+
+function buildApiCacheKey(url) {
+    return `jikan_cache_${url}`;
+}
+
+function getCachedApiResponse(url) {
+    try {
+        const raw = localStorage.getItem(buildApiCacheKey(url));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.timestamp || !parsed.payload) return null;
+        return parsed;
+    } catch (error) {
+        console.warn('Cache API invalide, suppression de l\'entrée:', error);
+        localStorage.removeItem(buildApiCacheKey(url));
+        return null;
+    }
+}
+
+function saveCachedApiResponse(url, payload) {
+    try {
+        localStorage.setItem(buildApiCacheKey(url), JSON.stringify({
+            timestamp: Date.now(),
+            payload
+        }));
+    } catch (error) {
+        console.warn('Impossible de sauvegarder le cache API:', error);
+    }
+}
+
+function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // Fonction pour nettoyer le synopsis en supprimant les mentions MAL rewrite
 function cleanSynopsis(synopsis) {
@@ -999,37 +1036,61 @@ async function fetchContentFromAPI(endpoint, params) {
     console.log(`Filtres:`, params);
     console.log(`Type filter value: ${elements.typeFilter ? elements.typeFilter.value : 'N/A'}`);
     
-    const FETCH_TIMEOUT_MS = 28000;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-    try {
-        const response = await fetch(url, { signal: controller.signal });
-
-        if (!response.ok) {
-            if (response.status === 429) {
-                console.warn(`⚠️ Rate limiting détecté. Attendre avant de réessayer...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return null;
-            }
-            console.warn(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-            return null;
-        }
-
-        const data = await response.json();
-        console.log(`API Response:`, data);
-
-        return data;
-    } catch (error) {
-        if (error && error.name === 'AbortError') {
-            console.error('Jikan: délai dépassé (timeout)', url);
-        } else {
-            console.error('Erreur lors de la récupération des données:', error);
-        }
-        return null;
-    } finally {
-        clearTimeout(timeoutId);
+    const cachedEntry = getCachedApiResponse(url);
+    const isFreshCache = cachedEntry && (Date.now() - cachedEntry.timestamp <= API_CACHE_TTL_MS);
+    if (isFreshCache) {
+        console.log('🧠 Réponse API servie depuis le cache local:', url);
+        return cachedEntry.payload;
     }
+
+    for (let attempt = 0; attempt <= API_FETCH_RETRY_COUNT; attempt++) {
+        const FETCH_TIMEOUT_MS = 28000;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+        try {
+            const response = await fetch(url, { signal: controller.signal });
+
+            if (!response.ok) {
+                if (response.status === 429 || response.status >= 500) {
+                    console.warn(`⚠️ API temporairement indisponible (${response.status}). Tentative ${attempt + 1}/${API_FETCH_RETRY_COUNT + 1}`);
+                    if (attempt < API_FETCH_RETRY_COUNT) {
+                        await wait(API_FETCH_RETRY_DELAY_MS * (attempt + 1));
+                        continue;
+                    }
+                } else {
+                    console.warn(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+                }
+                break;
+            }
+
+            const data = await response.json();
+            console.log(`API Response:`, data);
+            saveCachedApiResponse(url, data);
+            return data;
+        } catch (error) {
+            if (error && error.name === 'AbortError') {
+                console.error(`Jikan: délai dépassé (timeout), tentative ${attempt + 1}/${API_FETCH_RETRY_COUNT + 1}`, url);
+            } else {
+                console.error(`Erreur lors de la récupération des données (tentative ${attempt + 1}/${API_FETCH_RETRY_COUNT + 1}):`, error);
+            }
+
+            if (attempt < API_FETCH_RETRY_COUNT) {
+                await wait(API_FETCH_RETRY_DELAY_MS * (attempt + 1));
+                continue;
+            }
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    const canUseStaleCache = cachedEntry && (Date.now() - cachedEntry.timestamp <= API_CACHE_STALE_MAX_MS);
+    if (canUseStaleCache) {
+        console.warn('⚠️ Utilisation d\'un cache stale Jikan (offline fallback):', url);
+        return cachedEntry.payload;
+    }
+
+    return null;
 }
 
 // Fonction pour récupérer les statuts personnels de la collection
