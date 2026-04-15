@@ -6,8 +6,15 @@ export default {
     if (url.pathname.startsWith("/api/jikan/")) {
       const upstreamPath = url.pathname.slice("/api/jikan/".length);
       const upstreamUrl = `https://api.jikan.moe/v4/${upstreamPath}${url.search}`;
+      const cache = caches.default;
+      const cacheKey = new Request(url.toString(), { method: "GET" });
 
       try {
+        const cachedResponse = await cache.match(cacheKey);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
         const upstreamResponse = await fetch(upstreamUrl, {
           method: "GET",
           headers: {
@@ -15,16 +22,28 @@ export default {
           }
         });
 
+        // Jikan peut répondre 429; si on a un cache, on le renvoie
+        if (upstreamResponse.status === 429) {
+          const stale = await cache.match(cacheKey);
+          if (stale) return stale;
+        }
+
         const headers = new Headers(upstreamResponse.headers);
         headers.set("Access-Control-Allow-Origin", "*");
-        headers.set("Cache-Control", "public, max-age=120");
+        headers.set("Cache-Control", "public, max-age=600");
         headers.set("X-MangaWatch-Proxy", "jikan");
-
-        return new Response(upstreamResponse.body, {
+        const proxiedResponse = new Response(upstreamResponse.body, {
           status: upstreamResponse.status,
           statusText: upstreamResponse.statusText,
           headers
         });
+
+        // Mettre en cache uniquement les réponses valides
+        if (upstreamResponse.ok) {
+          await cache.put(cacheKey, proxiedResponse.clone());
+        }
+
+        return proxiedResponse;
       } catch (_) {
         return new Response(
           JSON.stringify({
