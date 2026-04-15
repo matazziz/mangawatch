@@ -1120,15 +1120,45 @@ function mapTypeToAniListFormat(typeValue, mediaType) {
         novel: 'NOVEL',
         one_shot: 'ONE_SHOT',
         one: 'ONE_SHOT',
-        doujin: 'DOUJINSHI',
-        manhwa: 'MANGA',
-        manhua: 'MANGA'
+        // AniList n'expose pas un format fiable "doujin" public
+        doujin: null,
+        manhwa: null,
+        manhua: null
     };
     return mediaType === 'anime' ? (animeMap[normalized] || null) : (mangaMap[normalized] || null);
 }
 
+function mapGenreToAniList(genreValue) {
+    if (!genreValue) return null;
+    const g = String(genreValue).trim();
+    // Evite les 400 AniList avec des genres localises (FR/DE/ES...)
+    if (!/^[A-Za-z][A-Za-z\s-]*$/.test(g)) return null;
+    return g;
+}
+
+function applySelectedTypePostFilter(items, selectedType, mediaType) {
+    if (!Array.isArray(items) || items.length === 0) return items || [];
+    const selected = (selectedType || '').toLowerCase();
+    if (!selected) return items;
+
+    if (mediaType === 'anime' || selected === 'anime') {
+        return items.filter(i => ['TV', 'Movie', 'OVA', 'ONA', 'Special', 'Music'].includes(i.type));
+    }
+    if (selected === 'novel') return items.filter(i => i.type === 'Novel');
+    if (selected === 'doujin') {
+        return items.filter(i => {
+            const genres = (i.genres || []).map(g => String(g.name || g).toLowerCase());
+            return genres.includes('hentai') || genres.includes('erotica');
+        });
+    }
+    // manga par defaut: evite de melanger avec les subsets si on n'est pas dans leurs onglets
+    if (selected === 'manga') return items.filter(i => i.type === 'Manga' || i.type === 'One Shot');
+    return items;
+}
+
 async function fetchContentFromAPI(endpoint, params) {
     const mediaType = endpoint === 'anime' ? 'anime' : 'manga';
+    const selectedType = (params.get('type') || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
     const page = parseInt(params.get('page') || '1', 10);
     const perPage = parseInt(params.get('limit') || ITEMS_PER_PAGE.toString(), 10);
     const search = (params.get('q') || '').trim();
@@ -1137,7 +1167,8 @@ async function fetchContentFromAPI(endpoint, params) {
     const status = mapStatusToAniList(params.get('status') || '');
     const format = mapTypeToAniListFormat(params.get('type') || '', mediaType);
     const genreFromParams = params.get('genre') || '';
-    const genre = genreFromParams || (isGenreSortActive && selectedGenres.length > 0 ? selectedGenres[0] : '');
+    const rawGenre = genreFromParams || (isGenreSortActive && selectedGenres.length > 0 ? selectedGenres[0] : '');
+    const genre = mapGenreToAniList(rawGenre);
     const anilistSort = mapOrderByToAniList(orderBy, sort, mediaType);
 
     const query = `
@@ -1185,6 +1216,7 @@ async function fetchContentFromAPI(endpoint, params) {
     mwDebug('AniList:request', {
         endpoint,
         mediaType,
+        selectedType,
         variables
     });
 
@@ -1240,8 +1272,16 @@ async function fetchContentFromAPI(endpoint, params) {
         currentPage: pageData.pageInfo?.currentPage || page,
         lastPage: pageData.pageInfo?.lastPage || 1
     });
+    const mappedData = mediaList.map(media => convertAniListMediaToLegacy(media, mediaType));
+    const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
+    mwDebug('AniList:post-filter', {
+        selectedType,
+        beforeCount: mappedData.length,
+        afterCount: filteredData.length
+    });
+
     return {
-        data: mediaList.map(media => convertAniListMediaToLegacy(media, mediaType)),
+        data: filteredData,
         pagination: {
             last_visible_page: pageData.pageInfo?.lastPage || 1,
             current_page: pageData.pageInfo?.currentPage || page,
@@ -1314,8 +1354,11 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
             mediaCount: pageData.media?.length || 0,
             currentPage: pageData.pageInfo?.currentPage || page
         });
+        const selectedType = (elements.typeFilter?.value || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
+        const mappedData = (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType));
+        const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
         return {
-            data: (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType)),
+            data: filteredData,
             pagination: {
                 last_visible_page: pageData.pageInfo?.lastPage || 1,
                 current_page: pageData.pageInfo?.currentPage || page,
