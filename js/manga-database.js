@@ -1,5 +1,5 @@
 // Configuration
-const API_BASE_URL = '/api/jikan';
+const API_BASE_URL = 'https://api.jikan.moe/v4';
 const ITEMS_PER_PAGE = 25; // Limite maximale qui fonctionne avec l'API Jikan
 const API_FETCH_RETRY_COUNT = 2;
 const API_FETCH_RETRY_DELAY_MS = 1200;
