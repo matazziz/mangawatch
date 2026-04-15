@@ -969,7 +969,7 @@ async function fetchContentList() {
                 }
             }, 200);
         } else {
-            showError('Aucune donnée reçue de l\'API (Jikan indisponible, limite ou timeout). Réessayez dans un instant.');
+            showError('Aucune donnée reçue de l\'API. Réessayez dans un instant.');
             totalPages = 1;
             currentPage = 1;
             updatePagination();
@@ -1124,11 +1124,17 @@ async function fetchContentFromAPI(endpoint, params) {
 
     if (!response.ok) {
         console.warn(`AniList HTTP ${response.status}`);
-        return null;
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
     }
 
     const payload = await response.json();
-    if (!payload?.data?.Page) return null;
+    if (payload?.errors?.length) {
+        console.warn('AniList GraphQL errors, fallback simple query:', payload.errors);
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
+    if (!payload?.data?.Page) {
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
 
     const pageData = payload.data.Page;
     return {
@@ -1139,6 +1145,70 @@ async function fetchContentFromAPI(endpoint, params) {
             has_next_page: !!pageData.pageInfo?.hasNextPage
         }
     };
+}
+
+async function fetchAniListSimpleFallback(mediaType, page, perPage) {
+    const fallbackQuery = `
+        query ($page: Int, $perPage: Int, $type: MediaType) {
+            Page(page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                media(type: $type, sort: [POPULARITY_DESC]) {
+                    id
+                    title { romaji english native }
+                    description(asHtml: false)
+                    averageScore
+                    popularity
+                    episodes
+                    duration
+                    chapters
+                    volumes
+                    status
+                    format
+                    startDate { year }
+                    coverImage { medium large }
+                    genres
+                }
+            }
+        }
+    `;
+
+    try {
+        const fallbackResponse = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+                query: fallbackQuery,
+                variables: {
+                    page,
+                    perPage,
+                    type: mediaType === 'anime' ? 'ANIME' : 'MANGA'
+                }
+            })
+        });
+
+        if (!fallbackResponse.ok) return null;
+        const payload = await fallbackResponse.json();
+        if (!payload?.data?.Page) return null;
+
+        const pageData = payload.data.Page;
+        return {
+            data: (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType)),
+            pagination: {
+                last_visible_page: pageData.pageInfo?.lastPage || 1,
+                current_page: pageData.pageInfo?.currentPage || page,
+                has_next_page: !!pageData.pageInfo?.hasNextPage
+            }
+        };
+    } catch (error) {
+        console.warn('AniList simple fallback failed:', error);
+        return null;
+    }
 }
 
 // Fonction pour récupérer les statuts personnels de la collection
