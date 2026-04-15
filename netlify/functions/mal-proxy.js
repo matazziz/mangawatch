@@ -1,4 +1,6 @@
 const MAL_API_BASE = "https://api.myanimelist.net/v2";
+const MAL_FIELDS_ANIME = "id,title,main_picture,start_date,synopsis,mean,media_type,status,genres,num_episodes";
+const MAL_FIELDS_MANGA = "id,title,main_picture,start_date,synopsis,mean,media_type,status,genres,num_volumes,num_chapters";
 
 function toInt(value, fallback) {
   const n = parseInt(String(value ?? ""), 10);
@@ -31,12 +33,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: "Missing id for detail action" })
       };
     }
-    params.set(
-      "fields",
-      mediaType === "anime"
-        ? "id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,nsfw,created_at,updated_at,media_type,status,genres,num_episodes,start_season,broadcast,source,average_episode_duration,rating,pictures,background,studios"
-        : "id,title,main_picture,alternative_titles,start_date,end_date,synopsis,mean,rank,popularity,num_list_users,num_scoring_users,nsfw,created_at,updated_at,media_type,status,genres,num_volumes,num_chapters,authors,pictures,background"
-    );
+    params.set("fields", mediaType === "anime" ? MAL_FIELDS_ANIME : MAL_FIELDS_MANGA);
     upstreamUrl = `${MAL_API_BASE}/${mediaType}/${encodeURIComponent(id)}?${params.toString()}`;
   } else if (action === "search") {
     const q = (qs.q || "").trim();
@@ -49,12 +46,7 @@ exports.handler = async (event) => {
     }
     params.set("q", q);
     params.set("limit", String(Math.min(100, Math.max(1, toInt(qs.limit, 25)))));
-    params.set(
-      "fields",
-      mediaType === "anime"
-        ? "id,title,main_picture,start_date,synopsis,mean,media_type,status,genres,num_episodes"
-        : "id,title,main_picture,start_date,synopsis,mean,media_type,status,genres,num_volumes,num_chapters"
-    );
+    params.set("fields", mediaType === "anime" ? MAL_FIELDS_ANIME : MAL_FIELDS_MANGA);
     params.set("nsfw", "false");
     upstreamUrl = `${MAL_API_BASE}/${mediaType}?${params.toString()}`;
   } else {
@@ -65,12 +57,7 @@ exports.handler = async (event) => {
     params.set("ranking_type", rankingType);
     params.set("limit", String(limit));
     params.set("offset", String(offset));
-    params.set(
-      "fields",
-      mediaType === "anime"
-        ? "id,title,main_picture,start_date,synopsis,mean,media_type,status,genres,num_episodes"
-        : "id,title,main_picture,start_date,synopsis,mean,media_type,status,genres,num_volumes,num_chapters"
-    );
+    params.set("fields", mediaType === "anime" ? MAL_FIELDS_ANIME : MAL_FIELDS_MANGA);
     params.set("nsfw", "false");
     upstreamUrl = `${MAL_API_BASE}/${mediaType}/ranking?${params.toString()}`;
   }
