@@ -1097,6 +1097,30 @@ function mapStatusToAniList(status) {
     return map[status] || null;
 }
 
+function mapTypeToAniListFormat(typeValue, mediaType) {
+    if (!typeValue) return null;
+    const normalized = String(typeValue).toLowerCase();
+    const animeMap = {
+        tv: 'TV',
+        movie: 'MOVIE',
+        ova: 'OVA',
+        ona: 'ONA',
+        special: 'SPECIAL',
+        music: 'MUSIC',
+        anime: null
+    };
+    const mangaMap = {
+        manga: 'MANGA',
+        novel: 'NOVEL',
+        one_shot: 'ONE_SHOT',
+        one: 'ONE_SHOT',
+        doujin: 'DOUJINSHI',
+        manhwa: 'MANGA',
+        manhua: 'MANGA'
+    };
+    return mediaType === 'anime' ? (animeMap[normalized] || null) : (mangaMap[normalized] || null);
+}
+
 async function fetchContentFromAPI(endpoint, params) {
     const mediaType = endpoint === 'anime' ? 'anime' : 'manga';
     const page = parseInt(params.get('page') || '1', 10);
@@ -1105,12 +1129,13 @@ async function fetchContentFromAPI(endpoint, params) {
     const orderBy = params.get('order_by') || '';
     const sort = params.get('sort') || 'desc';
     const status = mapStatusToAniList(params.get('status') || '');
+    const format = mapTypeToAniListFormat(params.get('type') || '', mediaType);
     const genreFromParams = params.get('genre') || '';
     const genre = genreFromParams || (isGenreSortActive && selectedGenres.length > 0 ? selectedGenres[0] : '');
     const anilistSort = mapOrderByToAniList(orderBy, sort, mediaType);
 
     const query = `
-        query ($page: Int, $perPage: Int, $type: MediaType, $search: String, $status: MediaStatus, $genre: String, $sort: [MediaSort]) {
+        query ($page: Int, $perPage: Int, $type: MediaType, $search: String, $status: MediaStatus, $genre: String, $sort: [MediaSort], $format: MediaFormat, $isAdult: Boolean) {
             Page(page: $page, perPage: $perPage) {
                 pageInfo {
                     total
@@ -1119,7 +1144,7 @@ async function fetchContentFromAPI(endpoint, params) {
                     hasNextPage
                     perPage
                 }
-                media(type: $type, search: $search, status: $status, genre: $genre, sort: $sort) {
+                media(type: $type, search: $search, status: $status, genre: $genre, sort: $sort, format: $format, isAdult: $isAdult) {
                     id
                     title { romaji english native }
                     description(asHtml: false)
@@ -1146,7 +1171,9 @@ async function fetchContentFromAPI(endpoint, params) {
         search: search || null,
         status: status || null,
         genre: genre || null,
-        sort: anilistSort
+        sort: anilistSort,
+        format: format || null,
+        isAdult: false
     };
 
     mwDebug('AniList:request', {
@@ -1182,14 +1209,33 @@ async function fetchContentFromAPI(endpoint, params) {
         return fetchAniListSimpleFallback(mediaType, page, perPage);
     }
 
-    const pageData = payload.data.Page;
+    let pageData = payload.data.Page;
+    let mediaList = pageData.media || [];
+
+    if (mediaList.length === 0 && genre) {
+        mwDebug('AniList:retry-without-genre', { originalGenre: genre, mediaType });
+        const retryResponse = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ query, variables: { ...variables, genre: null } })
+        });
+        if (retryResponse.ok) {
+            const retryPayload = await retryResponse.json();
+            if (retryPayload?.data?.Page?.media?.length) {
+                pageData = retryPayload.data.Page;
+                mediaList = pageData.media;
+                mwDebug('AniList:retry-without-genre:success', { mediaCount: mediaList.length });
+            }
+        }
+    }
+
     mwDebug('AniList:mapped-result', {
-        mappedCount: pageData.media?.length || 0,
+        mappedCount: mediaList.length || 0,
         currentPage: pageData.pageInfo?.currentPage || page,
         lastPage: pageData.pageInfo?.lastPage || 1
     });
     return {
-        data: (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType)),
+        data: mediaList.map(media => convertAniListMediaToLegacy(media, mediaType)),
         pagination: {
             last_visible_page: pageData.pageInfo?.lastPage || 1,
             current_page: pageData.pageInfo?.currentPage || page,
@@ -1209,7 +1255,7 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
                     hasNextPage
                     perPage
                 }
-                media(type: $type, sort: [POPULARITY_DESC]) {
+                media(type: $type, sort: [POPULARITY_DESC], isAdult: false) {
                     id
                     title { romaji english native }
                     description(asHtml: false)
