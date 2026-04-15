@@ -337,9 +337,7 @@
                 }
                 
                 // Utiliser l'endpoint approprié selon le type
-                const apiUrl = contentType === 'manga' 
-                    ? `https://api.jikan.moe/v4/manga/${contentId}/full`
-                    : `https://api.jikan.moe/v4/anime/${contentId}/full`;
+                const apiUrl = `/.netlify/functions/mal-proxy?action=detail&mediaType=${contentType === 'manga' ? 'manga' : 'anime'}&id=${encodeURIComponent(contentId)}`;
                 console.log('🌐 Appel API:', apiUrl);
                 const startedAt = performance.now();
                 mwDebug('anime-details:request', { apiUrl });
@@ -365,8 +363,8 @@
                             genresCount: data?.data?.genres?.length || 0
                         });
                         
-                        if (data.data) {
-                            const content = data.data;
+                        const content = normalizeContentDetailsPayload(data, contentType);
+                        if (content) {
                             console.log('✅ Données contenu reçues:', content);
                             console.log('🎭 Genres:', content.genres);
                             console.log('📝 Synopsis original:', content.synopsis);
@@ -395,6 +393,40 @@
                         reject(error);
                     });
             });
+        }
+
+        function normalizeContentDetailsPayload(data, mediaType) {
+            if (data && data.data) return data.data; // compat Jikan historique
+            if (!data || !data.id) return null;
+
+            const year = data.start_date ? new Date(data.start_date).getFullYear() : null;
+            const image = data.main_picture?.large || data.main_picture?.medium || '';
+            return {
+                mal_id: data.id,
+                title: data.title || 'Sans titre',
+                title_english: data.alternative_titles?.en || null,
+                images: {
+                    jpg: {
+                        large_image_url: image,
+                        image_url: image
+                    }
+                },
+                synopsis: data.synopsis || 'Synopsis indisponible.',
+                score: data.mean || null,
+                popularity: data.popularity || 0,
+                rank: data.rank || null,
+                status: data.status || null,
+                type: data.media_type || (mediaType === 'anime' ? 'TV' : 'Manga'),
+                episodes: data.num_episodes || null,
+                volumes: data.num_volumes || null,
+                chapters: data.num_chapters || null,
+                genres: (data.genres || []).map(g => ({ name: g.name })),
+                published: { prop: { from: { year } } },
+                aired: { prop: { from: { year } } },
+                trailer: null,
+                studios: (data.studios || []).map(s => ({ name: s.name })),
+                background: data.background || null
+            };
         }
         
         // Fonction helper pour obtenir le type traduit

@@ -1187,231 +1187,139 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
     return items;
 }
 
+function mapMalStatusToLegacy(status) {
+    const map = {
+        currently_publishing: 'publishing',
+        currently_airing: 'publishing',
+        finished_publishing: 'complete',
+        finished_airing: 'complete',
+        on_hiatus: 'hiatus',
+        discontinued: 'discontinued',
+        not_yet_published: 'publishing',
+        not_yet_aired: 'publishing'
+    };
+    return map[status] || 'complete';
+}
+
+function mapMalType(mediaType, malMediaType) {
+    const t = String(malMediaType || '').toLowerCase();
+    if (mediaType === 'anime') {
+        if (t === 'movie') return 'Movie';
+        if (t === 'ova') return 'OVA';
+        if (t === 'ona') return 'ONA';
+        if (t === 'special') return 'Special';
+        if (t === 'music') return 'Music';
+        return 'TV';
+    }
+    if (t === 'novel') return 'Novel';
+    if (t === 'one_shot') return 'One Shot';
+    if (t === 'doujinshi') return 'Doujinshi';
+    if (t === 'manhwa') return 'Manhwa';
+    if (t === 'manhua') return 'Manhua';
+    return 'Manga';
+}
+
+function mapMalNodeToLegacy(node, mediaType) {
+    const year = node.start_date ? new Date(node.start_date).getFullYear() : null;
+    const image = node.main_picture?.large || node.main_picture?.medium || '';
+    return {
+        mal_id: node.id,
+        title: node.title || 'Sans titre',
+        synopsis: node.synopsis || 'Synopsis indisponible.',
+        score: node.mean || null,
+        images: { jpg: { image_url: image, large_image_url: image } },
+        genres: (node.genres || []).map(g => ({ name: g.name })),
+        type: mapMalType(mediaType, node.media_type),
+        rawFormat: node.media_type || null,
+        countryOfOrigin: null,
+        status: mapMalStatusToLegacy(node.status),
+        episodes: node.num_episodes || null,
+        duration: node.average_episode_duration ? `${Math.round(node.average_episode_duration / 60)} min` : null,
+        chapters: node.num_chapters || null,
+        volumes: node.num_volumes || null,
+        published: { prop: { from: { year } } },
+        aired: { prop: { from: { year } } },
+        popularity: node.popularity || 0
+    };
+}
+
+function mapSelectedTypeToMalRankingType(selectedType, mediaType) {
+    const s = String(selectedType || '').toLowerCase();
+    if (mediaType === 'anime') {
+        if (['tv', 'movie', 'ova', 'special'].includes(s)) return s;
+        return 'all';
+    }
+    if (mediaType === 'manga') {
+        if (['manga', 'novel', 'one_shot', 'doujinshi', 'manhwa', 'manhua'].includes(s)) return s;
+    }
+    return 'all';
+}
+
 async function fetchContentFromAPI(endpoint, params) {
     const mediaType = endpoint === 'anime' ? 'anime' : 'manga';
     const selectedType = (params.get('type') || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
     const page = parseInt(params.get('page') || '1', 10);
     const perPage = parseInt(params.get('limit') || ITEMS_PER_PAGE.toString(), 10);
     const search = (params.get('q') || '').trim();
-    const orderBy = params.get('order_by') || '';
-    const sort = params.get('sort') || 'desc';
-    const status = mapStatusToAniList(params.get('status') || '');
-    const format = mapTypeToAniListFormat(params.get('type') || '', mediaType);
-    const genreFromParams = params.get('genre') || '';
-    const rawGenre = genreFromParams || (isGenreSortActive && selectedGenres.length > 0 ? selectedGenres[0] : '');
-    const genre = mapGenreToAniList(rawGenre);
-    const anilistSort = mapOrderByToAniList(orderBy, sort, mediaType);
+    const rankingType = mapSelectedTypeToMalRankingType(selectedType, mediaType);
 
-    const query = `
-        query ($page: Int, $perPage: Int, $type: MediaType, $search: String, $status: MediaStatus, $genre: String, $sort: [MediaSort], $format: MediaFormat, $isAdult: Boolean) {
-            Page(page: $page, perPage: $perPage) {
-                pageInfo {
-                    total
-                    currentPage
-                    lastPage
-                    hasNextPage
-                    perPage
-                }
-                media(type: $type, search: $search, status: $status, genre: $genre, sort: $sort, format: $format, isAdult: $isAdult) {
-                    id
-                    title { romaji english native }
-                    description(asHtml: false)
-                    averageScore
-                    popularity
-                    episodes
-                    duration
-                    chapters
-                    volumes
-                    status
-                    format
-                    countryOfOrigin
-                    startDate { year }
-                    coverImage { medium large extraLarge }
-                    genres
-                }
-            }
-        }
-    `;
+    const malUrl = new URL('/.netlify/functions/mal-proxy', window.location.origin);
+    malUrl.searchParams.set('mediaType', mediaType);
+    malUrl.searchParams.set('page', String(page));
+    malUrl.searchParams.set('limit', String(perPage));
 
-    const variables = {
-        page,
-        perPage,
-        type: mediaType === 'anime' ? 'ANIME' : 'MANGA',
-        search: search || null,
-        status: status || null,
-        genre: genre || null,
-        sort: anilistSort,
-        format: format || null,
-        isAdult: false
-    };
+    if (search) {
+        malUrl.searchParams.set('action', 'search');
+        malUrl.searchParams.set('q', search);
+    } else {
+        malUrl.searchParams.set('action', 'list');
+        malUrl.searchParams.set('ranking_type', rankingType);
+    }
 
-    mwDebug('AniList:request', {
+    mwDebug('MAL:request', {
         endpoint,
         mediaType,
         selectedType,
-        variables
+        rankingType,
+        url: malUrl.toString()
     });
 
-    const response = await fetch(ANILIST_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ query, variables })
+    const response = await fetch(malUrl.toString(), {
+        headers: { Accept: 'application/json' }
     });
 
     if (!response.ok) {
-        console.warn(`AniList HTTP ${response.status}`);
-        mwDebug('AniList:http-error', { status: response.status, statusText: response.statusText });
-        return fetchAniListSimpleFallback(mediaType, page, perPage);
+        mwDebug('MAL:http-error', { status: response.status, statusText: response.statusText });
+        return null;
     }
 
     const payload = await response.json();
-    mwDebug('AniList:payload-meta', {
-        hasErrors: !!payload?.errors?.length,
-        errorCount: payload?.errors?.length || 0,
-        hasPage: !!payload?.data?.Page,
-        mediaCount: payload?.data?.Page?.media?.length || 0
-    });
-    if (payload?.errors?.length) {
-        console.warn('AniList GraphQL errors, fallback simple query:', payload.errors);
-        return fetchAniListSimpleFallback(mediaType, page, perPage);
-    }
-    if (!payload?.data?.Page) {
-        return fetchAniListSimpleFallback(mediaType, page, perPage);
-    }
-
-    let pageData = payload.data.Page;
-    let mediaList = pageData.media || [];
-
-    if (mediaList.length === 0 && genre) {
-        mwDebug('AniList:retry-without-genre', { originalGenre: genre, mediaType });
-        const retryResponse = await fetch(ANILIST_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ query, variables: { ...variables, genre: null } })
-        });
-        if (retryResponse.ok) {
-            const retryPayload = await retryResponse.json();
-            if (retryPayload?.data?.Page?.media?.length) {
-                pageData = retryPayload.data.Page;
-                mediaList = pageData.media;
-                mwDebug('AniList:retry-without-genre:success', { mediaCount: mediaList.length });
-            }
-        }
-    }
-
-    mwDebug('AniList:mapped-result', {
-        mappedCount: mediaList.length || 0,
-        currentPage: pageData.pageInfo?.currentPage || page,
-        lastPage: pageData.pageInfo?.lastPage || 1
-    });
-
-    // Sécurité: si la requête principale renvoie 0 résultat, utiliser le fallback simple
-    if (mediaList.length === 0) {
-        mwDebug('AniList:empty-main-result -> fallback');
-        return fetchAniListSimpleFallback(mediaType, page, perPage);
-    }
-
-    const mappedData = mediaList.map(media => convertAniListMediaToLegacy(media, mediaType));
+    const rawItems = Array.isArray(payload?.data) ? payload.data : [];
+    const mappedData = rawItems
+        .map(item => mapMalNodeToLegacy(item?.node || item, mediaType))
+        .filter(Boolean);
     const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
-    mwDebug('AniList:post-filter', {
-        selectedType,
-        beforeCount: mappedData.length,
-        afterCount: filteredData.length
+
+    const hasNext = !!payload?.paging?.next;
+    const currentPage = page;
+    const estimatedLastPage = hasNext ? Math.max(currentPage + 1, 2) : currentPage;
+
+    mwDebug('MAL:result', {
+        rawCount: rawItems.length,
+        mappedCount: mappedData.length,
+        filteredCount: filteredData.length,
+        currentPage,
+        estimatedLastPage
     });
 
     return {
         data: filteredData,
         pagination: {
-            last_visible_page: pageData.pageInfo?.lastPage || 1,
-            current_page: pageData.pageInfo?.currentPage || page,
-            has_next_page: !!pageData.pageInfo?.hasNextPage
+            last_visible_page: estimatedLastPage,
+            current_page: currentPage,
+            has_next_page: hasNext
         }
     };
-}
-
-async function fetchAniListSimpleFallback(mediaType, page, perPage) {
-    const fallbackQuery = `
-        query ($page: Int, $perPage: Int, $type: MediaType) {
-            Page(page: $page, perPage: $perPage) {
-                pageInfo {
-                    total
-                    currentPage
-                    lastPage
-                    hasNextPage
-                    perPage
-                }
-                media(type: $type, sort: [SCORE_DESC], isAdult: false) {
-                    id
-                    title { romaji english native }
-                    description(asHtml: false)
-                    averageScore
-                    popularity
-                    episodes
-                    duration
-                    chapters
-                    volumes
-                    status
-                    format
-                    countryOfOrigin
-                    startDate { year }
-                    coverImage { medium large extraLarge }
-                    genres
-                }
-            }
-        }
-    `;
-
-    try {
-        mwDebug('AniList:fallback-request', { mediaType, page, perPage });
-        const fallbackResponse = await fetch(ANILIST_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-                query: fallbackQuery,
-                variables: {
-                    page,
-                    perPage,
-                    type: mediaType === 'anime' ? 'ANIME' : 'MANGA'
-                }
-            })
-        });
-
-        if (!fallbackResponse.ok) {
-            mwDebug('AniList:fallback-http-error', {
-                status: fallbackResponse.status,
-                statusText: fallbackResponse.statusText
-            });
-            return null;
-        }
-        const payload = await fallbackResponse.json();
-        if (!payload?.data?.Page) {
-            mwDebug('AniList:fallback-empty-payload');
-            return null;
-        }
-
-        const pageData = payload.data.Page;
-        mwDebug('AniList:fallback-success', {
-            mediaCount: pageData.media?.length || 0,
-            currentPage: pageData.pageInfo?.currentPage || page
-        });
-        const selectedType = (elements.typeFilter?.value || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
-        const mappedData = (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType));
-        const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
-        return {
-            data: filteredData,
-            pagination: {
-                last_visible_page: pageData.pageInfo?.lastPage || 1,
-                current_page: pageData.pageInfo?.currentPage || page,
-                has_next_page: !!pageData.pageInfo?.hasNextPage
-            }
-        };
-    } catch (error) {
-        console.warn('AniList simple fallback failed:', error);
-        mwDebug('AniList:fallback-error', {
-            message: error?.message || String(error)
-        });
-        return null;
-    }
 }
 
 // Fonction pour récupérer les statuts personnels de la collection
