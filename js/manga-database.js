@@ -938,8 +938,13 @@ function initializePage() {
 async function fetchContentList() {
     try {
         showLoading(true);
+        const selectedType = elements.typeFilter?.value || currentFilters.type || 'manga';
+        const effectiveEndpoint = selectedType === 'anime' ? 'anime' : 'manga';
+        currentContentType = effectiveEndpoint;
         mwDebug('fetchContentList:start', {
             currentContentType,
+            selectedType,
+            effectiveEndpoint,
             currentPage,
             currentFilters: { ...currentFilters },
             isGenreSortActive,
@@ -953,7 +958,7 @@ async function fetchContentList() {
             return;
         }
         
-        const endpoint = currentContentType === 'anime' ? 'anime' : 'manga';
+        const endpoint = effectiveEndpoint;
         
         // Convertir les filtres en URLSearchParams
         const params = new URLSearchParams();
@@ -1110,7 +1115,8 @@ function mapTypeToAniListFormat(typeValue, mediaType) {
         anime: null
     };
     const mangaMap = {
-        manga: 'MANGA',
+        // Laisser "manga" sans format strict pour garder un top complet trié par note
+        manga: null,
         novel: 'NOVEL',
         one_shot: 'ONE_SHOT',
         one: 'ONE_SHOT',
@@ -1255,7 +1261,7 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
                     hasNextPage
                     perPage
                 }
-                media(type: $type, sort: [POPULARITY_DESC], isAdult: false) {
+                media(type: $type, sort: [SCORE_DESC], isAdult: false) {
                     id
                     title { romaji english native }
                     description(asHtml: false)
