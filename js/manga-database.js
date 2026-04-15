@@ -166,6 +166,7 @@ function getTranslatedGenreForCard(apiGenreName) {
 // État de l'application
 let currentPage = 1;
 let totalPages = 1;
+let hasNextPage = false;
 let currentMangaList = [];
 let currentContentType = 'manga'; // 'manga' ou 'anime'
 let isUpdatingFilters = false; // Flag pour éviter les appels récursifs
@@ -983,6 +984,7 @@ async function fetchContentList() {
             if (response.pagination) {
                 totalPages = response.pagination.last_visible_page;
                 currentPage = response.pagination.current_page;
+                hasNextPage = !!response.pagination.has_next_page;
                 updatePagination();
             }
             
@@ -1006,6 +1008,7 @@ async function fetchContentList() {
             showError('Aucune donnée reçue de l\'API. Réessayez dans un instant.');
             totalPages = 1;
             currentPage = 1;
+            hasNextPage = false;
             updatePagination();
             displayContentList([]);
         }
@@ -1018,6 +1021,7 @@ async function fetchContentList() {
         showError('Erreur lors du chargement des données');
         totalPages = 1;
         currentPage = 1;
+        hasNextPage = false;
         updatePagination();
         displayContentList([]);
     } finally {
@@ -1145,8 +1149,8 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
     if (!selected) return items;
 
     if (mediaType === 'anime' || selected === 'anime') {
-        // "Anime" = flux principal TV (les films restent dans le filtre dédié)
-        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'TV');
+        // Par défaut "Anime" doit afficher toutes les sous-catégories anime.
+        return items;
     }
     if (selected === 'movie' || selected === 'film') {
         return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MOVIE');
@@ -1176,13 +1180,9 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
     if (selected === 'manhua') {
         return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'CN');
     }
-    // manga par defaut: evite de melanger avec les subsets si on n'est pas dans leurs onglets
+    // Manga par défaut: afficher toutes les sous-catégories manga non NSFW déjà filtrées par l'API.
     if (selected === 'manga') {
-        return items.filter(i => {
-            const country = (i.countryOfOrigin || '').toUpperCase();
-            const isKoreanOrChinese = country === 'KR' || country === 'CN';
-            return (i.type === 'Manga' || i.type === 'One Shot') && !isKoreanOrChinese;
-        });
+        return items;
     }
     return items;
 }
@@ -1246,11 +1246,12 @@ function mapMalNodeToLegacy(node, mediaType) {
 function mapSelectedTypeToMalRankingType(selectedType, mediaType) {
     const s = String(selectedType || '').toLowerCase();
     if (mediaType === 'anime') {
-        if (['tv', 'movie', 'ova', 'special'].includes(s)) return s;
+        if (['tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(s)) return s;
         return 'all';
     }
     if (mediaType === 'manga') {
-        if (['manga', 'novel', 'one_shot', 'doujinshi', 'manhwa', 'manhua'].includes(s)) return s;
+        if (['novel', 'one_shot', 'doujinshi', 'manhwa', 'manhua'].includes(s)) return s;
+        if (s === 'manga') return 'all';
     }
     return 'all';
 }
@@ -2996,7 +2997,9 @@ function resetFilters() {
 
 // Changer de page
 function changePage(page) {
-    if (page < 1 || page > totalPages) return;
+    if (page < 1) return;
+    // MAL ne fournit pas le total exact des pages, on autorise page+1 si l'API annonce une suite.
+    if (page > totalPages && !(page === currentPage + 1 && hasNextPage)) return;
     
     const previousPage = currentPage;
     currentPage = page;
@@ -3042,7 +3045,7 @@ function updatePagination() {
     if (!elements.prevPage || !elements.nextPage || !elements.pageNumbers) return;
 
     elements.prevPage.disabled = currentPage === 1;
-    elements.nextPage.disabled = currentPage >= totalPages;
+    elements.nextPage.disabled = !hasNextPage && currentPage >= totalPages;
     
     // Afficher les numéros de page
     let pageNumbers = '';
@@ -3514,6 +3517,7 @@ async function applyGenreSort() {
         // Mettre à jour la pagination
         totalPages = data.pagination.last_visible_page;
         currentPage = data.pagination.current_page;
+        hasNextPage = !!data.pagination.has_next_page;
         
         // Mettre à jour la liste globale
         currentMangaList = data.data;
