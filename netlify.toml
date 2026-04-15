@@ -21,6 +21,12 @@
   to = "/pages/acceuil.html"
   status = 200
 
+[[redirects]]
+  # Support des routes /<endpoint> pour la fonction Jikan
+  from = "/.netlify/functions/jikan/*"
+  to = "/.netlify/functions/jikan?endpoint=:splat"
+  status = 200
+
 # Headers pour la sécurité et les performances
 [[headers]]
   for = "/*"
