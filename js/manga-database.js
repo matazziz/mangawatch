@@ -1062,6 +1062,7 @@ async function fetchTopFallbackContent(endpoint) {
     return null;
 }
 
+
 // Fonction helper pour récupérer les données d'un endpoint spécifique
 async function fetchContentFromAPI(endpoint, params) {
     let url = `${API_BASE_URL}/${endpoint}`;
