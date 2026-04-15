@@ -1272,6 +1272,13 @@ async function fetchContentFromAPI(endpoint, params) {
         currentPage: pageData.pageInfo?.currentPage || page,
         lastPage: pageData.pageInfo?.lastPage || 1
     });
+
+    // Sécurité: si la requête principale renvoie 0 résultat, utiliser le fallback simple
+    if (mediaList.length === 0) {
+        mwDebug('AniList:empty-main-result -> fallback');
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
+
     const mappedData = mediaList.map(media => convertAniListMediaToLegacy(media, mediaType));
     const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
     mwDebug('AniList:post-filter', {
