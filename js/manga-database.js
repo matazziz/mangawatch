@@ -2818,8 +2818,12 @@ function updateFilters() {
     }
 }
 
+// Désactivé volontairement : on veut uniquement des données MAL réelles, sans pages synthétiques.
+const ENABLE_SYNTHETIC_NEW_RELEASES_PAGES = false;
+
 // Fonction pour récupérer et ajouter les nouveautés
 async function fetchAndAddNewReleases() {
+    if (!ENABLE_SYNTHETIC_NEW_RELEASES_PAGES) return;
     // Vérifier qu'on est bien sur la dernière page ET que ce n'est pas le chargement initial
     if (currentPage !== totalPages || currentPage === 1) {
         console.log('🆕 Nouveautés ignorées - pas sur la dernière page ou chargement initial');
@@ -2851,6 +2855,7 @@ async function fetchAndAddNewReleases() {
 
 // Fonction pour ajouter les nouveautés à la dernière page
 async function addNewReleasesToLastPage(newReleases) {
+    if (!ENABLE_SYNTHETIC_NEW_RELEASES_PAGES) return;
     try {
         // Récupérer le contenu de la dernière page
         const lastPageParams = new URLSearchParams();
@@ -2895,6 +2900,7 @@ async function addNewReleasesToLastPage(newReleases) {
 
 // Fonction pour mettre à jour la dernière page avec les nouveautés
 async function updateLastPageWithNewReleases(existingContent, newReleases) {
+    if (!ENABLE_SYNTHETIC_NEW_RELEASES_PAGES) return;
     // Combiner le contenu existant avec les nouveautés
     const combinedContent = [...existingContent, ...newReleases];
     
@@ -2911,6 +2917,7 @@ async function updateLastPageWithNewReleases(existingContent, newReleases) {
 
 // Fonction pour créer une nouvelle page avec les nouveautés
 async function createNewPageWithReleases(newReleases) {
+    if (!ENABLE_SYNTHETIC_NEW_RELEASES_PAGES) return;
     // Incrémenter le nombre total de pages
     totalPages++;
     
@@ -3011,12 +3018,7 @@ function changePage(page) {
     // Sauvegarder l'état après le changement de page
     savePageState();
     
-    // Si on navigue VERS la dernière page (pas si on y était déjà), ajouter les nouveautés
-    if (page === totalPages && previousPage !== totalPages) {
-        setTimeout(() => {
-            fetchAndAddNewReleases();
-        }, 2000);
-    }
+    // Pas d'ajout de pages synthétiques : on affiche uniquement la pagination API réelle.
     
     // Sur téléphone, remonter au début de la grille (pas tout en haut de page).
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
