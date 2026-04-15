@@ -1,6 +1,18 @@
 // Configuration
-const API_BASE_URL = 'https://api.jikan.moe/v4';
+const ANILIST_API_URL = 'https://graphql.anilist.co';
 const ITEMS_PER_PAGE = 25; // Limite maximale qui fonctionne avec l'API Jikan
+const MW_DEBUG_ENABLED = new URLSearchParams(window.location.search).get('debug') === '1' ||
+    localStorage.getItem('mw_debug') === '1';
+
+function mwDebug(label, payload) {
+    if (!MW_DEBUG_ENABLED) return;
+    const ts = new Date().toISOString();
+    if (typeof payload === 'undefined') {
+        console.log(`[MW-DEBUG][${ts}] ${label}`);
+    } else {
+        console.log(`[MW-DEBUG][${ts}] ${label}`, payload);
+    }
+}
 
 // Fonction pour nettoyer le synopsis en supprimant les mentions MAL rewrite
 function cleanSynopsis(synopsis) {
@@ -926,6 +938,18 @@ function initializePage() {
 async function fetchContentList() {
     try {
         showLoading(true);
+        const selectedType = elements.typeFilter?.value || currentFilters.type || 'manga';
+        const effectiveEndpoint = selectedType === 'anime' ? 'anime' : 'manga';
+        currentContentType = effectiveEndpoint;
+        mwDebug('fetchContentList:start', {
+            currentContentType,
+            selectedType,
+            effectiveEndpoint,
+            currentPage,
+            currentFilters: { ...currentFilters },
+            isGenreSortActive,
+            selectedGenres: [...selectedGenres]
+        });
         
         // Vérifier si un filtre de genre est actif
         if (isGenreSortActive && selectedGenres.length > 0) {
@@ -934,7 +958,7 @@ async function fetchContentList() {
             return;
         }
         
-        const endpoint = currentContentType === 'anime' ? 'anime' : 'manga';
+        const endpoint = effectiveEndpoint;
         
         // Convertir les filtres en URLSearchParams
         const params = new URLSearchParams();
@@ -945,6 +969,12 @@ async function fetchContentList() {
         });
         
         const response = await fetchContentFromAPI(endpoint, params);
+        mwDebug('fetchContentList:response', {
+            hasResponse: !!response,
+            hasDataArray: !!(response && Array.isArray(response.data)),
+            dataLength: response?.data?.length || 0,
+            pagination: response?.pagination || null
+        });
         
         if (response && response.data) {
             console.log(`📚 ${response.data.length} éléments trouvés`);
@@ -969,13 +999,21 @@ async function fetchContentList() {
                 }
             }, 200);
         } else {
-            showError('Aucune donnée reçue de l\'API (Jikan indisponible, limite ou timeout). Réessayez dans un instant.');
+            mwDebug('fetchContentList:empty-response', {
+                endpoint,
+                params: params.toString()
+            });
+            showError('Aucune donnée reçue de l\'API. Réessayez dans un instant.');
             totalPages = 1;
             currentPage = 1;
             updatePagination();
             displayContentList([]);
         }
     } catch (error) {
+        mwDebug('fetchContentList:error', {
+            message: error?.message || String(error),
+            stack: error?.stack || null
+        });
         console.error('Erreur lors de la récupération des données:', error);
         showError('Erreur lors du chargement des données');
         totalPages = 1;
@@ -988,47 +1026,391 @@ async function fetchContentList() {
 }
 
 // Fonction helper pour récupérer les données d'un endpoint spécifique
-async function fetchContentFromAPI(endpoint, params) {
-    let url = `${API_BASE_URL}/${endpoint}`;
-    if (params.toString()) {
-        url += `?${params.toString()}`;
+function mapAniListStatusToLegacy(status) {
+    const map = {
+        RELEASING: 'publishing',
+        FINISHED: 'complete',
+        HIATUS: 'hiatus',
+        CANCELLED: 'discontinued',
+        NOT_YET_RELEASED: 'publishing'
+    };
+    return map[status] || 'complete';
+}
+
+function mapAniListFormat(mediaType, format) {
+    if (mediaType === 'anime') {
+        if (format === 'MOVIE') return 'Movie';
+        if (format === 'ONA') return 'ONA';
+        if (format === 'OVA') return 'OVA';
+        if (format === 'SPECIAL') return 'Special';
+        if (format === 'MUSIC') return 'Music';
+        return 'TV';
     }
-    
-    console.log(`🔍 Requête API: ${url}`);
-    console.log(`Type de contenu: ${currentContentType}`);
-    console.log(`Filtres:`, params);
-    console.log(`Type filter value: ${elements.typeFilter ? elements.typeFilter.value : 'N/A'}`);
-    
-    const FETCH_TIMEOUT_MS = 28000;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    if (format === 'NOVEL') return 'Novel';
+    if (format === 'ONE_SHOT') return 'One Shot';
+    return 'Manga';
+}
+
+function convertAniListMediaToLegacy(media, mediaType) {
+    return {
+        mal_id: media.id,
+        title: media.title?.english || media.title?.romaji || media.title?.native || 'Sans titre',
+        synopsis: media.description || 'Synopsis indisponible.',
+        score: media.averageScore ? (media.averageScore / 10) : null,
+        images: {
+            jpg: {
+                large_image_url: media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '',
+                image_url: media.coverImage?.large || media.coverImage?.medium || media.coverImage?.extraLarge || ''
+            }
+        },
+        genres: (media.genres || []).map(name => ({ name })),
+        type: mapAniListFormat(mediaType, media.format),
+        rawFormat: media.format || null,
+        countryOfOrigin: media.countryOfOrigin || null,
+        status: mapAniListStatusToLegacy(media.status),
+        episodes: media.episodes || null,
+        duration: media.duration ? `${media.duration} min` : null,
+        chapters: media.chapters || null,
+        volumes: media.volumes || null,
+        published: {
+            prop: {
+                from: { year: media.startDate?.year || null }
+            }
+        },
+        aired: {
+            prop: {
+                from: { year: media.startDate?.year || null }
+            }
+        },
+        popularity: media.popularity || 0
+    };
+}
+
+function mapOrderByToAniList(orderBy, sort, mediaType) {
+    const isAsc = (sort || '').toLowerCase() === 'asc';
+    if (orderBy === 'title') return [isAsc ? 'TITLE_ROMAJI' : 'TITLE_ROMAJI_DESC'];
+    if (orderBy === 'popularity') return ['POPULARITY_DESC'];
+    if (orderBy === 'start_date') return ['START_DATE_DESC'];
+    if (orderBy === 'score') return ['SCORE_DESC'];
+    return mediaType === 'anime' ? ['POPULARITY_DESC'] : ['SCORE_DESC'];
+}
+
+function mapStatusToAniList(status) {
+    const map = {
+        publishing: 'RELEASING',
+        complete: 'FINISHED',
+        hiatus: 'HIATUS',
+        discontinued: 'CANCELLED'
+    };
+    return map[status] || null;
+}
+
+function mapTypeToAniListFormat(typeValue, mediaType) {
+    if (!typeValue) return null;
+    const normalized = String(typeValue).toLowerCase();
+    const animeMap = {
+        tv: 'TV',
+        movie: 'MOVIE',
+        ova: 'OVA',
+        ona: 'ONA',
+        special: 'SPECIAL',
+        music: 'MUSIC',
+        anime: null
+    };
+    const mangaMap = {
+        // Laisser "manga" sans format strict pour garder un top complet trié par note
+        manga: null,
+        novel: 'NOVEL',
+        one_shot: 'ONE_SHOT',
+        one: 'ONE_SHOT',
+        // AniList n'expose pas un format fiable "doujin" public
+        doujin: null,
+        manhwa: null,
+        manhua: null
+    };
+    return mediaType === 'anime' ? (animeMap[normalized] || null) : (mangaMap[normalized] || null);
+}
+
+function mapGenreToAniList(genreValue) {
+    if (!genreValue) return null;
+    const g = String(genreValue).trim();
+    // Evite les 400 AniList avec des genres localises (FR/DE/ES...)
+    if (!/^[A-Za-z][A-Za-z\s-]*$/.test(g)) return null;
+    return g;
+}
+
+function applySelectedTypePostFilter(items, selectedType, mediaType) {
+    if (!Array.isArray(items) || items.length === 0) return items || [];
+    const selected = (selectedType || '').toLowerCase();
+    if (!selected) return items;
+
+    if (mediaType === 'anime' || selected === 'anime') {
+        // "Anime" = flux principal TV (les films restent dans le filtre dédié)
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'TV');
+    }
+    if (selected === 'movie' || selected === 'film') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MOVIE');
+    }
+    if (selected === 'ova') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'OVA');
+    }
+    if (selected === 'ona') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'ONA');
+    }
+    if (selected === 'special') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'SPECIAL');
+    }
+    if (selected === 'music') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MUSIC');
+    }
+    if (selected === 'novel') return items.filter(i => i.type === 'Novel');
+    if (selected === 'doujin') {
+        return items.filter(i => {
+            const genres = (i.genres || []).map(g => String(g.name || g).toLowerCase());
+            return genres.includes('hentai') || genres.includes('erotica');
+        });
+    }
+    if (selected === 'manhwa') {
+        return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'KR');
+    }
+    if (selected === 'manhua') {
+        return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'CN');
+    }
+    // manga par defaut: evite de melanger avec les subsets si on n'est pas dans leurs onglets
+    if (selected === 'manga') {
+        return items.filter(i => {
+            const country = (i.countryOfOrigin || '').toUpperCase();
+            const isKoreanOrChinese = country === 'KR' || country === 'CN';
+            return (i.type === 'Manga' || i.type === 'One Shot') && !isKoreanOrChinese;
+        });
+    }
+    return items;
+}
+
+async function fetchContentFromAPI(endpoint, params) {
+    const mediaType = endpoint === 'anime' ? 'anime' : 'manga';
+    const selectedType = (params.get('type') || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
+    const page = parseInt(params.get('page') || '1', 10);
+    const perPage = parseInt(params.get('limit') || ITEMS_PER_PAGE.toString(), 10);
+    const search = (params.get('q') || '').trim();
+    const orderBy = params.get('order_by') || '';
+    const sort = params.get('sort') || 'desc';
+    const status = mapStatusToAniList(params.get('status') || '');
+    const format = mapTypeToAniListFormat(params.get('type') || '', mediaType);
+    const genreFromParams = params.get('genre') || '';
+    const rawGenre = genreFromParams || (isGenreSortActive && selectedGenres.length > 0 ? selectedGenres[0] : '');
+    const genre = mapGenreToAniList(rawGenre);
+    const anilistSort = mapOrderByToAniList(orderBy, sort, mediaType);
+
+    const query = `
+        query ($page: Int, $perPage: Int, $type: MediaType, $search: String, $status: MediaStatus, $genre: String, $sort: [MediaSort], $format: MediaFormat, $isAdult: Boolean) {
+            Page(page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                media(type: $type, search: $search, status: $status, genre: $genre, sort: $sort, format: $format, isAdult: $isAdult) {
+                    id
+                    title { romaji english native }
+                    description(asHtml: false)
+                    averageScore
+                    popularity
+                    episodes
+                    duration
+                    chapters
+                    volumes
+                    status
+                    format
+                    countryOfOrigin
+                    startDate { year }
+                    coverImage { medium large extraLarge }
+                    genres
+                }
+            }
+        }
+    `;
+
+    const variables = {
+        page,
+        perPage,
+        type: mediaType === 'anime' ? 'ANIME' : 'MANGA',
+        search: search || null,
+        status: status || null,
+        genre: genre || null,
+        sort: anilistSort,
+        format: format || null,
+        isAdult: false
+    };
+
+    mwDebug('AniList:request', {
+        endpoint,
+        mediaType,
+        selectedType,
+        variables
+    });
+
+    const response = await fetch(ANILIST_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query, variables })
+    });
+
+    if (!response.ok) {
+        console.warn(`AniList HTTP ${response.status}`);
+        mwDebug('AniList:http-error', { status: response.status, statusText: response.statusText });
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
+
+    const payload = await response.json();
+    mwDebug('AniList:payload-meta', {
+        hasErrors: !!payload?.errors?.length,
+        errorCount: payload?.errors?.length || 0,
+        hasPage: !!payload?.data?.Page,
+        mediaCount: payload?.data?.Page?.media?.length || 0
+    });
+    if (payload?.errors?.length) {
+        console.warn('AniList GraphQL errors, fallback simple query:', payload.errors);
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
+    if (!payload?.data?.Page) {
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
+
+    let pageData = payload.data.Page;
+    let mediaList = pageData.media || [];
+
+    if (mediaList.length === 0 && genre) {
+        mwDebug('AniList:retry-without-genre', { originalGenre: genre, mediaType });
+        const retryResponse = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ query, variables: { ...variables, genre: null } })
+        });
+        if (retryResponse.ok) {
+            const retryPayload = await retryResponse.json();
+            if (retryPayload?.data?.Page?.media?.length) {
+                pageData = retryPayload.data.Page;
+                mediaList = pageData.media;
+                mwDebug('AniList:retry-without-genre:success', { mediaCount: mediaList.length });
+            }
+        }
+    }
+
+    mwDebug('AniList:mapped-result', {
+        mappedCount: mediaList.length || 0,
+        currentPage: pageData.pageInfo?.currentPage || page,
+        lastPage: pageData.pageInfo?.lastPage || 1
+    });
+
+    // Sécurité: si la requête principale renvoie 0 résultat, utiliser le fallback simple
+    if (mediaList.length === 0) {
+        mwDebug('AniList:empty-main-result -> fallback');
+        return fetchAniListSimpleFallback(mediaType, page, perPage);
+    }
+
+    const mappedData = mediaList.map(media => convertAniListMediaToLegacy(media, mediaType));
+    const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
+    mwDebug('AniList:post-filter', {
+        selectedType,
+        beforeCount: mappedData.length,
+        afterCount: filteredData.length
+    });
+
+    return {
+        data: filteredData,
+        pagination: {
+            last_visible_page: pageData.pageInfo?.lastPage || 1,
+            current_page: pageData.pageInfo?.currentPage || page,
+            has_next_page: !!pageData.pageInfo?.hasNextPage
+        }
+    };
+}
+
+async function fetchAniListSimpleFallback(mediaType, page, perPage) {
+    const fallbackQuery = `
+        query ($page: Int, $perPage: Int, $type: MediaType) {
+            Page(page: $page, perPage: $perPage) {
+                pageInfo {
+                    total
+                    currentPage
+                    lastPage
+                    hasNextPage
+                    perPage
+                }
+                media(type: $type, sort: [SCORE_DESC], isAdult: false) {
+                    id
+                    title { romaji english native }
+                    description(asHtml: false)
+                    averageScore
+                    popularity
+                    episodes
+                    duration
+                    chapters
+                    volumes
+                    status
+                    format
+                    countryOfOrigin
+                    startDate { year }
+                    coverImage { medium large extraLarge }
+                    genres
+                }
+            }
+        }
+    `;
 
     try {
-        const response = await fetch(url, { signal: controller.signal });
+        mwDebug('AniList:fallback-request', { mediaType, page, perPage });
+        const fallbackResponse = await fetch(ANILIST_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({
+                query: fallbackQuery,
+                variables: {
+                    page,
+                    perPage,
+                    type: mediaType === 'anime' ? 'ANIME' : 'MANGA'
+                }
+            })
+        });
 
-        if (!response.ok) {
-            if (response.status === 429) {
-                console.warn(`⚠️ Rate limiting détecté. Attendre avant de réessayer...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                return null;
-            }
-            console.warn(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+        if (!fallbackResponse.ok) {
+            mwDebug('AniList:fallback-http-error', {
+                status: fallbackResponse.status,
+                statusText: fallbackResponse.statusText
+            });
+            return null;
+        }
+        const payload = await fallbackResponse.json();
+        if (!payload?.data?.Page) {
+            mwDebug('AniList:fallback-empty-payload');
             return null;
         }
 
-        const data = await response.json();
-        console.log(`API Response:`, data);
-
-        return data;
+        const pageData = payload.data.Page;
+        mwDebug('AniList:fallback-success', {
+            mediaCount: pageData.media?.length || 0,
+            currentPage: pageData.pageInfo?.currentPage || page
+        });
+        const selectedType = (elements.typeFilter?.value || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
+        const mappedData = (pageData.media || []).map(media => convertAniListMediaToLegacy(media, mediaType));
+        const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
+        return {
+            data: filteredData,
+            pagination: {
+                last_visible_page: pageData.pageInfo?.lastPage || 1,
+                current_page: pageData.pageInfo?.currentPage || page,
+                has_next_page: !!pageData.pageInfo?.hasNextPage
+            }
+        };
     } catch (error) {
-        if (error && error.name === 'AbortError') {
-            console.error('Jikan: délai dépassé (timeout)', url);
-        } else {
-            console.error('Erreur lors de la récupération des données:', error);
-        }
+        console.warn('AniList simple fallback failed:', error);
+        mwDebug('AniList:fallback-error', {
+            message: error?.message || String(error)
+        });
         return null;
-    } finally {
-        clearTimeout(timeoutId);
     }
 }
 
@@ -1069,6 +1451,7 @@ function displayContentList(contentList) {
     console.log('Affichage de', contentList.length, 'éléments');
     
     // Filtrer par statut si un statut est sélectionné
+    const originalContentList = [...contentList];
     let sortedContentList = [...contentList];
     if (elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '') {
         const selectedStatus = elements.statusFilter.value;
@@ -1080,6 +1463,15 @@ function displayContentList(contentList) {
         });
         
         console.log(`📋 Résultat du filtrage statut "${selectedStatus}": ${sortedContentList.length} élément(s)`);
+
+        // Évite l'effet "page vide" quand un statut sauvegardé ne matche rien
+        if (sortedContentList.length === 0 && originalContentList.length > 0) {
+            console.warn(`⚠️ Aucun résultat pour le statut "${selectedStatus}", fallback sur la liste complète`);
+            sortedContentList = [...originalContentList];
+            if (elements.statusFilter) {
+                elements.statusFilter.value = '';
+            }
+        }
     }
     
     // Vider la grille
@@ -1102,13 +1494,32 @@ function displayContentList(contentList) {
         const filteredIds = new Set(filtered.map(f => f.id));
         contentToDisplay = sortedContentList.filter(c => filteredIds.has(c.mal_id));
     }
+
+    // Sécurité finale : ne jamais afficher 0 carte si on avait des données valides
+    if (contentToDisplay.length === 0 && sortedContentList.length > 0) {
+        console.warn('⚠️ Filtrage final vide, fallback sur sortedContentList');
+        contentToDisplay = [...sortedContentList];
+    }
+
+    mwDebug('displayContentList:before-render', {
+        incomingCount: contentList.length,
+        afterStatusFilterCount: sortedContentList.length,
+        finalDisplayCount: contentToDisplay.length
+    });
     
     // Créer et ajouter les cartes
+    let renderFailures = 0;
     contentToDisplay.forEach(content => {
         const card = createContentCard(content);
         if (card) {
             mangaGrid.appendChild(card);
+        } else {
+            renderFailures++;
         }
+    });
+    mwDebug('displayContentList:after-render', {
+        renderedCount: mangaGrid.children.length,
+        renderFailures
     });
     
     // Afficher la grille avec une transition fluide
@@ -2516,16 +2927,7 @@ async function fetchAndAddNewReleases() {
         params.append('sort', 'desc');
         
         const endpoint = currentContentType === 'anime' ? 'anime' : 'manga';
-        const url = `${API_BASE_URL}/${endpoint}?${params.toString()}`;
-        
-        console.log('Fetching nouveautés URL:', url);
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-        }
-        
-        const data = await response.json();
+        const data = await fetchContentFromAPI(endpoint, params);
         
         if (data && data.data && data.data.length > 0) {
             console.log(`🆕 ${data.data.length} nouveautés trouvées`);
@@ -2552,16 +2954,7 @@ async function addNewReleasesToLastPage(newReleases) {
         lastPageParams.append('limit', ITEMS_PER_PAGE);
         
         const endpoint = currentContentType === 'anime' ? 'anime' : 'manga';
-        const lastPageUrl = `${API_BASE_URL}/${endpoint}?${lastPageParams.toString()}`;
-        
-        console.log('Récupération de la dernière page:', lastPageUrl);
-        
-        const response = await fetch(lastPageUrl);
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-        }
-        
-        const data = await response.json();
+        const data = await fetchContentFromAPI(endpoint, lastPageParams);
         
         if (data && data.data) {
             const lastPageContent = data.data;
@@ -3190,8 +3583,8 @@ async function applyGenreSort() {
             }
         });
         
-        // Ajouter le genre comme paramètre de recherche
-        params.append('genres', selectedGenreId);
+        // Ajouter le genre comme paramètre de recherche (nom pour AniList)
+        params.append('genre', selectedGenres[0]);
         
         // S'assurer que le paramètre limit est toujours présent
         if (!params.has('limit')) {
@@ -3200,20 +3593,7 @@ async function applyGenreSort() {
         
         // Recherche normale pour un seul type
         const endpoint = currentContentType === 'anime' ? 'anime' : 'manga';
-        let url = `${API_BASE_URL}/${endpoint}`;
-        if (params.toString()) {
-            url += `?${params.toString()}`;
-        }
-        
-        console.log('🔍 Requête API avec genre:', url);
-        
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
-        }
-        
-        const data = await response.json();
+        const data = await fetchContentFromAPI(endpoint, params);
         console.log('API Response avec genre:', data);
         
         // Vérifier si les données sont valides
