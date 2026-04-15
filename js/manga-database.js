@@ -981,7 +981,11 @@ async function fetchContentList() {
             }
         });
         
-        const response = await fetchContentFromAPI(endpoint, params);
+        let response = await fetchContentFromAPI(endpoint, params);
+        if (!response || !response.data || response.data.length === 0) {
+            console.warn('⚠️ Réponse principale vide/indisponible, tentative fallback top list...');
+            response = await fetchTopFallbackContent(endpoint);
+        }
         
         if (response && response.data) {
             console.log(`📚 ${response.data.length} éléments trouvés`);
@@ -1022,6 +1026,40 @@ async function fetchContentList() {
     } finally {
         showLoading(false);
     }
+}
+
+async function fetchTopFallbackContent(endpoint) {
+    // Fallback robuste : endpoint "top" moins sensible aux filtres/queries complexes
+    const topUrl = `${API_BASE_URL}/top/${endpoint}?filter=bypopularity&page=1&limit=${ITEMS_PER_PAGE}`;
+    const cachedEntry = getCachedApiResponse(topUrl);
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const response = await fetch(topUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data?.data?.length) {
+            saveCachedApiResponse(topUrl, data);
+            console.log('✅ Fallback top list chargé:', topUrl);
+            return data;
+        }
+    } catch (error) {
+        console.warn('⚠️ Fallback top list indisponible:', error.message || error);
+    }
+
+    const canUseStaleCache = cachedEntry && (Date.now() - cachedEntry.timestamp <= API_CACHE_STALE_MAX_MS);
+    if (canUseStaleCache) {
+        console.warn('⚠️ Utilisation du cache stale pour le fallback top list');
+        return cachedEntry.payload;
+    }
+
+    return null;
 }
 
 // Fonction helper pour récupérer les données d'un endpoint spécifique
