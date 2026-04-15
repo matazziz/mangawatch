@@ -1055,15 +1055,18 @@ function convertAniListMediaToLegacy(media, mediaType) {
     return {
         mal_id: media.id,
         title: media.title?.english || media.title?.romaji || media.title?.native || 'Sans titre',
-        synopsis: media.description || '',
+        synopsis: media.description || 'Synopsis indisponible.',
         score: media.averageScore ? (media.averageScore / 10) : null,
         images: {
             jpg: {
-                image_url: media.coverImage?.large || media.coverImage?.medium || ''
+                large_image_url: media.coverImage?.extraLarge || media.coverImage?.large || media.coverImage?.medium || '',
+                image_url: media.coverImage?.large || media.coverImage?.medium || media.coverImage?.extraLarge || ''
             }
         },
         genres: (media.genres || []).map(name => ({ name })),
         type: mapAniListFormat(mediaType, media.format),
+        rawFormat: media.format || null,
+        countryOfOrigin: media.countryOfOrigin || null,
         status: mapAniListStatusToLegacy(media.status),
         episodes: media.episodes || null,
         duration: media.duration ? `${media.duration} min` : null,
@@ -1142,7 +1145,23 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
     if (!selected) return items;
 
     if (mediaType === 'anime' || selected === 'anime') {
-        return items.filter(i => ['TV', 'Movie', 'OVA', 'ONA', 'Special', 'Music'].includes(i.type));
+        // "Anime" = flux principal TV (les films restent dans le filtre dédié)
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'TV');
+    }
+    if (selected === 'movie' || selected === 'film') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MOVIE');
+    }
+    if (selected === 'ova') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'OVA');
+    }
+    if (selected === 'ona') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'ONA');
+    }
+    if (selected === 'special') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'SPECIAL');
+    }
+    if (selected === 'music') {
+        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MUSIC');
     }
     if (selected === 'novel') return items.filter(i => i.type === 'Novel');
     if (selected === 'doujin') {
@@ -1151,8 +1170,20 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
             return genres.includes('hentai') || genres.includes('erotica');
         });
     }
+    if (selected === 'manhwa') {
+        return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'KR');
+    }
+    if (selected === 'manhua') {
+        return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'CN');
+    }
     // manga par defaut: evite de melanger avec les subsets si on n'est pas dans leurs onglets
-    if (selected === 'manga') return items.filter(i => i.type === 'Manga' || i.type === 'One Shot');
+    if (selected === 'manga') {
+        return items.filter(i => {
+            const country = (i.countryOfOrigin || '').toUpperCase();
+            const isKoreanOrChinese = country === 'KR' || country === 'CN';
+            return (i.type === 'Manga' || i.type === 'One Shot') && !isKoreanOrChinese;
+        });
+    }
     return items;
 }
 
@@ -1193,8 +1224,9 @@ async function fetchContentFromAPI(endpoint, params) {
                     volumes
                     status
                     format
+                    countryOfOrigin
                     startDate { year }
-                    coverImage { medium large }
+                    coverImage { medium large extraLarge }
                     genres
                 }
             }
@@ -1320,8 +1352,9 @@ async function fetchAniListSimpleFallback(mediaType, page, perPage) {
                     volumes
                     status
                     format
+                    countryOfOrigin
                     startDate { year }
-                    coverImage { medium large }
+                    coverImage { medium large extraLarge }
                     genres
                 }
             }
