@@ -1148,41 +1148,75 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
     const selected = (selectedType || '').toLowerCase();
     if (!selected) return items;
 
+    const getFormat = (item) => String(item?.rawFormat || item?.type || '')
+        .toUpperCase()
+        .replace(/[-\s]+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '');
+
     if (mediaType === 'anime' || selected === 'anime') {
-        // Par défaut "Anime" doit afficher toutes les sous-catégories anime.
-        return items;
+        // "Anime" (séries) séparé des films.
+        return items.filter(i => {
+            const format = getFormat(i);
+            return ['TV', 'OVA', 'ONA', 'SPECIAL', 'MUSIC', ''].includes(format);
+        });
     }
+
     if (selected === 'movie' || selected === 'film') {
-        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MOVIE');
+        return items.filter(i => getFormat(i) === 'MOVIE');
     }
     if (selected === 'ova') {
-        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'OVA');
+        return items.filter(i => getFormat(i) === 'OVA');
     }
     if (selected === 'ona') {
-        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'ONA');
+        return items.filter(i => getFormat(i) === 'ONA');
     }
     if (selected === 'special') {
-        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'SPECIAL');
+        return items.filter(i => getFormat(i) === 'SPECIAL');
     }
     if (selected === 'music') {
-        return items.filter(i => (i.rawFormat || '').toUpperCase() === 'MUSIC');
+        return items.filter(i => getFormat(i) === 'MUSIC');
     }
-    if (selected === 'novel') return items.filter(i => i.type === 'Novel');
+    if (selected === 'novel') return items.filter(i => getFormat(i) === 'NOVEL');
     if (selected === 'doujin') {
         return items.filter(i => {
+            const format = getFormat(i);
+            if (format === 'DOUJINSHI' || format === 'DOUJIN') return true;
             const genres = (i.genres || []).map(g => String(g.name || g).toLowerCase());
             return genres.includes('hentai') || genres.includes('erotica');
         });
     }
     if (selected === 'manhwa') {
-        return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'KR');
+        return items.filter(i => {
+            const format = getFormat(i);
+            return format === 'MANHWA' || (i.countryOfOrigin || '').toUpperCase() === 'KR';
+        });
     }
     if (selected === 'manhua') {
-        return items.filter(i => (i.countryOfOrigin || '').toUpperCase() === 'CN');
+        return items.filter(i => {
+            const format = getFormat(i);
+            return format === 'MANHUA' || (i.countryOfOrigin || '').toUpperCase() === 'CN';
+        });
     }
-    // Manga par défaut: afficher toutes les sous-catégories manga non NSFW déjà filtrées par l'API.
+    // Manga par défaut: garder les mangas "classiques" + one-shots.
     if (selected === 'manga') {
-        return items;
+        return items.filter(i => {
+            const format = getFormat(i);
+            if (['MANGA', 'ONE_SHOT', 'ONESHOT', ''].includes(format)) return true;
+            return ![
+                'NOVEL',
+                'LIGHT_NOVEL',
+                'MANHWA',
+                'MANHUA',
+                'DOUJINSHI',
+                'DOUJIN',
+                'TV',
+                'MOVIE',
+                'OVA',
+                'ONA',
+                'SPECIAL',
+                'MUSIC'
+            ].includes(format);
+        });
     }
     return items;
 }
@@ -1261,66 +1295,60 @@ async function fetchContentFromAPI(endpoint, params) {
     const selectedType = (params.get('type') || (mediaType === 'anime' ? 'anime' : 'manga')).toLowerCase();
     const page = parseInt(params.get('page') || '1', 10);
     const perPage = parseInt(params.get('limit') || ITEMS_PER_PAGE.toString(), 10);
-    const search = (params.get('q') || '').trim();
-    const rankingType = mapSelectedTypeToMalRankingType(selectedType, mediaType);
 
-    const malUrl = new URL('/.netlify/functions/mal-proxy', window.location.origin);
-    malUrl.searchParams.set('mediaType', mediaType);
-    malUrl.searchParams.set('page', String(page));
-    malUrl.searchParams.set('limit', String(perPage));
+    const jikanUrl = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
+    jikanUrl.searchParams.set('action', 'list');
+    jikanUrl.searchParams.set('mediaType', mediaType);
+    jikanUrl.searchParams.set('page', String(page));
+    jikanUrl.searchParams.set('limit', String(perPage));
 
-    if (search) {
-        malUrl.searchParams.set('action', 'search');
-        malUrl.searchParams.set('q', search);
-    } else {
-        malUrl.searchParams.set('action', 'list');
-        malUrl.searchParams.set('ranking_type', rankingType);
-    }
+    // Propager les filtres existants (recherche, type, tri, score, genres...)
+    params.forEach((value, key) => {
+        if (['page', 'limit'].includes(key)) return;
+        if (value === '' || value === null || value === undefined) return;
+        jikanUrl.searchParams.set(key, String(value));
+    });
 
-    mwDebug('MAL:request', {
+    mwDebug('JIKAN:request', {
         endpoint,
         mediaType,
         selectedType,
-        rankingType,
-        url: malUrl.toString()
+        url: jikanUrl.toString()
     });
 
-    const response = await fetch(malUrl.toString(), {
-        headers: { Accept: 'application/json' }
-    });
+    try {
+        const response = await fetch(jikanUrl.toString(), {
+            headers: { Accept: 'application/json' }
+        });
 
-    if (!response.ok) {
-        mwDebug('MAL:http-error', { status: response.status, statusText: response.statusText });
+        if (!response.ok) {
+            mwDebug('JIKAN:http-error', { status: response.status, statusText: response.statusText });
+            return null;
+        }
+
+        const payload = await response.json();
+        const rawItems = Array.isArray(payload?.data) ? payload.data : [];
+        const filteredData = applySelectedTypePostFilter(rawItems, selectedType, mediaType);
+        const pagination = payload?.pagination || {
+            last_visible_page: page,
+            current_page: page,
+            has_next_page: false
+        };
+
+        mwDebug('JIKAN:result', {
+            rawCount: rawItems.length,
+            filteredCount: filteredData.length,
+            pagination
+        });
+
+        return {
+            data: filteredData,
+            pagination
+        };
+    } catch (error) {
+        mwDebug('JIKAN:request-failed', { message: error?.message || String(error) });
         return null;
     }
-
-    const payload = await response.json();
-    const rawItems = Array.isArray(payload?.data) ? payload.data : [];
-    const mappedData = rawItems
-        .map(item => mapMalNodeToLegacy(item?.node || item, mediaType))
-        .filter(Boolean);
-    const filteredData = applySelectedTypePostFilter(mappedData, selectedType, mediaType);
-
-    const hasNext = !!payload?.paging?.next;
-    const currentPage = page;
-    const estimatedLastPage = hasNext ? Math.max(currentPage + 1, 2) : currentPage;
-
-    mwDebug('MAL:result', {
-        rawCount: rawItems.length,
-        mappedCount: mappedData.length,
-        filteredCount: filteredData.length,
-        currentPage,
-        estimatedLastPage
-    });
-
-    return {
-        data: filteredData,
-        pagination: {
-            last_visible_page: estimatedLastPage,
-            current_page: currentPage,
-            has_next_page: hasNext
-        }
-    };
 }
 
 // Fonction pour récupérer les statuts personnels de la collection
@@ -1761,6 +1789,11 @@ function updateCardTypeBadges() {
         const translatedType = getTranslatedType(contentType, originalType);
         element.textContent = translatedType;
     });
+}
+
+// Compatibilité: ancien appel asynchrone attendu dans displayContentList()
+async function translateCardTypes() {
+    updateCardTypeBadges();
 }
 
 // Fonction pour traduire les genres dans les cartes
