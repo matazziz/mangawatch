@@ -3086,8 +3086,8 @@ function updatePagination() {
     let pageNumbers = '';
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
-        // Mobile: pages 1-4 + "..." + dernière page
-        const firstPagesCount = Math.min(4, totalPages);
+        // Mobile: pages 1-5 + "..." + dernière page
+        const firstPagesCount = Math.min(5, totalPages);
         for (let i = 1; i <= firstPagesCount; i++) {
             pageNumbers += `<button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
         }
