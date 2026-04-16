@@ -3084,30 +3084,45 @@ function updatePagination() {
     
     // Afficher les numéros de page
     let pageNumbers = '';
-    const maxPagesToShow = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
-    
-    if (endPage - startPage + 1 < maxPagesToShow) {
-        startPage = Math.max(1, endPage - maxPagesToShow + 1);
-    }
-    
-    if (startPage > 1) {
-        pageNumbers += `<button class="page-number" data-page="1">1</button>`;
-        if (startPage > 2) {
-            pageNumbers += `<span class="page-ellipsis">...</span>`;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) {
+        // Mobile: pages 1-4 + "..." + dernière page
+        const firstPagesCount = Math.min(4, totalPages);
+        for (let i = 1; i <= firstPagesCount; i++) {
+            pageNumbers += `<button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
         }
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        pageNumbers += `<button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
-    }
-    
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            pageNumbers += `<span class="page-ellipsis">...</span>`;
+        if (totalPages > firstPagesCount) {
+            if (totalPages > firstPagesCount + 1) {
+                pageNumbers += `<span class="page-ellipsis">...</span>`;
+            }
+            pageNumbers += `<button class="page-number ${totalPages === currentPage ? 'active' : ''}" data-page="${totalPages}">${totalPages}</button>`;
         }
-        pageNumbers += `<button class="page-number" data-page="${totalPages}">${totalPages}</button>`;
+    } else {
+        const maxPagesToShow = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+        let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+        
+        if (endPage - startPage + 1 < maxPagesToShow) {
+            startPage = Math.max(1, endPage - maxPagesToShow + 1);
+        }
+        
+        if (startPage > 1) {
+            pageNumbers += `<button class="page-number" data-page="1">1</button>`;
+            if (startPage > 2) {
+                pageNumbers += `<span class="page-ellipsis">...</span>`;
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbers += `<button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                pageNumbers += `<span class="page-ellipsis">...</span>`;
+            }
+            pageNumbers += `<button class="page-number" data-page="${totalPages}">${totalPages}</button>`;
+        }
     }
     
     elements.pageNumbers.innerHTML = pageNumbers;

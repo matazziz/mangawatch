@@ -1123,6 +1123,37 @@ main.manga-database {
     .info-grid {
         grid-template-columns: 1fr;
     }
+
+    .pagination {
+        gap: 8px;
+        margin: 24px 0;
+        flex-wrap: nowrap;
+    }
+
+    .page-numbers {
+        gap: 4px;
+        margin: 0 4px;
+    }
+
+    .pagination button {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+    }
+
+    .pagination button[id*="prev"],
+    .pagination button[id*="next"] {
+        min-width: 72px;
+        padding: 0 8px;
+        font-size: 0.75rem;
+    }
+
+    .page-ellipsis {
+        padding: 0 4px;
+        font-size: 0.85rem;
+    }
 }
 
 @media (max-width: 576px) {
