@@ -3086,9 +3086,9 @@ function updatePagination() {
     let pageNumbers = '';
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
-        // Mobile: pagination glissante compacte autour de la page courante.
-        const mobileWindow = 5;
-        let startPage = Math.max(1, currentPage - 2);
+        // Mobile: même logique que PC, mais en plus compact (4 pages visibles).
+        const mobileWindow = 4;
+        let startPage = Math.max(1, currentPage - Math.floor(mobileWindow / 2));
         let endPage = Math.min(totalPages, startPage + mobileWindow - 1);
 
         if (endPage - startPage + 1 < mobileWindow) {
