@@ -3597,8 +3597,39 @@ async function applyGenreSort() {
             return taxonomyBuckets.some(g => Number(g?.mal_id) === Number(selectedGenreId));
         });
         
+        const normalizeGenre = (value) => String(value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim();
+        
+        const selectedGenreNormalized = normalizeGenre(selectedGenres[0]);
+        
+        const nameFallbackFilteredData = data.data.filter(item => {
+            const taxonomyBuckets = [
+                ...(Array.isArray(item?.genres) ? item.genres : []),
+                ...(Array.isArray(item?.themes) ? item.themes : []),
+                ...(Array.isArray(item?.demographics) ? item.demographics : []),
+                ...(Array.isArray(item?.explicit_genres) ? item.explicit_genres : [])
+            ];
+            if (taxonomyBuckets.length === 0) return false;
+            
+            return taxonomyBuckets.some(g => {
+                const rawName = g?.name || '';
+                const translatedName = getTranslatedGenreForCard(rawName);
+                return normalizeGenre(rawName) === selectedGenreNormalized ||
+                    normalizeGenre(translatedName) === selectedGenreNormalized;
+            });
+        });
+        
+        const finalGenreFilteredData = strictGenreFilteredData.length > 0
+            ? strictGenreFilteredData
+            : nameFallbackFilteredData;
+        
         console.log(`🎭 ${data.data.length} éléments bruts trouvés pour le genre "${selectedGenres[0]}"`);
         console.log(`🎯 ${strictGenreFilteredData.length} éléments après filtrage strict par ID de genre (${selectedGenreId})`);
+        console.log(`🧩 ${nameFallbackFilteredData.length} éléments après fallback par nom de genre`);
+        console.log(`✅ ${finalGenreFilteredData.length} éléments finaux retenus pour l'affichage`);
         
         // Mettre à jour la pagination
         totalPages = data.pagination.last_visible_page;
@@ -3606,11 +3637,11 @@ async function applyGenreSort() {
         hasNextPage = !!data.pagination.has_next_page;
         
         // Mettre à jour la liste globale
-        currentMangaList = strictGenreFilteredData;
+        currentMangaList = finalGenreFilteredData;
         
         // Mettre à jour l'interface utilisateur
         updatePagination();
-        displayContentList(strictGenreFilteredData);
+        displayContentList(finalGenreFilteredData);
         
     } catch (error) {
         console.error('Erreur lors du tri par genre:', error);
