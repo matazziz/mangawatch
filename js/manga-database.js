@@ -3086,13 +3086,28 @@ function updatePagination() {
     let pageNumbers = '';
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
-        // Mobile: pages 1-5 + "..." + dernière page
-        const firstPagesCount = Math.min(5, totalPages);
-        for (let i = 1; i <= firstPagesCount; i++) {
+        // Mobile: pagination glissante compacte autour de la page courante.
+        const mobileWindow = 5;
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + mobileWindow - 1);
+
+        if (endPage - startPage + 1 < mobileWindow) {
+            startPage = Math.max(1, endPage - mobileWindow + 1);
+        }
+
+        if (startPage > 1) {
+            pageNumbers += `<button class="page-number" data-page="1">1</button>`;
+            if (startPage > 2) {
+                pageNumbers += `<span class="page-ellipsis">...</span>`;
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
             pageNumbers += `<button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
         }
-        if (totalPages > firstPagesCount) {
-            if (totalPages > firstPagesCount + 1) {
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
                 pageNumbers += `<span class="page-ellipsis">...</span>`;
             }
             pageNumbers += `<button class="page-number ${totalPages === currentPage ? 'active' : ''}" data-page="${totalPages}">${totalPages}</button>`;
