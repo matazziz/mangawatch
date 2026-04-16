@@ -3348,6 +3348,11 @@ function showGenreContainer() {
     document.querySelectorAll('.genre-option').forEach(button => {
         button.addEventListener('click', () => {
             const genre = button.dataset.genre;
+            console.warn('🚨 Clic genre détecté', {
+                genre,
+                selectedGenresBefore: [...(selectedGenres || [])],
+                isGenreSortActive
+            });
             
             // Vérifier si le genre est déjà sélectionné
             const isSelected = selectedGenres.includes(genre);
@@ -3370,6 +3375,10 @@ function showGenreContainer() {
             
             // Mettre à jour l'état
             isGenreSortActive = selectedGenres.length > 0;
+            console.warn('🚨 État genre après clic', {
+                selectedGenresAfter: [...(selectedGenres || [])],
+                isGenreSortActive
+            });
             updateGenreSortButton();
             
             // Appliquer le tri par genre
@@ -3512,6 +3521,13 @@ const genreMapping = {
 
 // Appliquer le tri par genre
 async function applyGenreSort() {
+    console.warn('🚨 applyGenreSort() appelée', {
+        isGenreSortActive,
+        selectedGenres: [...(selectedGenres || [])],
+        currentContentType,
+        currentFilters: { ...currentFilters }
+    });
+
     if (!selectedGenres || selectedGenres.length === 0) {
         // Si aucun genre sélectionné, revenir à l'état normal
         isGenreSortActive = false;
