@@ -2755,6 +2755,13 @@ function updateFilters() {
             delete currentFilters.type;
         }
         
+        // Gérer le mode SFW (doujin peut nécessiter du NSFW pour retourner des résultats)
+        if (selectedType === 'doujin' && !(typeof isUserMinor === 'function' && isUserMinor())) {
+            currentFilters.sfw = 'false';
+        } else {
+            delete currentFilters.sfw;
+        }
+        
         // Gérer le statut (tri côté client uniquement)
         // Ne pas envoyer le filtre de statut à l'API, il sera géré côté client
         delete currentFilters.status;
@@ -3559,8 +3566,8 @@ async function applyGenreSort() {
             }
         });
         
-        // Ajouter le genre comme paramètre de recherche (nom pour AniList)
-        params.append('genre', selectedGenres[0]);
+        // Ajouter le genre sous forme d'ID Jikan/MAL (paramètre supporté par le proxy)
+        params.append('genres', String(selectedGenreId));
         
         // S'assurer que le paramètre limit est toujours présent
         if (!params.has('limit')) {

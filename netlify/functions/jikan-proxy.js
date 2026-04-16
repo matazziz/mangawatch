@@ -37,8 +37,12 @@ exports.handler = async (event) => {
     if (qs.min_score) params.set("min_score", String(qs.min_score));
     if (qs.genres) params.set("genres", String(qs.genres));
     if (qs.status) params.set("status", String(qs.status));
-    // Evite le contenu adulte sur le catalogue public.
-    params.set("sfw", "true");
+    // Evite le contenu adulte par défaut, sauf override explicite côté client.
+    if (typeof qs.sfw !== "undefined" && qs.sfw !== null && String(qs.sfw).trim() !== "") {
+      params.set("sfw", String(qs.sfw).toLowerCase());
+    } else {
+      params.set("sfw", "true");
+    }
 
     upstreamUrl = `${JIKAN_API_BASE}/${mediaType}?${params.toString()}`;
   }
