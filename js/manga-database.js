@@ -2719,7 +2719,7 @@ function updateFilters() {
         const typeMapping = {
             'manga': 'manga',
             'novel': 'novel',
-            'doujin': 'doujin',
+            'doujin': 'doujinshi',
             'manhwa': 'manhwa',
             'manhua': 'manhua',
             'anime': 'anime'
@@ -3584,7 +3584,15 @@ async function applyGenreSort() {
             throw new Error('Réponse API invalide : données manquantes');
         }
         
-        console.log(`🎭 ${data.data.length} éléments trouvés pour le genre "${selectedGenres[0]}"`);
+        // Sécurité: garantir un vrai filtrage par genre côté client (par ID MAL)
+        // Certains endpoints peuvent renvoyer des résultats trop larges selon les paramètres.
+        const strictGenreFilteredData = data.data.filter(item => {
+            if (!Array.isArray(item?.genres) || item.genres.length === 0) return false;
+            return item.genres.some(g => Number(g?.mal_id) === Number(selectedGenreId));
+        });
+        
+        console.log(`🎭 ${data.data.length} éléments bruts trouvés pour le genre "${selectedGenres[0]}"`);
+        console.log(`🎯 ${strictGenreFilteredData.length} éléments après filtrage strict par ID de genre (${selectedGenreId})`);
         
         // Mettre à jour la pagination
         totalPages = data.pagination.last_visible_page;
@@ -3592,11 +3600,11 @@ async function applyGenreSort() {
         hasNextPage = !!data.pagination.has_next_page;
         
         // Mettre à jour la liste globale
-        currentMangaList = data.data;
+        currentMangaList = strictGenreFilteredData;
         
         // Mettre à jour l'interface utilisateur
         updatePagination();
-        displayContentList(data.data);
+        displayContentList(strictGenreFilteredData);
         
     } catch (error) {
         console.error('Erreur lors du tri par genre:', error);
