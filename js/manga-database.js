@@ -2719,7 +2719,7 @@ function updateFilters() {
         const typeMapping = {
             'manga': 'manga',
             'novel': 'novel',
-            'doujin': 'doujinshi',
+            'doujin': 'doujin',
             'manhwa': 'manhwa',
             'manhua': 'manhua',
             'anime': 'anime'
@@ -3587,8 +3587,14 @@ async function applyGenreSort() {
         // Sécurité: garantir un vrai filtrage par genre côté client (par ID MAL)
         // Certains endpoints peuvent renvoyer des résultats trop larges selon les paramètres.
         const strictGenreFilteredData = data.data.filter(item => {
-            if (!Array.isArray(item?.genres) || item.genres.length === 0) return false;
-            return item.genres.some(g => Number(g?.mal_id) === Number(selectedGenreId));
+            const taxonomyBuckets = [
+                ...(Array.isArray(item?.genres) ? item.genres : []),
+                ...(Array.isArray(item?.themes) ? item.themes : []),
+                ...(Array.isArray(item?.demographics) ? item.demographics : []),
+                ...(Array.isArray(item?.explicit_genres) ? item.explicit_genres : [])
+            ];
+            if (taxonomyBuckets.length === 0) return false;
+            return taxonomyBuckets.some(g => Number(g?.mal_id) === Number(selectedGenreId));
         });
         
         console.log(`🎭 ${data.data.length} éléments bruts trouvés pour le genre "${selectedGenres[0]}"`);
