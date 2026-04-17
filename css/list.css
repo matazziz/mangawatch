@@ -913,9 +913,9 @@ body {
     }
 
     .list-item {
-        min-height: 320px;
-        height: 320px;
-        max-height: 320px;
+        min-height: 345px;
+        height: 345px;
+        max-height: 345px;
     }
 
     .item-content {
@@ -1021,9 +1021,9 @@ body {
     }
 
     .list-item {
-        min-height: 285px;
-        height: 285px;
-        max-height: 285px;
+        min-height: 305px;
+        height: 305px;
+        max-height: 305px;
     }
 
     .item-content {

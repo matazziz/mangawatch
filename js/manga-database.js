@@ -263,6 +263,7 @@ function restorePageState() {
                     const reverseTypeMapping = {
                         'novel': 'novel',
                         'doujin': 'doujin',
+                        'doujinshi': 'doujin',
                         'manhwa': 'manhwa',
                         'manhua': 'manhua',
                         'manga': 'manga',
@@ -1153,7 +1154,7 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
         .replace(/[-\s]+/g, '_')
         .replace(/[^A-Z0-9_]/g, '');
 
-    if (mediaType === 'anime' || selected === 'anime') {
+    if (selected === 'anime') {
         // "Anime" (séries) séparé des films.
         return items.filter(i => {
             const format = getFormat(i);
@@ -1672,9 +1673,10 @@ function createContentCard(content) {
     
     if (user && user.email) {
         const userList = JSON.parse(localStorage.getItem(`user_list_${user.email}`) || '[]');
-        const existingItem = userList.find(item => item.id === content.mal_id.toString());
+        const matchingItems = userList.filter(item => item.id === content.mal_id.toString());
+        const existingItem = matchingItems.find(item => !!item.status) || matchingItems[0];
         
-        if (existingItem) {
+        if (existingItem && existingItem.status) {
             // Afficher le bouton de statut existant
             const statusIcon = getStatusIcon(existingItem.status);
             const statusText = getStatusText(existingItem.status);
@@ -2330,9 +2332,7 @@ function updateItemStatusWithStoppedAt(status, stoppedAt) {
     }
     
     // Mettre à jour ou ajouter l'élément
-    const existingIndex = userList.findIndex(item => 
-        item.id === window.currentEditingItem.id && item.type === window.currentEditingItem.type
-    );
+    const existingIndex = userList.findIndex(item => item.id === window.currentEditingItem.id);
     
     if (existingIndex !== -1) {
         // Mettre à jour l'élément existant
@@ -2359,12 +2359,37 @@ function updateItemStatusWithStoppedAt(status, stoppedAt) {
         localStorage.setItem(listKey, JSON.stringify(userList));
         console.log(`✅ Liste sauvegardée dans localStorage`);
         
+        // Synchroniser aussi Firebase pour que la page Collection reflète immédiatement les changements.
+        const syncItem = existingIndex !== -1 ? userList[existingIndex] : window.currentEditingItem;
+        import('./firebase-service.js')
+            .then(({ collectionService }) => collectionService.addItem(user.email, {
+                id: syncItem.id,
+                title: syncItem.title,
+                type: syncItem.type,
+                status: status,
+                imageUrl: syncItem.imageUrl || syncItem.image,
+                synopsis: syncItem.synopsis,
+                episodes: syncItem.episodes,
+                volumes: syncItem.volumes,
+                year: syncItem.year,
+                genres: syncItem.genres || [],
+                score: syncItem.score || 0,
+                stoppedAt: stoppedAt ?? null
+            }))
+            .then(() => {
+                console.log('✅ Statut synchronisé dans Firebase');
+            })
+            .catch((syncError) => {
+                console.warn('⚠️ Synchronisation Firebase échouée (localStorage ok):', syncError);
+            });
+        
         // Afficher une notification
         showNotification('Statut mis à jour !', 'success');
         
         // Mettre à jour l'affichage en temps réel
         console.log(`🔄 Appel de updateCardDisplay avec l'ID: ${window.currentEditingItem.id}`);
         updateCardDisplay(window.currentEditingItem.id, status);
+        refreshCardsDisplay();
         
     } catch (e) {
         console.error('Erreur lors de la sauvegarde:', e);
@@ -3093,32 +3118,21 @@ function updatePagination() {
     let pageNumbers = '';
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
-        // Mobile: même logique que PC, mais en plus compact (4 pages visibles).
-        const mobileWindow = 4;
-        let startPage = Math.max(1, currentPage - Math.floor(mobileWindow / 2));
-        let endPage = Math.min(totalPages, startPage + mobileWindow - 1);
+        // Mobile: afficher 1 + page précédente + page actuelle + page suivante + dernière page.
+        const pagesToDisplay = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+        const sortedPages = Array.from(pagesToDisplay)
+            .filter(page => page >= 1 && page <= totalPages)
+            .sort((a, b) => a - b);
 
-        if (endPage - startPage + 1 < mobileWindow) {
-            startPage = Math.max(1, endPage - mobileWindow + 1);
-        }
-
-        if (startPage > 1) {
-            pageNumbers += `<button class="page-number" data-page="1">1</button>`;
-            if (startPage > 2) {
+        let previousRenderedPage = 0;
+        sortedPages.forEach(page => {
+            if (previousRenderedPage && page - previousRenderedPage > 1) {
                 pageNumbers += `<span class="page-ellipsis">...</span>`;
             }
-        }
 
-        for (let i = startPage; i <= endPage; i++) {
-            pageNumbers += `<button class="page-number ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
-        }
-
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                pageNumbers += `<span class="page-ellipsis">...</span>`;
-            }
-            pageNumbers += `<button class="page-number ${totalPages === currentPage ? 'active' : ''}" data-page="${totalPages}">${totalPages}</button>`;
-        }
+            pageNumbers += `<button class="page-number ${page === currentPage ? 'active' : ''}" data-page="${page}">${page}</button>`;
+            previousRenderedPage = page;
+        });
     } else {
         const maxPagesToShow = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
@@ -3346,7 +3360,7 @@ function showGenreContainer() {
     
     // Ajouter les écouteurs d'événements
     document.querySelectorAll('.genre-option').forEach(button => {
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             const genre = button.dataset.genre;
             console.warn('🚨 Clic genre détecté', {
                 genre,
@@ -3383,16 +3397,14 @@ function showGenreContainer() {
             
             // Appliquer le tri par genre
             if (isGenreSortActive) {
-                applyGenreSort();
+                await applyGenreSort();
             } else {
                 // Si aucun genre sélectionné, recharger les données normales
-                fetchContentList();
+                await fetchContentList();
             }
             
             // Fermer automatiquement le container des genres après sélection
-            setTimeout(() => {
-                hideGenreContainer();
-            }, 300);
+            hideGenreContainer();
         });
     });
     
@@ -3563,8 +3575,7 @@ async function applyGenreSort() {
     // Sauvegarder les filtres actuels
     const originalFilters = { ...currentFilters };
     
-    // Utiliser seulement le premier genre sélectionné pour l'API
-    const selectedGenreId = genreIds[0];
+    const selectedGenreIds = [...genreIds];
     
     // Réinitialiser la pagination
     currentPage = 1;
@@ -3582,8 +3593,8 @@ async function applyGenreSort() {
             }
         });
         
-        // Ajouter le genre sous forme d'ID Jikan/MAL (paramètre supporté par le proxy)
-        params.append('genres', String(selectedGenreId));
+        // Ajouter les genres sous forme d'IDs Jikan/MAL
+        params.append('genres', selectedGenreIds.join(','));
         
         // S'assurer que le paramètre limit est toujours présent
         if (!params.has('limit')) {
@@ -3610,7 +3621,7 @@ async function applyGenreSort() {
                 ...(Array.isArray(item?.explicit_genres) ? item.explicit_genres : [])
             ];
             if (taxonomyBuckets.length === 0) return false;
-            return taxonomyBuckets.some(g => Number(g?.mal_id) === Number(selectedGenreId));
+            return taxonomyBuckets.some(g => selectedGenreIds.includes(Number(g?.mal_id)));
         });
         
         const normalizeGenre = (value) => String(value || '')
@@ -3619,7 +3630,7 @@ async function applyGenreSort() {
             .replace(/[\u0300-\u036f]/g, '')
             .trim();
         
-        const selectedGenreNormalized = normalizeGenre(selectedGenres[0]);
+        const selectedGenresNormalized = selectedGenres.map(genre => normalizeGenre(genre));
         
         const nameFallbackFilteredData = data.data.filter(item => {
             const taxonomyBuckets = [
@@ -3633,8 +3644,10 @@ async function applyGenreSort() {
             return taxonomyBuckets.some(g => {
                 const rawName = g?.name || '';
                 const translatedName = getTranslatedGenreForCard(rawName);
-                return normalizeGenre(rawName) === selectedGenreNormalized ||
-                    normalizeGenre(translatedName) === selectedGenreNormalized;
+                const normalizedRaw = normalizeGenre(rawName);
+                const normalizedTranslated = normalizeGenre(translatedName);
+                return selectedGenresNormalized.includes(normalizedRaw) ||
+                    selectedGenresNormalized.includes(normalizedTranslated);
             });
         });
         
@@ -3642,10 +3655,14 @@ async function applyGenreSort() {
             ? strictGenreFilteredData
             : nameFallbackFilteredData;
         
-        console.log(`🎭 ${data.data.length} éléments bruts trouvés pour le genre "${selectedGenres[0]}"`);
-        console.log(`🎯 ${strictGenreFilteredData.length} éléments après filtrage strict par ID de genre (${selectedGenreId})`);
+        console.log(`🎭 ${data.data.length} éléments bruts trouvés pour les genres "${selectedGenres.join(', ')}"`);
+        console.log(`🎯 ${strictGenreFilteredData.length} éléments après filtrage strict par IDs de genre (${selectedGenreIds.join(', ')})`);
         console.log(`🧩 ${nameFallbackFilteredData.length} éléments après fallback par nom de genre`);
         console.log(`✅ ${finalGenreFilteredData.length} éléments finaux retenus pour l'affichage`);
+        
+        if (finalGenreFilteredData.length === 0) {
+            showNotification('Aucun résultat pour ce(s) genre(s) sur cette page.', 'info');
+        }
         
         // Mettre à jour la pagination
         totalPages = data.pagination.last_visible_page;

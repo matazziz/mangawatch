@@ -1491,19 +1491,39 @@ export const collectionService = {
   async getItemByContentId(userEmail, contentId) {
     try {
       const listRef = collection(db, COLLECTIONS.USER_LIST);
-      const q = query(
+      const contentIdAsString = contentId != null ? String(contentId) : '';
+      const contentIdAsNumber = Number(contentId);
+      let resolvedDoc = null;
+      
+      // 1) Recherche principale : content_id stocke en string (format attendu).
+      const stringQuery = query(
         listRef,
         where('user_email', '==', userEmail),
-        where('content_id', '==', contentId.toString())
+        where('content_id', '==', contentIdAsString)
       );
+      const stringSnapshot = await getDocs(stringQuery);
+      if (!stringSnapshot.empty) {
+        resolvedDoc = stringSnapshot.docs[0];
+      }
       
-      const querySnapshot = await getDocs(q);
+      // 2) Fallback legacy : certains docs historiques peuvent stocker content_id en number.
+      if (!resolvedDoc && Number.isFinite(contentIdAsNumber)) {
+        const numberQuery = query(
+          listRef,
+          where('user_email', '==', userEmail),
+          where('content_id', '==', contentIdAsNumber)
+        );
+        const numberSnapshot = await getDocs(numberQuery);
+        if (!numberSnapshot.empty) {
+          resolvedDoc = numberSnapshot.docs[0];
+        }
+      }
       
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
+      if (resolvedDoc) {
+        const doc = resolvedDoc;
         const data = doc.data();
         return {
-          id: data.content_id || data.id,
+          id: String(data.content_id || data.id),
           title: data.title || data.titre,
           type: data.type || data.content_type,
           status: data.status,

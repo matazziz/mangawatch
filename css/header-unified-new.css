@@ -85,7 +85,7 @@ body {
     border-radius: 22px;
     padding: 0;
     width: 100%;
-    min-height: 40px;
+    min-height: 44px;
     backdrop-filter: blur(20px);
     border: 1.5px solid rgba(255, 255, 255, 0.15);
     gap: 0;
@@ -404,16 +404,16 @@ body {
 /* Wrapper : taille modérée sur bureau (loupe visible sans dominer le header) */
 .search-wrapper {
     position: relative;
-    flex: 0 1 360px;
-    min-width: 260px;
-    max-width: 400px;
+    flex: 0 1 440px;
+    min-width: 300px;
+    max-width: 500px;
 }
 
 @media (min-width: 1100px) {
     .search-wrapper {
-        flex: 0 1 400px;
-        min-width: 280px;
-        max-width: 440px;
+        flex: 0 1 500px;
+        min-width: 320px;
+        max-width: 560px;
     }
 }
 
@@ -421,15 +421,15 @@ body {
 .search-results-dropdown {
     position: absolute;
     top: calc(100% + 10px);
-    left: -8px;
-    right: -8px;
+    left: -14px;
+    right: -14px;
     width: auto;
-    min-width: calc(100% + 16px);
+    min-width: calc(100% + 28px);
     background: var(--dark);
-    border-radius: 16px;
+    border-radius: 18px;
     box-shadow: 0 12px 44px rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(0, 168, 77, 0.2);
-    max-height: 480px;
+    max-height: 520px;
     overflow-y: auto;
     overflow-x: hidden;
     z-index: 1001;
@@ -506,6 +506,18 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Desktop uniquement : résultats de recherche légèrement plus lisibles */
+@media (min-width: 901px) {
+    .search-result-item img {
+        width: 66px;
+        height: 94px;
+    }
+
+    .search-result-item .result-title {
+        font-size: 1.08rem;
+    }
 }
 
 .search-result-item .result-subtitle {
@@ -975,9 +987,9 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
 
     .search-results-dropdown {
-        left: -72px;
-        right: -72px;
-        min-width: calc(100% + 144px);
+        left: -90px;
+        right: -30px;
+        min-width: calc(100% + 120px);
         max-height: 420px;
         border-radius: 12px;
         padding: 2px 0;
@@ -1274,9 +1286,9 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
 
     .search-results-dropdown {
-        left: -76px;
-        right: -76px;
-        min-width: calc(100% + 152px);
+        left: -96px;
+        right: -24px;
+        min-width: calc(100% + 120px);
         max-height: 360px;
         border-radius: 10px;
         padding: 2px 0;

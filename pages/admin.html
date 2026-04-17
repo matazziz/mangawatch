@@ -1893,6 +1893,9 @@
                         <button type="button" class="template-btn" data-template="share-site">
                             <i class="fas fa-share-alt"></i> Partage du site - Certification
                         </button>
+                        <button type="button" class="template-btn" data-template="api-jikan-incident">
+                            <i class="fas fa-triangle-exclamation"></i> Info - Incident API Jikan
+                        </button>
                     </div>
                 </div>
 
@@ -2382,13 +2385,16 @@
         // Récupérer tous les utilisateurs : localStorage (cette machine) + Firestore (prod)
         function getAllUsers() {
             const map = new Map();
+            const deletedUsers = new Set(getDeletedUsers().map(normalizeEmail));
             
             function putUser(email, name, avatar) {
                 if (!email || typeof email !== 'string') return;
-                const prev = map.get(email);
-                const n = (name && String(name).trim()) || prev?.name || (email.includes('@') ? email.split('@')[0] : email);
+                const normalizedEmail = normalizeEmail(email);
+                if (!normalizedEmail || deletedUsers.has(normalizedEmail)) return;
+                const prev = map.get(normalizedEmail);
+                const n = (name && String(name).trim()) || prev?.name || (normalizedEmail.includes('@') ? normalizedEmail.split('@')[0] : normalizedEmail);
                 const a = (avatar && String(avatar).trim()) || prev?.avatar || null;
-                map.set(email, { email, name: n, avatar: a });
+                map.set(normalizedEmail, { email: normalizedEmail, name: n, avatar: a });
             }
             
             const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
@@ -2698,6 +2704,15 @@
             return JSON.parse(localStorage.getItem('banned_users') || '[]');
         }
         
+        // Récupérer les emails marqués comme supprimés (masquage admin local)
+        function getDeletedUsers() {
+            return JSON.parse(localStorage.getItem('deleted_users') || '[]');
+        }
+        
+        function normalizeEmail(email) {
+            return String(email || '').trim().toLowerCase();
+        }
+        
         // Récupérer la blacklist d'emails bannis
         function getBlacklistedEmails() {
             return JSON.parse(localStorage.getItem('blacklisted_emails') || '[]');
@@ -2706,7 +2721,7 @@
         // Ajouter un email à la blacklist
         function addToBlacklist(email) {
             const blacklist = getBlacklistedEmails();
-            const emailLower = email.toLowerCase();
+            const emailLower = normalizeEmail(email);
             if (!blacklist.includes(emailLower)) {
                 blacklist.push(emailLower);
                 localStorage.setItem('blacklisted_emails', JSON.stringify(blacklist));
@@ -2716,89 +2731,129 @@
         // Vérifier si un email est blacklisté
         function isEmailBlacklisted(email) {
             const blacklist = getBlacklistedEmails();
-            return blacklist.includes(email);
+            return blacklist.includes(normalizeEmail(email));
         }
         
         // Bannir un utilisateur
         function banUser(email) {
+            const normalizedEmail = normalizeEmail(email);
             const banned = getBannedUsers();
-            if (!banned.some(b => b.email === email)) {
+            if (!banned.some(b => normalizeEmail(b.email) === normalizedEmail)) {
                 banned.push({
-                    email: email,
+                    email: normalizedEmail,
                     date: new Date().toISOString()
                 });
                 localStorage.setItem('banned_users', JSON.stringify(banned));
                 
                 // Ajouter l'email à la blacklist
-                addToBlacklist(email);
+                addToBlacklist(normalizedEmail);
             }
         }
         
         // Débannir un utilisateur
         function unbanUser(email) {
+            const normalizedEmail = normalizeEmail(email);
             const banned = getBannedUsers();
-            const filtered = banned.filter(b => b.email !== email);
+            const filtered = banned.filter(b => normalizeEmail(b.email) !== normalizedEmail);
             localStorage.setItem('banned_users', JSON.stringify(filtered));
             
             // Retirer l'email de la blacklist pour qu'il puisse se reconnecter
             const blacklist = getBlacklistedEmails();
-            const filteredBlacklist = blacklist.filter(e => e !== email.toLowerCase());
+            const filteredBlacklist = blacklist.filter(e => normalizeEmail(e) !== normalizedEmail);
             localStorage.setItem('blacklisted_emails', JSON.stringify(filteredBlacklist));
         }
         
         // Vérifier si un utilisateur est banni
         function isUserBanned(email) {
+            const normalizedEmail = normalizeEmail(email);
             const banned = getBannedUsers();
-            return banned.some(b => b.email === email);
+            return banned.some(b => normalizeEmail(b.email) === normalizedEmail);
         }
         
         // Supprimer un compte utilisateur
         function deleteUserAccount(email) {
+            const normalizedEmail = normalizeEmail(email);
             // Supprimer du localStorage (cela libère l'email et le pseudo pour une nouvelle utilisation)
             const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-            const filteredAccounts = accounts.filter(acc => acc.email !== email);
+            const filteredAccounts = accounts.filter(acc => normalizeEmail(acc.email) !== normalizedEmail);
             localStorage.setItem('accounts', JSON.stringify(filteredAccounts));
             
             // Retirer l'email de la blacklist pour permettre sa réutilisation
             const blacklist = getBlacklistedEmails();
-            const filteredBlacklist = blacklist.filter(e => e !== email.toLowerCase());
+            const filteredBlacklist = blacklist.filter(e => normalizeEmail(e) !== normalizedEmail);
             localStorage.setItem('blacklisted_emails', JSON.stringify(filteredBlacklist));
             
             // Retirer des utilisateurs bannis
             const banned = getBannedUsers();
-            const filteredBanned = banned.filter(b => b.email !== email);
+            const filteredBanned = banned.filter(b => normalizeEmail(b.email) !== normalizedEmail);
             localStorage.setItem('banned_users', JSON.stringify(filteredBanned));
             
+            // Marquer explicitement comme supprimé pour masquer immédiatement même si source distante
+            const deleted = getDeletedUsers();
+            if (!deleted.includes(normalizedEmail)) {
+                deleted.push(normalizedEmail);
+                localStorage.setItem('deleted_users', JSON.stringify(deleted));
+            }
+            
             // Supprimer le profil
-            localStorage.removeItem('profile_' + email);
+            localStorage.removeItem('profile_' + normalizedEmail);
             
             // Supprimer l'avatar
-            localStorage.removeItem('avatar_' + email);
+            localStorage.removeItem('avatar_' + normalizedEmail);
             
             // Supprimer des utilisateurs certifiés
             const verified = getVerifiedUsers();
-            const filteredVerified = verified.filter(v => v !== email);
+            const filteredVerified = verified.filter(v => normalizeEmail(v) !== normalizedEmail);
             localStorage.setItem('verified_users', JSON.stringify(filteredVerified));
             
             // Supprimer toutes les données utilisateur liées
             const keysToRemove = [];
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && (key.startsWith(email + '_') || key.includes('_' + email))) {
+                if (key && (key.startsWith(normalizedEmail + '_') || key.includes('_' + normalizedEmail))) {
                     keysToRemove.push(key);
                 }
             }
             keysToRemove.forEach(key => localStorage.removeItem(key));
             
             // Supprimer les notes
-            const notesKey = 'user_content_notes_' + email;
+            const notesKey = 'user_content_notes_' + normalizedEmail;
             localStorage.removeItem(notesKey);
             
             // Supprimer le Top 10
-            const top10Key = 'user_top10_' + email;
+            const top10Key = 'user_top10_' + normalizedEmail;
             localStorage.removeItem(top10Key);
             
-            console.log('✅ Compte utilisateur supprimé:', email);
+            // Nettoyer la messagerie locale pour éviter qu'un compte supprimé reste sélectionnable/visible.
+            try {
+                const siteMessages = JSON.parse(localStorage.getItem('site_messages') || '[]');
+                const cleanedMessages = siteMessages.filter(msg => {
+                    const recipient = normalizeEmail(msg && msg.recipient_email);
+                    const sender = normalizeEmail(msg && msg.created_by);
+                    return recipient !== normalizedEmail && sender !== normalizedEmail;
+                });
+                localStorage.setItem('site_messages', JSON.stringify(cleanedMessages));
+            } catch (e) {
+                console.warn('⚠️ Nettoyage site_messages impossible:', e);
+            }
+            
+            // Nettoyer les messages lus (ids inexistants apres nettoyage des messages).
+            try {
+                const siteMessages = JSON.parse(localStorage.getItem('site_messages') || '[]');
+                const validIds = new Set(siteMessages.map(m => m && m.id).filter(Boolean));
+                const readMessages = JSON.parse(localStorage.getItem('read_messages') || '[]');
+                const cleanedRead = readMessages.filter(id => validIds.has(id));
+                localStorage.setItem('read_messages', JSON.stringify(cleanedRead));
+            } catch (e) {
+                console.warn('⚠️ Nettoyage read_messages impossible:', e);
+            }
+            
+            // Mettre aussi à jour la copie locale des profils distants (rafraîchissement immédiat UI)
+            if (Array.isArray(window.__adminFirestoreUsers)) {
+                window.__adminFirestoreUsers = window.__adminFirestoreUsers.filter(u => normalizeEmail(u.email) !== normalizedEmail);
+            }
+            
+            console.log('✅ Compte utilisateur supprimé:', normalizedEmail);
         }
         
         // Obtenir le texte de la raison en français
@@ -3367,6 +3422,11 @@
                     type: 'global',
                     title: 'Partagez MangaWatch et obtenez des avantages exclusifs !',
                     content: 'Bonjour à tous,\n\nNous avons besoin de votre aide pour faire connaître MangaWatch ! 🚀\n\nSi vous appréciez notre plateforme et souhaitez nous soutenir, nous vous encourageons vivement à partager le site au maximum :\n\n👥 Avec votre entourage (famille, amis, collègues, etc.)\n📱 Sur vos réseaux sociaux (Facebook, Instagram, TikTok, etc.)\n💬 Sur Discord\n\n🎁 RÉCOMPENSE : Si vous partagez activement MangaWatch (avec votre entourage et/ou sur les réseaux) et que vous nous prévenez sur les réseaux sociaux ou sur notre serveur Discord, vous pourrez obtenir accès à des fonctionnalités exclusives sur le site, notamment :\n\n✨ Certification de votre compte\n✨ Badges exclusifs\n✨ Accès anticipé aux nouvelles fonctionnalités\n✨ Statut de membre privilégié\n\n📱 Comment nous prévenir ?\n- Partagez sur notre serveur Discord MangaWatch\n- Envoyez-nous un message via les réseaux sociaux\n\nVotre soutien est précieux pour faire grandir notre communauté ! Chaque partage compte et nous aide à améliorer continuellement la plateforme.\n\nMerci infiniment pour votre engagement ! 🙏\n\nCordialement,\nL\'équipe MangaWatch'
+                },
+                'api-jikan-incident': {
+                    type: 'global',
+                    title: 'Information - Perturbation temporaire API Jikan',
+                    content: 'Bonjour à tous,\n\nNous rencontrons actuellement un problème temporaire avec l\'API Jikan, ce qui peut impacter certaines fonctionnalités (chargement des fiches, recherche ou affichage de contenus).\n\nNotre équipe suit la situation de près. Le service devrait revenir à la normale très bientôt.\n\nSi la perturbation persiste, nous vous tiendrons informés sur nos réseaux sociaux officiels.\n\nMerci pour votre patience et votre compréhension.\n\nCordialement,\nL\'équipe MangaWatch'
                 }
             };
 
@@ -3721,7 +3781,7 @@
                 const filteredUsers = filterUsers(searchTerm);
                 const usersList = document.getElementById('users-management-list');
                 const bannedUsers = getBannedUsers();
-                const bannedEmails = bannedUsers.map(b => b.email);
+                const bannedEmails = bannedUsers.map(b => normalizeEmail(b.email));
                 
                 if (!usersList) return;
                 
@@ -3736,7 +3796,7 @@
                 }
                 
                 usersList.innerHTML = filteredUsers.map(user => {
-                    const isBanned = bannedEmails.includes(user.email);
+                    const isBanned = bannedEmails.includes(normalizeEmail(user.email));
                     return `
                         <div class="user-item">
                             <div class="user-info">

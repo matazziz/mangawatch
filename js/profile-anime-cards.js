@@ -840,14 +840,13 @@ window.createStarBadges = function createStarBadges() {
             const type = window.selectedType || null;
             let top10 = await getUserTop10(user, genre, type);
             
-            // Récupérer les notes de l'utilisateur
+            // Récupérer les notes de l'utilisateur depuis la source unifiée
             let notes = [];
             try {
-                const notesKey = isManga ? 'user_manga_notes_' : 'user_anime_notes_';
-                notes = JSON.parse(localStorage.getItem(notesKey + user.email) || '[]');
-            } catch (e) { 
+                notes = await loadUserNotes(user.email);
+            } catch (e) {
                 console.error('Erreur lors de la lecture des notes:', e);
-                notes = []; 
+                notes = [];
             }
             
             // Trouver l'anime/manga dans les notes
@@ -2109,6 +2108,17 @@ window.createStarBadges = function createStarBadges() {
             // Met à jour le type sélectionné
             const type = item.dataset.type;
             window.selectedType = type;
+            // Reset pagination des conteneurs étoiles au changement de type (surtout mobile).
+            // Sinon on peut rester sur une page > 1 d'un ancien type et afficher un décalage.
+            const isMobileTypeSwitch = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+            if (isMobileTypeSwitch) {
+                if (!window.starCurrentPages || typeof window.starCurrentPages !== 'object') {
+                    window.starCurrentPages = {};
+                }
+                for (let noteValue = 1; noteValue <= 10; noteValue++) {
+                    window.starCurrentPages[noteValue] = 1;
+                }
+            }
             // Ne plus sauvegarder dans localStorage car on veut toujours revenir au défaut
             // Met à jour le texte du bouton
             typeButton.textContent = item.textContent;
@@ -7871,19 +7881,18 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 container.addEventListener('dragleave', function() {
                     container.classList.remove('catalogue-card-drop-hover');
                 });
-                container.addEventListener('drop', function(e) {
+                container.addEventListener('drop', async function(e) {
                     e.preventDefault();
                     container.classList.remove('catalogue-card-drop-hover');
                     const animeId = e.dataTransfer.getData('anime-id');
                     
-                    // Utiliser les notes nettoyées et la bonne clé
+                    // Mettre à jour la note via la source unifiée (local + sync Firebase)
                     const user = JSON.parse(localStorage.getItem('user') || 'null');
                     if (!user || !user.email) return;
                     
-                    const notesKey = 'user_anime_notes_' + user.email;
                     let currentNotes = [];
                     try {
-                        currentNotes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+                        currentNotes = await loadUserNotes(user.email);
                     } catch (e) {
                         currentNotes = [];
                     }
@@ -7891,11 +7900,8 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     // Trouve l'anime dans notes et change sa note
                     const idx = currentNotes.findIndex(a => String(a.id) === String(animeId));
                     if (idx !== -1) {
-                        currentNotes[idx].note = note;
-                        localStorage.setItem(notesKey, JSON.stringify(currentNotes));
-                    // Utiliser un délai pour éviter les appels multiples
-                    // Ne pas rappeler displayUserAnimeNotes pour éviter les boucles infinies
-                    // La note est déjà mise à jour dans localStorage
+                        const existing = currentNotes[idx] || {};
+                        await saveAnimeNote(animeId, note, existing);
                     }
                 });
             }
@@ -7922,9 +7928,9 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     max-width: 98%;
                     display: flex;
                     justify-content: center;
-                    gap: 12px;
-                    margin: 18px auto 0 auto;
-                    padding: 8px;
+                    gap: ${isMobileStarCards ? '6px' : '12px'};
+                    margin: ${isMobileStarCards ? '10px' : '18px'} auto 0 auto;
+                    padding: ${isMobileStarCards ? '4px' : '8px'};
                     overflow-x: auto;
                     box-sizing: border-box;
                 `;
@@ -7934,22 +7940,23 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     if (p === '...') {
                         const span = document.createElement('span');
                         span.textContent = '...';
-                        span.style.cssText = 'padding: 10px 16px; color: #888; font-size: 1.1em;';
+                        span.style.cssText = `padding: ${isMobileStarCards ? '6px 8px' : '10px 16px'}; color: #888; font-size: ${isMobileStarCards ? '0.9em' : '1.1em'};`;
                         paginationContainer.appendChild(span);
                     } else {
                         const btn = document.createElement('button');
                         btn.textContent = p;
                         btn.style.cssText = `
-                            padding: 10px 20px;
+                            padding: ${isMobileStarCards ? '7px 10px' : '10px 20px'};
                             border: none;
                             border-radius: 8px;
                             background: ${(!reversePagination && p === page) || (reversePagination && (p === (totalPagesForPagination - page + 1))) ? '#00b894' : '#2d3748'};
                             color: white;
                             font-weight: ${(!reversePagination && p === page) || (reversePagination && (p === (totalPagesForPagination - page + 1))) ? '600' : '400'};
-                            font-size: 1rem;
+                            font-size: ${isMobileStarCards ? '0.82rem' : '1rem'};
                             cursor: pointer;
                             transition: all 0.2s ease;
                             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                            min-width: ${isMobileStarCards ? '34px' : 'auto'};
                         `;
                         btn.onclick = () => {
                             if (reversePagination) {
@@ -7991,17 +7998,17 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     scrollToTopBtn.innerHTML = _profileT('common.scroll_top') || '↑ Haut';
                     scrollToTopBtn.title = _profileT('common.scroll_top_title') || 'Remonter en haut de la page';
                     scrollToTopBtn.style.cssText = `
-                        padding: 10px 20px;
+                        padding: ${isMobileStarCards ? '7px 10px' : '10px 20px'};
                         border: none;
                         border-radius: 8px;
                         background: #00b894;
                         color: white;
                         font-weight: 600;
-                        font-size: 1rem;
+                        font-size: ${isMobileStarCards ? '0.82rem' : '1rem'};
                         cursor: pointer;
                         transition: all 0.2s ease;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                        margin-left: 10px;
+                        margin-left: ${isMobileStarCards ? '4px' : '10px'};
                     `;
                     scrollToTopBtn.onmouseover = () => {
                         scrollToTopBtn.style.background = '#00a085';
@@ -13177,31 +13184,30 @@ function relayoutMasonry() {
 
 // Fonction utilitaire pour générer une pagination compacte (ordre croissant ou décroissant)
 function getCompactPagination(current, total, reverse = false) {
-    let pages = [];
-    if (total <= 3) {
-        for (let i = 1; i <= total; i++) pages.push(i);
-    } else if (!reverse) {
-        if (current <= 2) {
-            pages.push(1, 2, 3, '...', total - 1, total);
-        } else if (current >= total - 1) {
-            pages.push(1, 2, '...', total - 2, total - 1, total);
-        } else {
-            pages.push(1, '...', current - 1, current, current + 1, '...', total);
-        }
-    } else {
-        // Pagination inversée
-        if (current >= total - 1) {
-            pages.push(total, total - 1, total - 2, '...', 2, 1);
-        } else if (current <= 2) {
-            pages.push(total, '...', current + 1, current, current - 1, '...', 1);
-        } else {
-            pages.push(total, '...', total - current + 1, total - current, total - current - 1, '...', 1);
-        }
-        // Nettoyage pour éviter doublons ou pages hors bornes
-        pages = pages.filter((v, i, arr) => v !== '...' || (i > 0 && arr[i - 1] !== '...')).filter(v => typeof v === 'number' ? v >= 1 && v <= total : true);
+    // Même logique que la pagination manga/anime :
+    // afficher 1 + (current-1, current, current+1) + dernière page si total > 4.
+    if (total <= 4) {
+        const allPages = [];
+        for (let i = 1; i <= total; i++) allPages.push(i);
+        return reverse ? allPages.reverse() : allPages;
     }
-    if (reverse) pages = pages.sort((a, b) => (b === '...' ? 1 : 0) - (a === '...' ? 1 : 0) || b - a);
-    return pages;
+
+    const pagesSet = new Set([1, total, current - 1, current, current + 1]);
+    const sortedPages = Array.from(pagesSet)
+        .filter(page => page >= 1 && page <= total)
+        .sort((a, b) => a - b);
+
+    const pages = [];
+    let previousPage = 0;
+    sortedPages.forEach(page => {
+        if (previousPage && page - previousPage > 1) {
+            pages.push('...');
+        }
+        pages.push(page);
+        previousPage = page;
+    });
+
+    return reverse ? pages.slice().reverse() : pages;
 }
 
 // === Ajout : fonction pour trier les anime cards du container de genre ===

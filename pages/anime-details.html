@@ -337,7 +337,7 @@
                 }
                 
                 // Utiliser l'endpoint approprié selon le type
-                const apiUrl = `/.netlify/functions/mal-proxy?action=detail&mediaType=${contentType === 'manga' ? 'manga' : 'anime'}&id=${encodeURIComponent(contentId)}`;
+                const apiUrl = `/.netlify/functions/jikan-proxy?action=detail&mediaType=${contentType === 'manga' ? 'manga' : 'anime'}&id=${encodeURIComponent(contentId)}`;
                 console.log('🌐 Appel API:', apiUrl);
                 const startedAt = performance.now();
                 mwDebug('anime-details:request', { apiUrl });

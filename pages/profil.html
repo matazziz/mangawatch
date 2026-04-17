@@ -2165,6 +2165,39 @@
 
         /* Ajustements mobile dédiés à la section Paramètres (profil perso) */
         @media (max-width: 768px) {
+            .banner-edit-menu {
+                min-width: 0 !important;
+                width: min(300px, 90vw) !important;
+                padding: 1.05rem !important;
+                border-radius: 12px !important;
+                gap: 0.65rem !important;
+            }
+
+            .banner-edit-menu h3 {
+                font-size: 1.08rem !important;
+                margin-bottom: 0.45rem !important;
+                gap: 0.5rem !important;
+            }
+
+            .banner-edit-menu h3::before {
+                height: 16px !important;
+            }
+
+            .banner-edit-option {
+                padding: 0.62rem 0.75rem !important;
+                border-radius: 8px !important;
+                font-size: 0.88rem !important;
+                gap: 0.5rem !important;
+            }
+
+            .banner-edit-option i {
+                font-size: 0.95rem !important;
+            }
+
+            .banner-volume-control {
+                margin: 0.35rem 0 !important;
+            }
+
             #settings-section {
                 padding: 1rem 0 0.5rem !important;
             }
@@ -2953,13 +2986,6 @@
                                 </div>
                                 <span id="banner-volume-setting-value" class="volume-value-compact" style="margin-left: 0.5rem;">35%</span>
                             </div>
-                        </div>
-                        <div class="setting-item">
-                            <label><i class="fas fa-palette"></i> <span data-i18n="profile.theme">Thème</span></label>
-                            <select id="theme-select">
-                                <option value="dark" data-i18n="profile.theme_dark">Sombre</option>
-                                <option value="light" data-i18n="profile.theme_light">Clair</option>
-                            </select>
                         </div>
                         <div class="setting-item">
                             <label><i class="fas fa-lock"></i> <span data-i18n="profile.privacy_subscriptions">Confidentialité des abonnements</span></label>
@@ -4314,9 +4340,8 @@
                 }
             }
             
-            // Rediriger vers le profil
+            // Sauvegarder l'utilisateur sans redirection forcée
             localStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/profil.html';
         }
 
     // Décoder le token JWT
@@ -4891,10 +4916,10 @@
             const languageSelect = document.getElementById('language-select');
             
         if (themeSelect) {
-            themeSelect.value = localStorage.getItem('theme') || currentUserForPrefs?.theme || 'dark';
+            themeSelect.value = localStorage.getItem('theme') || currentUser?.theme || 'dark';
         }
         if (languageSelect) {
-            languageSelect.value = localStorage.getItem('language') || currentUserForPrefs?.language || 'fr';
+            languageSelect.value = localStorage.getItem('language') || currentUser?.language || 'fr';
         }
             
             // Gérer les changements de thème

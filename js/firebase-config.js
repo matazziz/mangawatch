@@ -8,7 +8,7 @@ import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-s
 
 // 🔥 Configuration Firebase pour mangawatch-98ed0
 const firebaseConfig = {
-  apiKey: (typeof window !== 'undefined' && window.__FIREBASE_API_KEY__) ? window.__FIREBASE_API_KEY__ : "FIREBASE_API_KEY_NOT_SET",
+  apiKey: (typeof window !== 'undefined' && window.__FIREBASE_API_KEY__) ? window.__FIREBASE_API_KEY__ : "AIzaSyDJCMw1H71X5leQyO-IgejGLsWDW3kzHH8",
   authDomain: "mangawatch-98ed0.firebaseapp.com",
   projectId: "mangawatch-98ed0",
   storageBucket: "mangawatch-98ed0.firebasestorage.app",

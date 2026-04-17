@@ -119,10 +119,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!user || !user.email) return;
         
         const item = await collectionService.getItemByContentId(user.email, itemId);
+        // Fallback : si l'item n'est pas resolu a cet instant, on autorise quand meme
+        // la saisie pour ne pas bloquer les statuts "en pause" / "abandonne".
+        const resolvedItem = item || {
+            id: String(itemId),
+            type: 'anime',
+            stoppedAt: null
+        };
         
-        if (!item) return;
-        
-        const normalizedType = normalizeItemType(item.type);
+        const normalizedType = normalizeItemType(resolvedItem.type);
         const isAnime = normalizedType === 'anime';
         
         // Créer le popup
@@ -188,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             id="popup-stopped-at-input" 
                             min="1" 
                             placeholder="0" 
-                            value="${item.stoppedAt || ''}"
+                            value="${resolvedItem.stoppedAt || ''}"
                             style="
                                 width: 100%;
                                 padding: 12px;
@@ -328,17 +333,18 @@ document.addEventListener('DOMContentLoaded', function() {
         option.addEventListener('click', async function() {
             const status = this.dataset.status;
             selectedStatus = status;
+            const targetItemId = currentItemId;
             
             if (status === 'on-hold' || status === 'dropped') {
                 // Fermer le modal et afficher le popup
                 closeStatusModal();
-                await showStoppedAtPopup(currentItemId, status, async (stoppedAt) => {
+                await showStoppedAtPopup(targetItemId, status, async (stoppedAt) => {
                     // Mettre à jour le statut avec la valeur stoppedAt
-                    await updateItemStatusWithStoppedAt(currentItemId, status, stoppedAt);
+                    await updateItemStatusWithStoppedAt(targetItemId, status, stoppedAt);
                 });
             } else {
                 // Pour les autres statuts, appliquer directement
-                await updateItemStatus(currentItemId, status);
+                await updateItemStatus(targetItemId, status);
                 closeStatusModal();
             }
         });
