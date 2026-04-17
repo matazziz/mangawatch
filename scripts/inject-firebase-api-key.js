@@ -7,9 +7,15 @@ const fs = require('fs');
 const path = require('path');
 
 const PLACEHOLDER = '__MANGAWATCH_FB_KEY_B64__';
-const key = process.env.MANGAWATCH_FB_WEB_API_KEY;
+let key = process.env.MANGAWATCH_FB_WEB_API_KEY;
+if (key) {
+  key = String(key).trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
+}
 
-if (!key || !String(key).trim()) {
+if (!key) {
   console.error(
     '[inject-firebase-api-key] Variable MANGAWATCH_FB_WEB_API_KEY manquante. ' +
       'Netlify : Site settings → Environment variables.'

@@ -5,6 +5,10 @@
   publish = "."
   functions = "netlify/functions"
 
+# Variables secrètes : Netlify compare leur valeur à la sortie du build ; ce fichier contient volontairement la clé (Base64 + atob).
+[build.environment]
+  SECRETS_SCAN_OMIT_PATHS = "js/firebase-config.js"
+
 [[redirects]]
   # Rediriger la racine vers la page d'accueil
   from = "/"
