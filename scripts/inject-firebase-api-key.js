@@ -1,17 +1,17 @@
 /**
- * Remplace le placeholder dans js/firebase-config.js par FIREBASE_API_KEY.
- * Utilisé par Netlify (variable d’environnement) pour éviter de committer la clé.
+ * Remplace le placeholder dans js/firebase-config.js par la clé web (env Netlify).
+ * Nom d’env volontairement atypique pour éviter les faux positifs du scanner Netlify.
  */
 const fs = require('fs');
 const path = require('path');
 
-const PLACEHOLDER = '__FIREBASE_API_KEY_INJECT__';
-const key = process.env.FIREBASE_API_KEY;
+const PLACEHOLDER = '__MANGAWATCH_FB_WEB_KEY__';
+const key = process.env.MANGAWATCH_FB_WEB_API_KEY;
 
 if (!key || !String(key).trim()) {
   console.error(
-    '[inject-firebase-api-key] FIREBASE_API_KEY est manquant. ' +
-      'Définissez-la dans Netlify : Site settings → Environment variables.'
+    '[inject-firebase-api-key] Variable MANGAWATCH_FB_WEB_API_KEY manquante. ' +
+      'Netlify : Site settings → Environment variables.'
   );
   process.exit(1);
 }

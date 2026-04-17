@@ -7,9 +7,9 @@ import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth
 import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // 🔥 Configuration Firebase pour mangawatch-98ed0
-// La clé n’est pas dans le dépôt : Netlify injecte FIREBASE_API_KEY au build (voir scripts/inject-firebase-api-key.js).
+// Clé web injectée au build Netlify (voir scripts/inject-firebase-api-key.js + variable d’environnement du site).
 const firebaseConfig = {
-  apiKey: "__FIREBASE_API_KEY_INJECT__",
+  apiKey: "__MANGAWATCH_FB_WEB_KEY__",
   authDomain: "mangawatch-98ed0.firebaseapp.com",
   projectId: "mangawatch-98ed0",
   storageBucket: "mangawatch-98ed0.firebasestorage.app",

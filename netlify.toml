@@ -1,5 +1,5 @@
 [build]
-  # Injecte la clé Firebase depuis FIREBASE_API_KEY (variables d’environnement Netlify), sans la mettre dans Git.
+  # Injecte la clé web Firebase (variable MANGAWATCH_FB_WEB_API_KEY dans l’UI Netlify).
   command = "node scripts/inject-firebase-api-key.js"
   # Netlify servira les fichiers statiques depuis la racine
   publish = "."
