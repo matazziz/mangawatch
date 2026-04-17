@@ -1,4 +1,6 @@
 [build]
+  # Injecte la clé Firebase depuis FIREBASE_API_KEY (variables d’environnement Netlify), sans la mettre dans Git.
+  command = "node scripts/inject-firebase-api-key.js"
   # Netlify servira les fichiers statiques depuis la racine
   publish = "."
   functions = "netlify/functions"
