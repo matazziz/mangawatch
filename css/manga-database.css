@@ -1099,7 +1099,8 @@ main.manga-database {
         display: none;
     }
 
-    .search-container:not(.mobile-filters-open) #genre-container {
+    /* Ne masque le panneau genres que s'il n'est pas explicitement ouvert (classe posée par le JS). */
+    .search-container:not(.mobile-filters-open) #genre-container:not(.genre-panel-open) {
         display: none !important;
     }
 
@@ -1128,11 +1129,28 @@ main.manga-database {
         gap: 4px;
         margin: 16px 0;
         flex-wrap: nowrap;
+        max-width: 100%;
+        padding: 0 4px;
+        box-sizing: border-box;
+        justify-content: center;
     }
 
     .page-numbers {
         gap: 2px;
         margin: 0 2px;
+        max-width: calc(100vw - 118px);
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        justify-content: flex-start;
+    }
+
+    .page-numbers .page-number,
+    .page-numbers .page-ellipsis {
+        flex-shrink: 0;
     }
 
     .pagination button {

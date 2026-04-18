@@ -31,7 +31,15 @@ exports.handler = async (event) => {
     params.set("limit", String(limit));
 
     if (qs.q) params.set("q", String(qs.q).trim());
-    if (qs.type) params.set("type", String(qs.type).toLowerCase());
+    if (qs.type) {
+      // Jikan v4 attend les enums exacts (ex. doujinshi, one_shot), pas les libellés UI.
+      let t = String(qs.type).toLowerCase().trim();
+      if (mediaType === "manga") {
+        if (t === "doujin") t = "doujinshi";
+        if (t === "one shot" || t === "oneshot") t = "one_shot";
+      }
+      params.set("type", t);
+    }
     if (qs.order_by) params.set("order_by", String(qs.order_by));
     if (qs.sort) params.set("sort", String(qs.sort));
     if (qs.min_score) params.set("min_score", String(qs.min_score));

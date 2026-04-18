@@ -601,6 +601,9 @@ function wireMangaDatabaseEventListeners() {
         mobileFiltersToggle.addEventListener('click', () => {
             const isOpen = searchContainer.classList.toggle('mobile-filters-open');
             mobileFiltersToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            if (!isOpen && typeof hideGenreContainer === 'function') {
+                hideGenreContainer();
+            }
         });
     }
     if (elements.prevPage) elements.prevPage.addEventListener('click', () => changePage(currentPage - 1));
@@ -3118,8 +3121,15 @@ function updatePagination() {
     let pageNumbers = '';
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
-        // Mobile: afficher 1 + page précédente + page actuelle + page suivante + dernière page.
-        const pagesToDisplay = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+        // Mobile : fenêtre autour de la page courante ; éviter « 1 … 3 4 5 1981 » quand la dernière page est très loin.
+        const pagesToDisplay = new Set([1, currentPage - 1, currentPage, currentPage + 1]);
+        const showLast =
+            totalPages <= 1 ||
+            (totalPages <= 25 && currentPage >= totalPages - 8) ||
+            currentPage >= totalPages - 3;
+        if (showLast && totalPages > 1) {
+            pagesToDisplay.add(totalPages);
+        }
         const sortedPages = Array.from(pagesToDisplay)
             .filter(page => page >= 1 && page <= totalPages)
             .sort((a, b) => a - b);
@@ -3127,10 +3137,10 @@ function updatePagination() {
         let previousRenderedPage = 0;
         sortedPages.forEach(page => {
             if (previousRenderedPage && page - previousRenderedPage > 1) {
-                pageNumbers += `<span class="page-ellipsis">...</span>`;
+                pageNumbers += `<span class="page-ellipsis">…</span>`;
             }
 
-            pageNumbers += `<button class="page-number ${page === currentPage ? 'active' : ''}" data-page="${page}">${page}</button>`;
+            pageNumbers += `<button type="button" class="page-number ${page === currentPage ? 'active' : ''}" data-page="${page}">${page}</button>`;
             previousRenderedPage = page;
         });
     } else {
@@ -3166,7 +3176,9 @@ function updatePagination() {
     // Ajouter les écouteurs d'événements aux boutons de page
     document.querySelectorAll('.page-number').forEach(button => {
         button.addEventListener('click', (e) => {
-            const page = parseInt(e.target.dataset.page);
+            const el = e.currentTarget;
+            const page = parseInt(el && el.getAttribute('data-page'), 10);
+            if (!Number.isFinite(page) || page < 1) return;
             changePage(page);
         });
     });
@@ -3224,13 +3236,12 @@ function formatAiringDate(aired) {
 // Basculer le tri par genre
 function toggleGenreSort() {
     const genreContainer = document.getElementById('genre-container');
-    
-    if (genreContainer.style.display === 'none' || genreContainer.style.display === '') {
-        // Afficher le container des genres
-        showGenreContainer();
-    } else {
-        // Masquer le container des genres
+    if (!genreContainer) return;
+    // Sur mobile, display peut être forcé par CSS/!important : la classe fait foi.
+    if (genreContainer.classList.contains('genre-panel-open')) {
         hideGenreContainer();
+    } else {
+        showGenreContainer();
     }
 }
 
@@ -3355,8 +3366,9 @@ function showGenreContainer() {
         genreGrid.appendChild(button);
     });
     
-    // Afficher le container
-    genreContainer.style.display = 'block';
+    // Afficher le container (important : sur mobile, une règle CSS peut forcer display:none)
+    genreContainer.classList.add('genre-panel-open');
+    genreContainer.style.setProperty('display', 'block', 'important');
     
     // Ajouter les écouteurs d'événements
     document.querySelectorAll('.genre-option').forEach(button => {
@@ -3415,7 +3427,7 @@ function showGenreContainer() {
 // Fonction pour mettre à jour les traductions des genres quand la langue change
 function updateGenreTranslations() {
     const genreContainer = document.getElementById('genre-container');
-    if (genreContainer && genreContainer.style.display !== 'none') {
+    if (genreContainer && genreContainer.classList.contains('genre-panel-open')) {
         // Recharger les genres avec les nouvelles traductions
         showGenreContainer();
     }
@@ -3428,7 +3440,8 @@ window.updateGenreTranslations = updateGenreTranslations;
 function hideGenreContainer() {
     const genreContainer = document.getElementById('genre-container');
     if (genreContainer) {
-        genreContainer.style.display = 'none';
+        genreContainer.classList.remove('genre-panel-open');
+        genreContainer.style.setProperty('display', 'none', 'important');
     }
 }
 

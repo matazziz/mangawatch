@@ -913,14 +913,15 @@ body {
     }
 
     .list-item {
-        min-height: 345px;
-        height: 345px;
-        max-height: 345px;
+        min-height: 0;
+        height: auto;
+        max-height: none;
     }
 
     .item-content {
         padding: 12px !important;
-        min-height: 150px !important;
+        min-height: 0 !important;
+        flex: 1 1 auto;
     }
 
     .item-title {
@@ -1021,14 +1022,15 @@ body {
     }
 
     .list-item {
-        min-height: 305px;
-        height: 305px;
-        max-height: 305px;
+        min-height: 0;
+        height: auto;
+        max-height: none;
     }
 
     .item-content {
         padding: 10px !important;
-        min-height: 130px !important;
+        min-height: 0 !important;
+        flex: 1 1 auto;
     }
 
     .item-title {

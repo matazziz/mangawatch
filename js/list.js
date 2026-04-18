@@ -599,30 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 if (currentTypeFilter !== 'all') {
-                    filteredItems = filteredItems.filter(item => {
-                        const normalizedItemType = normalizeItemType(item.type);
-                        const normalizedFilterType = normalizeItemType(currentTypeFilter);
-                        
-                        // Cas spécial : si le filtre est "film", accepter aussi "Movie" (normalisé en "anime")
-                        // et si l'item est "Movie" (normalisé en "anime"), accepter aussi le filtre "film"
-                        const itemTypeLower = (item.type || '').toLowerCase();
-                        const filterTypeLower = currentTypeFilter.toLowerCase();
-                        
-                        let matches = normalizedItemType === normalizedFilterType;
-                        
-                        // Gestion spéciale pour "film" et "Movie"
-                        if (!matches) {
-                            if (filterTypeLower === 'film' && (itemTypeLower === 'movie' || itemTypeLower === 'film')) {
-                                matches = true;
-                            } else if (itemTypeLower === 'movie' && filterTypeLower === 'film') {
-                                matches = true;
-                            } else if (itemTypeLower === 'movie' && filterTypeLower === 'anime') {
-                                matches = true; // Movie peut être considéré comme anime
-                            }
-                        }
-                        
-                        return matches;
-                    });
+                    filteredItems = filteredItems.filter(item => itemMatchesTypeFilter(item, currentTypeFilter));
                     console.log(`Filtre type "${currentTypeFilter}" - items trouvés:`, filteredItems.length);
                 }
                 
@@ -720,6 +697,49 @@ document.addEventListener('DOMContentLoaded', function() {
         // Si c'est déjà "anime", "manga", "roman", "doujin", "manhwa", "manhua", "film", le retourner tel quel
         return typeLower;
     }
+
+    function getRawItemType(item) {
+        if (!item) return '';
+        return (item.type || item.content_type || item.contentType || '').toString().trim();
+    }
+
+    function itemGenreSuggestsDoujin(item) {
+        const arr = item.genres;
+        if (!Array.isArray(arr) || arr.length === 0) return false;
+        return arr.some(g => {
+            const s = String(typeof g === 'string' ? g : (g.name || '')).toLowerCase();
+            return s.includes('doujin');
+        });
+    }
+
+    /** Filtre type collection : gère Movie/film, doujin/doujinshi et champs Firebase alternatifs. */
+    function itemMatchesTypeFilter(item, typeFilter) {
+        if (!typeFilter || typeFilter === 'all') return true;
+        const raw = getRawItemType(item);
+        const normalizedItemType = normalizeItemType(raw || undefined);
+        const normalizedFilterType = normalizeItemType(typeFilter);
+        const itemTypeLower = raw.toLowerCase();
+        const filterTypeLower = typeFilter.toLowerCase();
+
+        let matches = normalizedItemType === normalizedFilterType;
+        if (!matches) {
+            if (filterTypeLower === 'film' && (itemTypeLower === 'movie' || itemTypeLower === 'film')) {
+                matches = true;
+            } else if (itemTypeLower === 'movie' && filterTypeLower === 'film') {
+                matches = true;
+            } else if (itemTypeLower === 'movie' && filterTypeLower === 'anime') {
+                matches = true;
+            }
+        }
+        if (!matches && filterTypeLower === 'doujin') {
+            if (normalizedItemType === 'doujin' || itemTypeLower.includes('doujin')) {
+                matches = true;
+            } else if (itemGenreSuggestsDoujin(item)) {
+                matches = true;
+            }
+        }
+        return matches;
+    }
     
     // Clé i18n pour le type (Movie → film pour la traduction)
     function getCollectionTypeKey(normalizedType, itemType) {
@@ -763,11 +783,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const statusClass = item.status;
         
         // Normaliser le type : convertir "TV", "Movie", etc. en "anime" pour l'affichage
-        const normalizedType = normalizeItemType(item.type);
+        const rawType = getRawItemType(item);
+        const normalizedType = normalizeItemType(rawType || undefined);
         
         // Libellés traduits pour épisodes/volumes et type
         const t = (key, fallback) => (window.localization && window.localization.get(key)) || fallback;
-        const typeLabel = getCollectionTypeLabel(normalizedType, item.type, t);
+        const typeLabel = getCollectionTypeLabel(normalizedType, rawType, t);
         const episodesLabel = normalizedType === 'anime' ? t('collection.label_episodes', 'épisodes') : t('collection.label_volumes', 'volumes');
         
         // Formater les informations - gérer les différents formats de données
@@ -887,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
         contentDiv.innerHTML = `
             <h3 class="item-title" onclick="window.location.href='anime-details.html?id=${item.id}'" style="cursor: pointer;">${item.title || 'Titre inconnu'}</h3>
             <div class="item-meta">
-                <span class="item-type" data-i18n-type="${normalizedType.toLowerCase()}" data-i18n="collection.type.${getCollectionTypeKey(normalizedType, item.type)}">${typeLabel}</span>
+                <span class="item-type" data-i18n-type="${normalizedType.toLowerCase()}" data-i18n="collection.type.${getCollectionTypeKey(normalizedType, rawType)}">${typeLabel}</span>
                 <span>•</span>
                 <span class="${isLongEpisodes ? 'episodes-long' : ''}" data-episodes-count="${episodesText}" data-episodes-type="${normalizedType === 'anime' ? 'anime' : 'manga'}">${episodesText} ${episodesLabel}</span>
                 <span>•</span>
@@ -961,29 +982,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Filtrer les items selon le type (en normalisant les types)
             if (currentTypeFilter !== 'all') {
                 filteredItems = filteredItems.filter(item => {
-                    const normalizedItemType = normalizeItemType(item.type);
-                    const normalizedFilterType = normalizeItemType(currentTypeFilter);
-                    
-                    // Cas spécial : si le filtre est "film", accepter aussi "Movie" (normalisé en "anime")
-                    // et si l'item est "Movie" (normalisé en "anime"), accepter aussi le filtre "film"
-                    const itemTypeLower = (item.type || '').toLowerCase();
-                    const filterTypeLower = currentTypeFilter.toLowerCase();
-                    
-                    let matches = normalizedItemType === normalizedFilterType;
-                    
-                    // Gestion spéciale pour "film" et "Movie"
+                    const matches = itemMatchesTypeFilter(item, currentTypeFilter);
                     if (!matches) {
-                        if (filterTypeLower === 'film' && (itemTypeLower === 'movie' || itemTypeLower === 'film')) {
-                            matches = true;
-                        } else if (itemTypeLower === 'movie' && filterTypeLower === 'film') {
-                            matches = true;
-                        } else if (itemTypeLower === 'movie' && filterTypeLower === 'anime') {
-                            matches = true; // Movie peut être considéré comme anime
-                        }
-                    }
-                    
-                    if (!matches) {
-                        console.log(`  Item "${item.title}" rejeté: type "${item.type}" (normalisé: "${normalizedItemType}") !== filtre "${currentTypeFilter}" (normalisé: "${normalizedFilterType}")`);
+                        const raw = getRawItemType(item);
+                        console.log(`  Item "${item.title}" rejeté: type "${raw}" (filtre "${currentTypeFilter}")`);
                     }
                     return matches;
                 });

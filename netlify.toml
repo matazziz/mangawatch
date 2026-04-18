@@ -37,10 +37,12 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 # Headers spécifiques pour les fichiers statiques
+# Même logique que le CSS : pas d’« immutable » 1 an sur le JS, sinon les mises à jour
+# ne s’affichent pas en navigation normale (cache agressif) alors qu’elles apparaissent en privé.
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 # Pas "immutable" 1 an : sinon les mises à jour CSS ne sont jamais vues sans changer l’URL.
 # Le ?v= sur les <link> dans les HTML force un nouveau téléchargement après chaque bump.

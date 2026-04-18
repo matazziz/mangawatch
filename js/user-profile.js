@@ -363,12 +363,18 @@ function displayProfileInfo(user, userEmail) {
         profileAvatar.src = rawAvatar ? upgradeProfileAvatarUrl(rawAvatar) : '';
     }
     
-    // Afficher le nom avec le badge certifié
+    // Afficher le nom avec le badge certifié (ne pas utiliser data-i18n sur ce nœud : applyLanguage réécraserait avec « Chargement… »)
     const userNameText = document.getElementById('user-name-text');
     const verifiedBadge = document.getElementById('verified-badge');
+    const accountsForDisplay = JSON.parse(localStorage.getItem('accounts') || '[]');
+    const accountForDisplay = accountsForDisplay.find(function(acc) { return acc.email === userEmail; });
+    const resolvedDisplayName = (user.username || user.name || accountForDisplay && (accountForDisplay.username || accountForDisplay.name) || '')
+        .toString()
+        .trim();
     
     if (userNameText) {
-        userNameText.textContent = user.name || user.email || 'Utilisateur';
+        userNameText.textContent = resolvedDisplayName || (userEmail && userEmail.split('@')[0]) || 'Utilisateur';
+        userNameText.removeAttribute('data-i18n');
     }
     
     // Vérifier si l'utilisateur est certifié
@@ -719,6 +725,18 @@ function setupCollectionFilters() {
 let currentStatusFilter = 'all';
 let currentTypeFilter = 'all';
 
+/** Filtre type collection (profil public) : roman/novel, film/movie, anime/TV… */
+function collectionItemMatchesTypeFilterPublic(item, typeFilter) {
+    if (!typeFilter || typeFilter === 'all') return true;
+    const raw = ((item && (item.type || item.content_type || item.contentType)) || '').toString().toLowerCase().trim();
+    const tf = String(typeFilter).toLowerCase();
+    if (tf === 'roman') return raw === 'roman' || raw === 'novel' || raw === 'light novel';
+    if (tf === 'doujin') return raw === 'doujin' || raw === 'doujinshi';
+    if (tf === 'film') return raw === 'film' || raw === 'movie';
+    if (tf === 'anime') return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(raw);
+    return raw === tf;
+}
+
 // Fonction pour charger et afficher la collection avec la même structure que list.js
 // Charge depuis Firebase (comme list.html) avec fallback localStorage pour cohérence
 async function loadUserCollection(statusFilter = 'all', typeFilter = 'all') {
@@ -749,12 +767,9 @@ async function loadUserCollection(statusFilter = 'all', typeFilter = 'all') {
         filteredList = filteredList.filter(item => item.status === statusFilter);
     }
     
-    // Filtrer selon le type
+    // Filtrer selon le type (aligné sur list.js : novel/roman, Movie/film, etc.)
     if (typeFilter !== 'all') {
-        filteredList = filteredList.filter(item => {
-            const itemType = (item.type || 'anime').toLowerCase();
-            return itemType === typeFilter.toLowerCase();
-        });
+        filteredList = filteredList.filter(item => collectionItemMatchesTypeFilterPublic(item, typeFilter));
     }
     
     // Vider le conteneur
@@ -1388,12 +1403,14 @@ async function displayUserAnimeNotesPublic() {
                     return noteType === 'manhua';
                 } else if (selectedType === 'doujin') {
                     return noteType === 'doujin';
+                } else if (selectedType === 'roman') {
+                    return noteType === 'roman' || noteType === 'novel';
                 } else if (selectedType === 'anime') {
                     return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType);
                 } else if (selectedType === 'film') {
                     return ['movie', 'film'].includes(noteType);
                 }
-                return true;
+                return false;
             });
         }
     
@@ -1797,13 +1814,14 @@ function createSortButtonsPublic(reviewsSection) {
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
+        'tous': (window.t && window.t('collection.type.all')) || 'Tous types',
         'anime': (window.t && window.t('genre.content_animes')) || 'Anime',
         'manga': (window.t && window.t('genre.content_mangas')) || 'Manga',
+        'roman': (window.t && window.t('search.type.novel')) || (window.t && window.t('collection.type.roman')) || 'Roman',
         'doujin': (window.t && window.t('collection.type.doujin')) || 'Doujin',
         'manhwa': (window.t && window.t('genre.content_manhwa')) || 'Manhwa',
         'manhua': (window.t && window.t('genre.content_manhua')) || 'Manhua',
-        'film': (window.t && window.t('genre.content_films')) || 'Film',
-        'tous': (window.t && window.t('collection.type.all')) || 'Tous types'
+        'film': (window.t && window.t('genre.content_films')) || 'Film'
     };
     typeButton.textContent = typeTexts[window.selectedType] || typeTexts['manga'];
     typeButton.style.cssText = sortButton.style.cssText + 'margin-left: 0; margin-right: 8px;';
@@ -1830,10 +1848,23 @@ function createSortButtonsPublic(reviewsSection) {
         border: 1.5px solid #00b894;
         text-align: left;
     `;
+    var tTous = (window.t && window.t('collection.type.all')) || 'Tous types';
     var tManga = (window.t && window.t('genre.content_mangas')) || 'Manga';
     var tAnime = (window.t && window.t('genre.content_animes')) || 'Anime';
     var tFilm = (window.t && window.t('genre.content_films')) || 'Film';
-    typeMenu.innerHTML = '<div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">' + tManga + '</div><div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">' + tAnime + '</div><div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">' + tFilm + '</div>';
+    var tRoman = (window.t && window.t('search.type.novel')) || (window.t && window.t('collection.type.roman')) || 'Roman';
+    var tDoujin = (window.t && window.t('collection.type.doujin')) || 'Doujin';
+    var tManhwa = (window.t && window.t('genre.content_manhwa')) || 'Manhwa';
+    var tManhua = (window.t && window.t('genre.content_manhua')) || 'Manhua';
+    typeMenu.innerHTML =
+        '<div class="type-menu-item" data-type="tous" style="padding: 10px 22px; cursor: pointer;">' + tTous + '</div>' +
+        '<div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">' + tManga + '</div>' +
+        '<div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">' + tAnime + '</div>' +
+        '<div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">' + tFilm + '</div>' +
+        '<div class="type-menu-item" data-type="roman" style="padding: 10px 22px; cursor: pointer;">' + tRoman + '</div>' +
+        '<div class="type-menu-item" data-type="doujin" style="padding: 10px 22px; cursor: pointer;">' + tDoujin + '</div>' +
+        '<div class="type-menu-item" data-type="manhwa" style="padding: 10px 22px; cursor: pointer;">' + tManhwa + '</div>' +
+        '<div class="type-menu-item" data-type="manhua" style="padding: 10px 22px; cursor: pointer;">' + tManhua + '</div>';
     // Mettre en surbrillance l'option correspondant au type actuel
     const currentType = window.selectedType || 'manga';
     typeMenu.querySelectorAll('.type-menu-item').forEach(opt => {
@@ -1889,6 +1920,11 @@ function createSortButtonsPublic(reviewsSection) {
     const getTypeSearchPlaceholderPublic = function(type) {
         if (type === 'anime') return 'Rechercher un anime...';
         if (type === 'film') return 'Rechercher un film...';
+        if (type === 'roman') return 'Rechercher un roman...';
+        if (type === 'doujin') return 'Rechercher un doujin...';
+        if (type === 'manhwa') return 'Rechercher un manhwa...';
+        if (type === 'manhua') return 'Rechercher un manhua...';
+        if (type === 'tous') return (window.t && window.t('search.placeholder.generic')) || 'Rechercher...';
         return 'Rechercher un manga...';
     };
     searchInput.placeholder = getTypeSearchPlaceholderPublic(window.selectedType);
@@ -2388,23 +2424,40 @@ function createSortButtonsPublic(reviewsSection) {
         });
     });
     
+    function resetPublicProfileGenreSelection() {
+        window.selectedGenres = [];
+        window.searchResultsInGenreContainer = false;
+        const gfc = document.getElementById('genre-filtered-container');
+        if (gfc) gfc.remove();
+        const searchRes = document.getElementById('search-results-container-public');
+        if (searchRes) searchRes.remove();
+        const gc = document.getElementById('genre-sort-container');
+        if (gc) {
+            gc.querySelectorAll('button').forEach(function(btn) {
+                btn.style.background = '#2a2d36';
+                btn.style.color = '#00b894';
+                btn.style.transform = 'translateY(0)';
+                btn.style.boxShadow = '';
+                btn.style.border = '2px solid #00b894';
+                btn.style.fontWeight = '500';
+            });
+            gc.style.display = 'none';
+            gc.style.opacity = '0';
+            gc.style.maxHeight = '0';
+            gc.style.marginBottom = '0';
+            gc.style.visibility = 'hidden';
+        }
+        const sortBtnEl = document.getElementById('sort-by-genre-btn');
+        if (sortBtnEl) sortBtnEl.classList.remove('genre-open');
+        const allStarWrap = document.querySelector('.all-star-containers');
+        if (allStarWrap) allStarWrap.style.display = '';
+        document.querySelectorAll('.star-rating-group').forEach(function(g) { g.style.display = ''; });
+        document.querySelectorAll('[id^="star-containers"]').forEach(function(c) { c.style.display = ''; });
+    }
+
     // Gestion du menu déroulant du bouton type
     typeButton.addEventListener('click', function(e) {
         e.stopPropagation();
-        
-        // Empêcher l'ouverture du menu si des genres sont sélectionnés
-        const hasSelectedGenres = Array.isArray(window.selectedGenres) && window.selectedGenres.length > 0;
-        const genreContainerEl = document.getElementById('genre-sort-container');
-        const isContainerOpen = genreContainerEl && 
-            (genreContainerEl.style.display !== 'none' && 
-             genreContainerEl.style.visibility !== 'hidden' &&
-             genreContainerEl.style.opacity !== '0');
-        
-        if (hasSelectedGenres || isContainerOpen) {
-            e.preventDefault();
-            return;
-        }
-        
         const isCurrentlyOpen = typeMenu.style.display !== 'none' && typeMenu.style.display !== '';
         if (orderMenu) orderMenu.style.display = 'none';
         if (!isCurrentlyOpen) {
@@ -2419,6 +2472,7 @@ function createSortButtonsPublic(reviewsSection) {
         item.addEventListener('click', function(e) {
             e.stopPropagation();
             if (typeMenu) typeMenu.style.display = 'none';
+            resetPublicProfileGenreSelection();
             const type = item.dataset.type;
             window.selectedType = type;
             typeButton.textContent = typeTexts[type] || item.textContent.trim();
@@ -2672,8 +2726,10 @@ function createSortButtonsPublic(reviewsSection) {
                     return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType);
                 } else if (selectedType === 'film') {
                     return ['movie', 'film'].includes(noteType);
+                } else if (selectedType === 'roman') {
+                    return noteType === 'roman' || noteType === 'novel';
                 }
-                return true;
+                return false;
             });
         }
         
@@ -2904,6 +2960,7 @@ function performSearchPublic(query) {
             // Type strict : manga = uniquement manga ; manhwa/manhua/doujin n'apparaissent que si leur type ou genre est sélectionné
             const matchesType = selectedType === 'tous' || 
                 (selectedType === 'manga' && noteType === 'manga') ||
+                (selectedType === 'roman' && (noteType === 'roman' || noteType === 'novel')) ||
                 (selectedType === 'manhwa' && (noteType === 'manhwa' || (noteType === 'manga' && noteGenresForType.some(ng => ng === 'manhwa' || ng.includes('manhwa'))))) ||
                 (selectedType === 'manhua' && (noteType === 'manhua' || (noteType === 'manga' && noteGenresForType.some(ng => ng === 'manhua' || ng.includes('manhua'))))) ||
                 (selectedType === 'doujin' && (noteType === 'doujin' || (noteType === 'manga' && noteGenresForType.some(ng => ng === 'doujin' || ng.includes('doujin'))))) ||
