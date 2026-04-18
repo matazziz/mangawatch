@@ -3121,13 +3121,9 @@ function updatePagination() {
     let pageNumbers = '';
     const isMobile = window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
-        // Mobile : fenêtre autour de la page courante ; éviter « 1 … 3 4 5 1981 » quand la dernière page est très loin.
+        // Mobile : page courante ±1, début (1) et toujours la dernière page si > 1.
         const pagesToDisplay = new Set([1, currentPage - 1, currentPage, currentPage + 1]);
-        const showLast =
-            totalPages <= 1 ||
-            (totalPages <= 25 && currentPage >= totalPages - 8) ||
-            currentPage >= totalPages - 3;
-        if (showLast && totalPages > 1) {
+        if (totalPages > 1) {
             pagesToDisplay.add(totalPages);
         }
         const sortedPages = Array.from(pagesToDisplay)

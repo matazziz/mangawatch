@@ -1136,9 +1136,9 @@ main.manga-database {
     }
 
     .page-numbers {
-        gap: 2px;
-        margin: 0 2px;
-        max-width: calc(100vw - 118px);
+        gap: 1px;
+        margin: 0 1px;
+        max-width: calc(100vw - 96px);
         min-width: 0;
         flex: 1 1 auto;
         overflow-x: auto;
@@ -1154,18 +1154,18 @@ main.manga-database {
     }
 
     .pagination button {
-        width: 26px;
-        height: 26px;
-        min-width: 26px;
-        font-size: 0.72rem;
-        border-radius: 5px;
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        font-size: 0.65rem;
+        border-radius: 4px;
     }
 
     .pagination button[id*="prev"],
     .pagination button[id*="next"] {
-        min-width: 50px;
-        padding: 0 4px;
-        font-size: 0.64rem;
+        min-width: 42px;
+        padding: 0 3px;
+        font-size: 0.58rem;
     }
 
     .page-ellipsis {

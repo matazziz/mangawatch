@@ -737,6 +737,28 @@ function collectionItemMatchesTypeFilterPublic(item, typeFilter) {
     return raw === tf;
 }
 
+/** Type de contenu normalisé pour les notes (profil public) : Firebase + champs API + flags. */
+function resolvePublicNoteContentType(note) {
+    if (!note || typeof note !== 'object') return 'manga';
+    let ct = String(note.contentType || note.content_type || '').trim().toLowerCase();
+    if (ct === 'doujinshi') return 'doujin';
+    if (ct === 'novel' || ct === 'light novel' || ct === 'light_novel') return 'roman';
+    if (ct === 'film' || ct === 'movie') return 'movie';
+    if (['anime', 'manga', 'manhwa', 'manhua', 'doujin', 'roman'].includes(ct)) return ct;
+    if (['tv', 'ova', 'ona', 'special', 'music'].includes(ct)) return 'anime';
+    const raw = String(note.type || note.mediaType || note.malType || '').trim().toLowerCase();
+    if (raw === 'doujinshi' || raw === 'doujin') return 'doujin';
+    if (raw === 'movie') return 'movie';
+    if (['tv', 'ova', 'ona', 'special', 'music'].includes(raw)) return 'anime';
+    if (raw === 'novel' || raw === 'light_novel') return 'roman';
+    if (raw === 'manhwa') return 'manhwa';
+    if (raw === 'manhua') return 'manhua';
+    if (raw === 'manga' || raw === 'one_shot' || raw === 'one shot') return 'manga';
+    if (note.isManga === true || note.isManga === 'true') return 'manga';
+    if (note.isAnime === true || note.isAnime === 'true') return 'anime';
+    return ct || 'manga';
+}
+
 // Fonction pour charger et afficher la collection avec la même structure que list.js
 // Charge depuis Firebase (comme list.html) avec fallback localStorage pour cohérence
 async function loadUserCollection(statusFilter = 'all', typeFilter = 'all') {
@@ -1112,7 +1134,9 @@ function loadUserAnimeNotes() {
     
     // Attendre un peu que les containers soient créés
     setTimeout(() => {
-        displayUserAnimeNotesPublic();
+        void displayUserAnimeNotesPublic().catch(function(err) {
+            console.error('[user-profile] displayUserAnimeNotesPublic:', err);
+        });
     }, 100);
 
     // Correctif: certains styles se stabilisent après le premier paint
@@ -1122,7 +1146,9 @@ function loadUserAnimeNotes() {
             const activeTab = document.querySelector('.profile-tab.active')?.getAttribute('data-tab');
             if (activeTab === 'reviews') {
                 createStarBadgesPublic();
-                displayUserAnimeNotesPublic();
+                void displayUserAnimeNotesPublic().catch(function(err) {
+                    console.error('[user-profile] displayUserAnimeNotesPublic:', err);
+                });
             }
         }, 450);
     });
@@ -1378,41 +1404,57 @@ function createStarBadgesPublic() {
 
 // Afficher les notes d'animes avec les containers à étoiles
 async function displayUserAnimeNotesPublic() {
-    // Charger les notes de l'utilisateur
     const notesKey = `user_content_notes_${viewedUserEmail}`;
     let notes = [];
     try {
-        notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+        if (viewedUserEmail && typeof window.loadUserNotes === 'function') {
+            notes = await window.loadUserNotes(viewedUserEmail);
+        } else {
+            notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+        }
+        if (!Array.isArray(notes)) notes = [];
     } catch (e) {
         console.error('Erreur lors du chargement des notes:', e);
         notes = [];
     }
+
+    const allStarWrap = document.querySelector('.all-star-containers');
+    if (allStarWrap) {
+        allStarWrap.style.display = 'flex';
+        allStarWrap.style.visibility = 'visible';
+        allStarWrap.style.opacity = '1';
+    }
+    document.querySelectorAll('.star-rating-group').forEach(function(g) {
+        g.style.display = '';
+        g.style.visibility = 'visible';
+        g.style.opacity = '1';
+    });
     
     // Filtrer selon le type sélectionné
     const selectedType = window.selectedType || 'manga';
     let filteredNotes = notes;
     
-        if (selectedType !== 'tous') {
-            filteredNotes = notes.filter(note => {
-                const noteType = (note.contentType || 'manga').toLowerCase();
-                if (selectedType === 'manga') {
-                    return noteType === 'manga';
-                } else if (selectedType === 'manhwa') {
-                    return noteType === 'manhwa';
-                } else if (selectedType === 'manhua') {
-                    return noteType === 'manhua';
-                } else if (selectedType === 'doujin') {
-                    return noteType === 'doujin';
-                } else if (selectedType === 'roman') {
-                    return noteType === 'roman' || noteType === 'novel';
-                } else if (selectedType === 'anime') {
-                    return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType);
-                } else if (selectedType === 'film') {
-                    return ['movie', 'film'].includes(noteType);
-                }
-                return false;
-            });
-        }
+    if (selectedType !== 'tous') {
+        filteredNotes = notes.filter(note => {
+            const noteType = resolvePublicNoteContentType(note);
+            if (selectedType === 'manga') {
+                return noteType === 'manga';
+            } else if (selectedType === 'manhwa') {
+                return noteType === 'manhwa';
+            } else if (selectedType === 'manhua') {
+                return noteType === 'manhua';
+            } else if (selectedType === 'doujin') {
+                return noteType === 'doujin';
+            } else if (selectedType === 'roman') {
+                return noteType === 'roman' || noteType === 'novel';
+            } else if (selectedType === 'anime') {
+                return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType);
+            } else if (selectedType === 'film') {
+                return ['movie', 'film'].includes(noteType);
+            }
+            return false;
+        });
+    }
     
     const animeNotes = filteredNotes;
     
@@ -2426,6 +2468,7 @@ function createSortButtonsPublic(reviewsSection) {
     
     function resetPublicProfileGenreSelection() {
         window.selectedGenres = [];
+        window.starCurrentPagesPublic = {};
         window.searchResultsInGenreContainer = false;
         const gfc = document.getElementById('genre-filtered-container');
         if (gfc) gfc.remove();
@@ -2490,7 +2533,9 @@ function createSortButtonsPublic(reviewsSection) {
             });
             
             // Réafficher les notes avec le nouveau filtre de type
-            displayUserAnimeNotesPublic();
+            void displayUserAnimeNotesPublic().catch(function(err) {
+                console.error('[user-profile] displayUserAnimeNotesPublic:', err);
+            });
             
             // Réafficher les containers d'étoiles si une recherche était active
             const searchInput = document.getElementById('profile-search-input-public');
@@ -2571,29 +2616,14 @@ function createSortButtonsPublic(reviewsSection) {
         const typeButtonEl = document.getElementById('filter-by-type-btn');
         const orderButtonEl = document.getElementById('order-desc-btn');
         const searchInputEl = document.getElementById('profile-search-input-public');
-        const genreContainerEl = document.getElementById('genre-sort-container');
         
-        const hasSelectedGenres = Array.isArray(window.selectedGenres) && window.selectedGenres.length > 0;
-        const isContainerOpen = genreContainerEl && 
-            (genreContainerEl.style.display !== 'none' && 
-             genreContainerEl.style.visibility !== 'hidden' &&
-             genreContainerEl.style.opacity !== '0');
-        
-        const shouldDisableType = hasSelectedGenres || isContainerOpen;
-        
-        // Désactiver/réactiver le bouton type uniquement (pas l'ordre)
+        // Le bouton « type » reste toujours actif : on peut changer de type à tout moment
+        // (réinitialise genres via le menu ; évite le blocage « seul manga marche »).
         if (typeButtonEl) {
-            if (shouldDisableType) {
-                typeButtonEl.style.opacity = '0.5';
-                typeButtonEl.style.cursor = 'not-allowed';
-                typeButtonEl.style.pointerEvents = 'none';
-                typeButtonEl.disabled = true;
-            } else {
-                typeButtonEl.style.opacity = '1';
-                typeButtonEl.style.cursor = 'pointer';
-                typeButtonEl.style.pointerEvents = 'auto';
-                typeButtonEl.disabled = false;
-            }
+            typeButtonEl.style.opacity = '1';
+            typeButtonEl.style.cursor = 'pointer';
+            typeButtonEl.style.pointerEvents = 'auto';
+            typeButtonEl.disabled = false;
         }
         
         // Le bouton ordre reste toujours actif (pour trier les containers à étoiles OU le container de genre)
@@ -2615,7 +2645,7 @@ function createSortButtonsPublic(reviewsSection) {
     };
     
     // Fonction pour appliquer le filtre par genre
-    window.applyGenreFilterPublic = function() {
+    window.applyGenreFilterPublic = async function() {
         console.log('🔍 applyGenreFilterPublic appelée avec selectedGenres:', window.selectedGenres);
         
         // Initialiser selectedGenres s'il n'existe pas
@@ -2649,7 +2679,7 @@ function createSortButtonsPublic(reviewsSection) {
             });
             
             // Mettre à jour le Top 10 (sans genre)
-            displayUserAnimeNotesPublic();
+            await displayUserAnimeNotesPublic();
             // Mettre à jour l'état des boutons
             if (typeof window.updateButtonsStatePublic === 'function') {
                 window.updateButtonsStatePublic();
@@ -2659,7 +2689,7 @@ function createSortButtonsPublic(reviewsSection) {
         
         // Mettre à jour le Top 10 avec le genre sélectionné AVANT de créer le container filtré
         console.log('📊 Mise à jour du Top 10 pour les genres:', window.selectedGenres.join(', '));
-        displayUserAnimeNotesPublic();
+        await displayUserAnimeNotesPublic();
         
         console.log('📋 Genres sélectionnés, masquage des conteneurs d\'étoiles');
         console.log('📋 Genres:', window.selectedGenres);
@@ -2692,7 +2722,12 @@ function createSortButtonsPublic(reviewsSection) {
         const notesKey = `user_content_notes_${viewedUserEmail}`;
         let notes = [];
         try {
-            notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+            if (typeof window.loadUserNotes === 'function' && viewedUserEmail) {
+                notes = await window.loadUserNotes(viewedUserEmail);
+            } else {
+                notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+            }
+            if (!Array.isArray(notes)) notes = [];
             console.log(`📚 ${notes.length} notes chargées pour l'utilisateur ${viewedUserEmail}`);
         } catch (e) {
             console.error('Erreur lors du chargement des notes:', e);
@@ -2708,7 +2743,7 @@ function createSortButtonsPublic(reviewsSection) {
         
         if (selectedType !== 'tous') {
             filteredNotes = notes.filter(note => {
-                const noteType = (note.contentType || 'manga').toLowerCase();
+                const noteType = resolvePublicNoteContentType(note);
                 if (selectedType === 'manga') {
                     // Inclure manga + manhwa/manhua/doujin si leur genre est sélectionné (pour afficher dans le container de genre)
                     if (noteType === 'manga') return true;
@@ -2749,7 +2784,7 @@ function createSortButtonsPublic(reviewsSection) {
                 return String(g).toLowerCase().trim();
             });
             
-            const noteContentType = (note.contentType || '').toLowerCase().trim();
+            const noteContentType = resolvePublicNoteContentType(note);
             
             return window.selectedGenres.some(selectedGenre => {
                 const normalizedSelected = selectedGenre.toLowerCase().trim();
@@ -2950,7 +2985,7 @@ function performSearchPublic(query) {
         let filteredNotes = notes.filter(note => {
             const title = (note.title || note.titre || '').toLowerCase();
             if (!title.includes(queryLower)) return false;
-            const noteType = (note.contentType || 'manga').toLowerCase();
+            const noteType = resolvePublicNoteContentType(note);
             const noteGenresForType = (note.genres || []).map(g => {
                 if (typeof g === 'object' && g !== null && (g.name || g.genre || g.title)) {
                     return String(g.name || g.genre || g.title).toLowerCase().trim();

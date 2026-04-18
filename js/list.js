@@ -704,11 +704,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function itemGenreSuggestsDoujin(item) {
+        const title = ((item && item.title) || '').toString().toLowerCase();
+        if (title.includes('doujin')) return true;
         const arr = item.genres;
         if (!Array.isArray(arr) || arr.length === 0) return false;
         return arr.some(g => {
-            const s = String(typeof g === 'string' ? g : (g.name || '')).toLowerCase();
-            return s.includes('doujin');
+            const s = String(typeof g === 'string' ? g : (g.name || g.genre || '')).toLowerCase();
+            return s.includes('doujin') || s.includes('doujinshi');
         });
     }
 
