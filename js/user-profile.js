@@ -353,6 +353,8 @@ function displayProfileInfo(user, userEmail) {
         var rawAvatar = '';
         if (storedAvatar) {
             rawAvatar = storedAvatar;
+        } else if (user.avatar) {
+            rawAvatar = user.avatar;
         } else if (user.customAvatar) {
             rawAvatar = user.customAvatar;
         } else if (user.originalAvatar) {
