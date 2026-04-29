@@ -123,8 +123,8 @@ function getTranslatedType(contentType, itemType) {
             'Novel': 'collection.type.novel',
             'Light Novel': 'collection.type.novel', // Utiliser la même traduction que Novel
             'One Shot': 'collection.type.manga', // Traiter comme manga
-            'Doujinshi': 'collection.type.doujin',
-            'Doujin': 'collection.type.doujin',
+            'Doujinshi': 'collection.type.manga',
+            'Doujin': 'collection.type.manga',
             'Manhwa': 'collection.type.manhwa',
             'Manhua': 'collection.type.manhua'
         };
@@ -262,8 +262,8 @@ function restorePageState() {
                     // Mapping inverse des tags API vers les types de l'interface
                     const reverseTypeMapping = {
                         'novel': 'novel',
-                        'doujin': 'doujin',
-                        'doujinshi': 'doujin',
+                        'doujin': 'manga',
+                        'doujinshi': 'manga',
                         'manhwa': 'manhwa',
                         'manhua': 'manhua',
                         'manga': 'manga',
@@ -461,13 +461,6 @@ function updateInterfaceForContentType(contentType) {
             if (pageTitle) pageTitle.textContent = 'Romans';
             if (elements.searchInput) {
                 elements.searchInput.placeholder = getPlaceholderForType('novel');
-            }
-            break;
-            
-        case 'doujin':
-            if (pageTitle) pageTitle.textContent = 'Doujins';
-            if (elements.searchInput) {
-                elements.searchInput.placeholder = getPlaceholderForType('doujin');
             }
             break;
             
@@ -1181,14 +1174,7 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
         return items.filter(i => getFormat(i) === 'MUSIC');
     }
     if (selected === 'novel') return items.filter(i => getFormat(i) === 'NOVEL');
-    if (selected === 'doujin') {
-        return items.filter(i => {
-            const format = getFormat(i);
-            if (format === 'DOUJINSHI' || format === 'DOUJIN') return true;
-            const genres = (i.genres || []).map(g => String(g.name || g).toLowerCase());
-            return genres.includes('hentai') || genres.includes('erotica');
-        });
-    }
+    if (selected === 'doujin') return applySelectedTypePostFilter(items, 'manga', mediaType);
     if (selected === 'manhwa') {
         return items.filter(i => {
             const format = getFormat(i);
@@ -1251,7 +1237,7 @@ function mapMalType(mediaType, malMediaType) {
     }
     if (t === 'novel') return 'Novel';
     if (t === 'one_shot') return 'One Shot';
-    if (t === 'doujinshi') return 'Doujinshi';
+    if (t === 'doujinshi') return 'Manga';
     if (t === 'manhwa') return 'Manhwa';
     if (t === 'manhua') return 'Manhua';
     return 'Manga';
@@ -1288,7 +1274,7 @@ function mapSelectedTypeToMalRankingType(selectedType, mediaType) {
         return 'all';
     }
     if (mediaType === 'manga') {
-        if (['novel', 'one_shot', 'doujinshi', 'manhwa', 'manhua'].includes(s)) return s;
+        if (['novel', 'one_shot', 'manhwa', 'manhua'].includes(s)) return s;
         if (s === 'manga') return 'all';
     }
     return 'all';
@@ -2651,10 +2637,10 @@ function updateFilters() {
         let selectedType = elements.typeFilter.value;
         
         // Si l'utilisateur est mineur et que doujin est sélectionné, changer vers manga
-        if (typeof isUserMinor === 'function' && isUserMinor() && selectedType === 'doujin') {
+        if (selectedType === 'doujin') {
             selectedType = 'manga';
             elements.typeFilter.value = 'manga';
-            console.log('Type doujin changé vers manga pour utilisateur mineur');
+            console.log('Type doujin normalisé vers manga');
         }
         
         console.log('Type sélectionné:', selectedType);
@@ -2695,11 +2681,6 @@ function updateFilters() {
                     const pageTitle = document.querySelector('.page-title');
                     if (pageTitle) pageTitle.textContent = 'Romans';
                     elements.searchInput.placeholder = getPlaceholderForType('novel');
-                } else if (selectedType === 'doujin') {
-                    currentContentType = 'manga'; // Les doujins utilisent l'endpoint manga
-                    const pageTitle = document.querySelector('.page-title');
-                    if (pageTitle) pageTitle.textContent = 'Doujins';
-                    elements.searchInput.placeholder = getPlaceholderForType('doujin');
                 } else if (selectedType === 'manhwa') {
                     currentContentType = 'manga'; // Les manhwa utilisent l'endpoint manga
                     const pageTitle = document.querySelector('.page-title');
@@ -2747,7 +2728,7 @@ function updateFilters() {
         const typeMapping = {
             'manga': 'manga',
             'novel': 'novel',
-            'doujin': 'doujin',
+            'doujin': 'manga',
             'manhwa': 'manhwa',
             'manhua': 'manhua',
             'anime': 'anime'
@@ -2783,12 +2764,7 @@ function updateFilters() {
             delete currentFilters.type;
         }
         
-        // Gérer le mode SFW (doujin peut nécessiter du NSFW pour retourner des résultats)
-        if (selectedType === 'doujin' && !(typeof isUserMinor === 'function' && isUserMinor())) {
-            currentFilters.sfw = 'false';
-        } else {
-            delete currentFilters.sfw;
-        }
+        delete currentFilters.sfw;
         
         // Gérer le statut (tri côté client uniquement)
         // Ne pas envoyer le filtre de statut à l'API, il sera géré côté client

@@ -1,9 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const http = require('http');
-const fs = require('fs');
 const app = express();
+const rootDir = path.join(__dirname, '..');
 
 // Configuration de multer pour l'upload des fichiers
 const storage = multer.diskStorage({
@@ -34,59 +33,16 @@ app.post('/upload-avatar', upload.single('avatar'), (req, res) => {
     }
 });
 
-// Servir les fichiers statiques
-app.use(express.static(__dirname));
+// Servir les fichiers statiques depuis la racine du projet
+app.use(express.static(rootDir));
 
-// Créer un serveur HTTP pour servir les fichiers statiques
-const server = http.createServer((req, res) => {
-    const filePath = path.join(__dirname, req.url === '/' ? 'acceuil.html' : req.url);
-    
-    // Déterminer le type MIME
-    const ext = path.extname(filePath);
-    let contentType = 'text/html';
-    
-    switch (ext) {
-        case '.js':
-            contentType = 'application/javascript';
-            break;
-        case '.css':
-            contentType = 'text/css';
-            break;
-        case '.png':
-            contentType = 'image/png';
-            break;
-        case '.jpg':
-        case '.jpeg':
-            contentType = 'image/jpeg';
-            break;
-    }
-
-    fs.readFile(filePath, (err, content) => {
-        if (err) {
-            if (err.code === 'ENOENT') {
-                // Fichier non trouvé
-                res.writeHead(404, { 'Content-Type': 'text/html' });
-                res.end('<h1>404 - Page non trouvée</h1>');
-            } else {
-                // Autre erreur
-                res.writeHead(500, { 'Content-Type': 'text/html' });
-                res.end('<h1>500 - Erreur serveur</h1>');
-            }
-        } else {
-            // Fichier trouvé
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content);
-        }
-    });
+// Aligner le comportement local avec Netlify (/ -> /pages/acceuil.html)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(rootDir, 'pages', 'acceuil.html'));
 });
 
 // Démarrer le serveur
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Serveur démarré sur le port ${PORT}`);
-});
-
-// Démarrer le serveur HTTP
-server.listen(8080, () => {
-    console.log(`Serveur HTTP en cours d'exécution sur le port 8080`);
 });

@@ -1020,7 +1020,7 @@ window.createStarBadges = function createStarBadges() {
     const typeTexts = {
         'anime': _pt('profile.search_anime'),
         'manga': _pt('profile.search_manga'),
-        'doujin': 'Doujin',
+        'doujin': _pt('profile.search_manga'),
         'manhwa': 'Manhwa',
         'manhua': 'Manhua',
         'film': _pt('profile.search_movie'),
@@ -1277,7 +1277,7 @@ window.createStarBadges = function createStarBadges() {
 
     // Liste des genres en noms API (pour filtre) ; affichage traduit via getTranslatedGenreForProfile
     let genres = [
-        "Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love", "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Ecchi", "Erotica", "Hentai", "Adult Cast", "Anthropomorphic", "CGDCT", "Childcare", "Combat Sports", "Crossdressing", "Delinquents", "Detective", "Educational", "Gag Humor", "Gore", "Harem", "High Stakes Game", "Historical", "Idols (Female)", "Idols (Male)", "Isekai", "Iyashikei", "Love Polygon", "Romantic Subtext", "Magical Sex Shift", "Magical Girls", "Martial Arts", "Mecha", "Medical", "Military", "Music", "Mythology", "Organized Crime", "Otaku Culture", "Parody", "Performing Arts", "Pets", "Psychological", "Racing", "Reincarnation", "Reverse Harem", "Samurai", "School", "Showbiz", "Space", "Strategy Game", "Super Power", "Survival", "Team Sports", "Time Travel", "Urban Fantasy", "Vampire", "Video Game", "Villainess", "Visual Arts", "Workplace", "Doujin", "Manhwa", "Manhua"
+        "Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love", "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Ecchi", "Erotica", "Hentai", "Adult Cast", "Anthropomorphic", "CGDCT", "Childcare", "Combat Sports", "Crossdressing", "Delinquents", "Detective", "Educational", "Gag Humor", "Gore", "Harem", "High Stakes Game", "Historical", "Idols (Female)", "Idols (Male)", "Isekai", "Iyashikei", "Love Polygon", "Romantic Subtext", "Magical Sex Shift", "Magical Girls", "Martial Arts", "Mecha", "Medical", "Military", "Music", "Mythology", "Organized Crime", "Otaku Culture", "Parody", "Performing Arts", "Pets", "Psychological", "Racing", "Reincarnation", "Reverse Harem", "Samurai", "School", "Showbiz", "Space", "Strategy Game", "Super Power", "Survival", "Team Sports", "Time Travel", "Urban Fantasy", "Vampire", "Video Game", "Villainess", "Visual Arts", "Workplace", "Manhwa", "Manhua"
     ];
     
     // Filtrer les genres interdits pour les mineurs
@@ -1338,7 +1338,7 @@ window.createStarBadges = function createStarBadges() {
     
     // Fonction pour mettre à jour la visibilité des genres selon le type sélectionné (rendue globale)
     window.updateGenresVisibility = function() {
-        const mangaSpecificGenres = ['Doujin', 'Manhwa', 'Manhua'];
+        const mangaSpecificGenres = ['Manhwa', 'Manhua'];
         const genreContainer = document.getElementById('genre-sort-container');
         if (!genreContainer) return;
         
@@ -1631,7 +1631,7 @@ window.createStarBadges = function createStarBadges() {
             const genreBtn = e.target;
             
             // Définir les genres "type" (un seul peut être sélectionné)
-            const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
+            const typeGenres = ['Manhwa', 'Manhua'];
             const isTypeGenre = typeGenres.includes(genre);
             
             // Initialiser selectedGenres s'il n'existe pas
@@ -2108,16 +2108,16 @@ window.createStarBadges = function createStarBadges() {
             // Met à jour le type sélectionné
             const type = item.dataset.type;
             window.selectedType = type;
-            // Reset pagination des conteneurs étoiles au changement de type (surtout mobile).
-            // Sinon on peut rester sur une page > 1 d'un ancien type et afficher un décalage.
-            const isMobileTypeSwitch = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
-            if (isMobileTypeSwitch) {
-                if (!window.starCurrentPages || typeof window.starCurrentPages !== 'object') {
-                    window.starCurrentPages = {};
-                }
-                for (let noteValue = 1; noteValue <= 10; noteValue++) {
-                    window.starCurrentPages[noteValue] = 1;
-                }
+            // Nettoyage agressif anti-pagination fantôme lors du switch de type.
+            document.querySelectorAll('.star-rating-group .star-pagination, .star-rating-group .star-scroll-to-bottom-btn, .star-pagination, .star-scroll-to-bottom-btn')
+                .forEach((el) => el.remove());
+            // Reset pagination des conteneurs étoiles à chaque changement de type.
+            // Evite de réutiliser une page > 1 d'un autre type (anime -> manga/film).
+            if (!window.starCurrentPages || typeof window.starCurrentPages !== 'object') {
+                window.starCurrentPages = {};
+            }
+            for (let noteValue = 1; noteValue <= 10; noteValue++) {
+                window.starCurrentPages[noteValue] = 1;
             }
             // Ne plus sauvegarder dans localStorage car on veut toujours revenir au défaut
             // Met à jour le texte du bouton
@@ -2291,8 +2291,10 @@ window.createStarBadges = function createStarBadges() {
             if (selectedType && selectedType !== 'tous') {
                 const noteType = normalizeType(note.contentType || note.type);
                 const normalizedSelectedType = normalizeType(selectedType);
-                // Type strict : manga = uniquement manga ; manhwa/manhua/doujin n'apparaissent que si leur type est sélectionné
-                const typeMatch = noteType === normalizedSelectedType;
+                // Type strict : manga inclut aussi roman/novel ; les autres types restent stricts
+                const typeMatch = normalizedSelectedType === 'manga'
+                    ? ['manga', 'roman', 'novel', 'light novel', 'light_novel'].includes(noteType)
+                    : noteType === normalizedSelectedType;
                 if (!typeMatch) {
                     return false;
                 }
@@ -2309,7 +2311,7 @@ window.createStarBadges = function createStarBadges() {
                 const noteType = (note.contentType || note.type || '').toLowerCase().trim();
                 for (const sg of selectedGenresForSearch) {
                     const sgLower = sg.toLowerCase().trim();
-                    if (sgLower === 'doujin' || sgLower === 'manhwa' || sgLower === 'manhua') {
+                    if (sgLower === 'manhwa' || sgLower === 'manhua') {
                         if (noteType !== sgLower) return false;
                     } else {
                         const match = noteGenres.some(ng => ng === sgLower || ng.includes(sgLower) || sgLower.includes(ng));
@@ -3827,8 +3829,8 @@ function applyGenreFilter() {
                         return false;
                     }
                 } else {
-                    // Si aucun genre "type" n'est sélectionné, seulement les mangas normaux
-                    if (animeType !== 'manga') {
+                    // Si aucun genre "type" n'est sélectionné, inclure manga + roman/novel
+                    if (animeType !== 'manga' && animeType !== 'roman' && animeType !== 'novel') {
                         const typeAmbigu = (anime.contentType == null || anime.contentType === '') && anime.isManga !== false;
                         if (typeAmbigu) {
                             animeType = 'manga';
@@ -3925,17 +3927,21 @@ function applyGenreFilter() {
         console.log('  → Genres sélectionnés:', selectedGenres);
         console.log('  → Type de l\'anime:', animeType);
         
-        // RÈGLE SPÉCIALE : Les doujins/manhua/manhwa ne peuvent apparaître QUE si leur genre "type" spécifique est sélectionné
+        // Normaliser les anciens contenus doujin vers manga pour l'affichage
+        if (animeType === 'doujin') {
+            animeType = 'manga';
+        }
+
+        // RÈGLE SPÉCIALE : Les manhua/manhwa ne peuvent apparaître QUE si leur genre "type" spécifique est sélectionné
         // Si un autre genre est aussi sélectionné, vérifier que l'anime correspond à tous les genres
         const typeGenresMapping = {
-            'doujin': 'Doujin',
             'manhwa': 'Manhwa',
             'manhua': 'Manhua'
         };
-        const typeGenresList = ['Doujin', 'Manhwa', 'Manhua'];
+        const typeGenresList = ['Manhwa', 'Manhua'];
         
-        // Vérifier si c'est un doujin/manhua/manhwa
-        if (animeType === 'doujin' || animeType === 'manhwa' || animeType === 'manhua') {
+        // Vérifier si c'est un manhua/manhwa
+        if (animeType === 'manhwa' || animeType === 'manhua') {
             const requiredTypeGenre = typeGenresMapping[animeType];
             
             // Vérifier si le genre "type" correspondant est sélectionné
@@ -6392,6 +6398,17 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
         
         // Si aucun contenu trouvé pour cette note, passer à la suivante
         if (notesForThisStar.length === 0) {
+            const starGroup = container ? ((typeof container.closest === 'function' && container.closest('.star-rating-group')) || container.parentNode) : null;
+            if (starGroup) {
+                const oldPag = starGroup.querySelector('.star-pagination');
+                if (oldPag) oldPag.remove();
+                const oldBottomBtn = starGroup.querySelector('.star-scroll-to-bottom-btn');
+                if (oldBottomBtn) oldBottomBtn.remove();
+            }
+            if (window.starCurrentPages && typeof window.starCurrentPages === 'object') {
+                window.starCurrentPages[note] = 1;
+            }
+            if (container) container.innerHTML = '';
             // Log seulement pour les notes 1-10 pour éviter trop de logs
             if (note >= 8 && note <= 10) {
                 console.log(`⚠️ Aucune note trouvée pour la note ${note}/10`);
@@ -6517,9 +6534,10 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             filteredAnimes = filteredAnimes.filter(anime => {
                 // Filtrage strict des 3 types principaux pour éviter tout mélange entre containers
                 if (selectedType === 'manga' || selectedType === 'anime' || selectedType === 'film') {
-                    const strictType = String(
+                    let strictType = String(
                         anime.contentType || (anime.isManga ? 'manga' : 'anime')
                     ).toLowerCase().trim();
+                    if (strictType === 'doujin') strictType = 'manga';
                     return strictType === selectedType;
                 }
 
@@ -6576,7 +6594,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 } else if (anime.contentType === 'film') {
                     animeType = 'film';
                 } else if (anime.contentType === 'doujin') {
-                    animeType = 'doujin';
+                    animeType = 'manga';
                 } else if (anime.contentType === 'roman') {
                     animeType = 'roman';
                 } else if (anime.contentType === 'manhua') {
@@ -6639,9 +6657,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 let shouldInclude = false;
                 
                 // Si le genre "Doujin", "Manhua" ou "Manhwa" est sélectionné, permettre l'inclusion même si le type sélectionné est différent
-                if (animeType === 'doujin' && selectedGenres.includes('Doujin')) {
-                    shouldInclude = true;
-                } else if (animeType === 'manhua' && selectedGenres.includes('Manhua')) {
+                if (animeType === 'manhua' && selectedGenres.includes('Manhua')) {
                     shouldInclude = true;
                 } else if (animeType === 'manhwa' && selectedGenres.includes('Manhwa')) {
                     shouldInclude = true;
@@ -6654,9 +6670,9 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     } else if (!anime.contentType && anime.isManga) {
                         // Si isManga est true mais pas de contentType, considérer comme manga
                         shouldInclude = true;
-                    } else if (animeType === 'doujin' || animeType === 'manhua' || animeType === 'manhwa') {
-                        // Permettre les doujins/manhua/manhwa si leur genre est sélectionné
-                        const genreToCheck = animeType === 'doujin' ? 'Doujin' : (animeType === 'manhua' ? 'Manhua' : 'Manhwa');
+                    } else if (animeType === 'manhua' || animeType === 'manhwa') {
+                        // Permettre les manhua/manhwa si leur genre est sélectionné
+                        const genreToCheck = animeType === 'manhua' ? 'Manhua' : 'Manhwa';
                         if (selectedGenres.includes(genreToCheck)) {
                             shouldInclude = true;
                         } else {
@@ -6961,7 +6977,8 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 updateAllStarContainersVisibility();
                 
                 // Créer et placer le bouton "Bas" en haut du conteneur
-                const oldTopBtn = container.parentNode.querySelector('.star-scroll-to-bottom-btn');
+                const starGroup = (typeof container.closest === 'function' && container.closest('.star-rating-group')) || container.parentNode;
+                const oldTopBtn = starGroup && starGroup.querySelector('.star-scroll-to-bottom-btn');
                 if (oldTopBtn) oldTopBtn.remove();
                 
                 const scrollToBottomBtn = document.createElement('button');
@@ -6994,7 +7011,9 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
                 };
                 // Insérer le bouton avant le conteneur
-                container.parentNode.insertBefore(scrollToBottomBtn, container);
+                if (starGroup) {
+                    starGroup.insertBefore(scrollToBottomBtn, container);
+                }
                 
                 // Style du container paginé
                 container.style.display = 'flex';
@@ -7017,7 +7036,8 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 }
             } else {
                 // Retirer le bouton "Bas" si on revient à la page 1
-                const oldTopBtn = container.parentNode.querySelector('.star-scroll-to-bottom-btn');
+                const starGroup = (typeof container.closest === 'function' && container.closest('.star-rating-group')) || container.parentNode;
+                const oldTopBtn = starGroup && starGroup.querySelector('.star-scroll-to-bottom-btn');
                 if (oldTopBtn) oldTopBtn.remove();
                 // Mettre à jour la visibilité de tous les conteneurs (pour réafficher si nécessaire)
                 updateAllStarContainersVisibility();
@@ -7800,7 +7820,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 } else if (anime.contentType === 'film') {
                     animeType = 'film';
                 } else if (anime.contentType === 'doujin') {
-                    animeType = 'doujin';
+                    animeType = 'manga';
                 } else if (anime.contentType === 'roman') {
                     animeType = 'roman';
                 } else if (anime.contentType === 'manhua') {
@@ -7918,7 +7938,8 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 }
             }
             
-            const oldPag = container.parentNode.querySelector('.star-pagination');
+            const starGroup = (typeof container.closest === 'function' && container.closest('.star-rating-group')) || container.parentNode;
+            const oldPag = starGroup && starGroup.querySelector('.star-pagination');
             if (oldPag) oldPag.remove();
             if (totalPagesForPagination > 1) {
                 const paginationContainer = document.createElement('div');
@@ -8024,7 +8045,9 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     paginationContainer.appendChild(scrollToTopBtn);
                 }
                 
-                container.parentNode.insertBefore(paginationContainer, container.nextSibling);
+                if (starGroup) {
+                    starGroup.insertBefore(paginationContainer, container.nextSibling);
+                }
             }
             
             // IMPORTANT: Mettre à jour tous les boutons "..." après le rendu de la page
@@ -10573,18 +10596,12 @@ async function renderTop10Slots() {
     }
     
     if (filterType === 'manga') {
-        // Pour le type manga, exclure les doujins
+        // Pour le type manga, inclure aussi les anciens doujins (normalises en manga)
         notes = allNotes.filter(note => {
-            if (note.contentType === 'doujin') return false;
+            if (note.contentType === 'doujin' || note.contentType === 'doujinshi') return true;
             if (note.contentType === 'manga') return true;
-            // Pour les anciennes notes sans contentType, vérifier le titre
-            const title = (note.titre || note.title || '').toLowerCase();
-            const genres = (note.genres || []).join(' ').toLowerCase();
-            return !title.includes('doujin') && 
-                   !title.includes('totally captivated') && 
-                   !title.includes('hentai') &&
-                   !genres.includes('erotica') &&
-                   !genres.includes('adult');
+            // Pour les anciennes notes sans contentType, garder les contenus manga
+            return note.isManga === true || note.isManga === 'true';
         });
         console.log('Type manga: notes filtrées:', notes.length);
     } else if (filterType === 'doujin') {
@@ -11066,18 +11083,11 @@ async function renderTop10Slots() {
                         // Utiliser filterType au lieu de type pour avoir le bon type selon le contexte
                         let filteredNotes = notes;
                         if (filterType === 'manga') {
-                            // Pour le type manga, exclure les doujins
+                            // Pour le type manga, inclure aussi les anciens doujins
                             filteredNotes = notes.filter(note => {
-                                if (note.contentType === 'doujin') return false;
+                                if (note.contentType === 'doujin' || note.contentType === 'doujinshi') return true;
                                 if (note.contentType === 'manga') return true;
-                                // Pour les anciennes notes sans contentType, vérifier le titre
-                                const title = (note.titre || note.title || '').toLowerCase();
-                                const genres = (note.genres || []).join(' ').toLowerCase();
-                                return !title.includes('doujin') && 
-                                       !title.includes('totally captivated') && 
-                                       !title.includes('hentai') &&
-                                       !genres.includes('erotica') &&
-                                       !genres.includes('adult');
+                                return note.isManga === true || note.isManga === 'true';
                             });
                         } else if (filterType === 'doujin') {
                             // Pour le type doujin, inclure les notes avec contentType 'doujin' ET les mangas détectés comme doujins

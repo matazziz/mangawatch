@@ -2072,6 +2072,76 @@ document.addEventListener('DOMContentLoaded', async function() {
         sessionStorage.setItem('cache_cleaned', 'true');
     }
 
+    async function getMergedAccountsForHome() {
+        const merged = new Map();
+
+        const put = (entry) => {
+            if (!entry || !entry.email) return;
+            const email = String(entry.email).trim().toLowerCase();
+            if (!email || !email.includes('@') || email.endsWith('@example.com')) return;
+            const prev = merged.get(email) || {};
+            merged.set(email, {
+                email,
+                username: entry.username || entry.pseudo || prev.username || null,
+                name: entry.name || entry.displayName || prev.name || null,
+                picture: entry.picture || prev.picture || null,
+                avatar: entry.avatar || prev.avatar || null,
+                provider: entry.provider || prev.provider || null,
+                created_at: entry.created_at || entry.createdAt || prev.created_at || prev.createdAt || null,
+                updated_at: entry.updated_at || entry.updatedAt || prev.updated_at || prev.updatedAt || null,
+                country: entry.country || entry.continent || prev.country || null,
+                verified: typeof entry.verified === 'boolean' ? entry.verified : prev.verified
+            });
+        };
+
+        const localAccounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        localAccounts.forEach((acc) => put(acc));
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith('profile_') || key.startsWith('profile_description_') || key.startsWith('profile_banner_')) continue;
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw || (!raw.trim().startsWith('{') && !raw.trim().startsWith('['))) continue;
+                const p = JSON.parse(raw);
+                put({
+                    email: p.email || key.replace('profile_', ''),
+                    username: p.username || null,
+                    name: p.name || null,
+                    picture: p.picture || null,
+                    avatar: p.avatar || p.customAvatar || null,
+                    created_at: p.created_at || p.createdAt || null
+                });
+            } catch (e) { /* ignore */ }
+        }
+
+        // Source Firestore (meme source que la page admin)
+        try {
+            const mod = await import('./firebase-service.js');
+            if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
+                const remoteUsers = await mod.profileAdminService.listAllUserProfiles();
+                if (Array.isArray(remoteUsers)) {
+                    remoteUsers.forEach((u) => {
+                        put({
+                            email: u.email,
+                            username: u.username || u.name || u.pseudo,
+                            name: u.name,
+                            avatar: u.avatar || null,
+                            country: u.country || null,
+                            created_at: u.created_at || u.createdAt || null,
+                            updated_at: u.updated_at || u.updatedAt || null,
+                            verified: u.verified === true
+                        });
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Impossible de charger les profils Firestore pour l\'accueil:', e);
+        }
+
+        return Array.from(merged.values());
+    }
+
     // Fonction pour charger les nouveaux utilisateurs
     async function loadNewUsers() {
         try {
@@ -2085,25 +2155,40 @@ document.addEventListener('DOMContentLoaded', async function() {
                 { username: "AnimeLover", joinDate: "Il y a 1 semaine", avatar: "", avatarType: "image", stats: { animes: 18, mangas: 12, tierLists: 5 } }
             ];
             
-            // Récupérer les vrais utilisateurs (accounts) - exclure les faux (@example.com)
-            const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-            const realAccounts = accounts
-                .filter(acc => (acc.username || acc.name) && acc.email && !acc.email.toLowerCase().endsWith('@example.com'))
-                .sort((a, b) => new Date(b.created_at || b.createdAt || 0) - new Date(a.created_at || a.createdAt || 0))
-                .slice(0, 6);
+            // Récupérer les vrais utilisateurs (local + Firestore)
+            const getDateMs = (value) => {
+                if (!value) return 0;
+                if (typeof value === 'number') return value;
+                const ms = Date.parse(value);
+                return Number.isNaN(ms) ? 0 : ms;
+            };
+            const realAccounts = (await getMergedAccountsForHome())
+                .filter(acc => (acc.username || acc.name) && acc.email)
+                .sort((a, b) => getDateMs(b.created_at || b.createdAt || b.updated_at || b.updatedAt) - getDateMs(a.created_at || a.createdAt || a.updated_at || a.updatedAt));
             
             // Charger les stats de collection (Firebase + fallback localStorage) pour chaque utilisateur
             let collectionService = null;
+            let avatarService = null;
             try {
                 const mod = await import('./firebase-service.js');
                 collectionService = mod.collectionService;
+                avatarService = mod.avatarService || null;
             } catch (e) { /* ignore */ }
             
             const realUsers = await Promise.all(realAccounts.map(async (acc) => {
                 const avatarKey = 'avatar_' + acc.email;
                 let avatarUrl = localStorage.getItem(avatarKey);
                 const profile = JSON.parse(localStorage.getItem('profile_' + acc.email) || '{}');
-                let avatar = avatarUrl || profile.customAvatar || profile.avatar || profile.picture || acc.picture;
+                let avatar = avatarUrl || profile.customAvatar || profile.avatar || profile.picture || acc.avatar || acc.picture;
+                if (!avatar && avatarService && typeof avatarService.getAvatar === 'function') {
+                    try {
+                        const remoteAvatar = await avatarService.getAvatar(acc.email);
+                        if (remoteAvatar) {
+                            avatar = remoteAvatar;
+                            try { localStorage.setItem(avatarKey, remoteAvatar); } catch (e) { /* ignore */ }
+                        }
+                    } catch (e) { /* ignore */ }
+                }
                 // Améliorer la qualité : Google photos +sz=400, ui-avatars +size=400
                 if (avatar && typeof avatar === 'string') {
                     if (avatar.includes('googleusercontent')) avatar = avatar.replace(/=s\d+(-c)?/g, '=s400-c');
@@ -2124,7 +2209,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     });
                 } catch (e) { /* ignore */ }
                 const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
-                const isVerified = verifiedUsers.includes(acc.email);
+                const isVerified = acc.verified === true || verifiedUsers.includes(acc.email);
                 // Comptes Google : n'afficher que le pseudo enregistré, pas un éventuel "name" type nom complet
                 let displayUsername = acc.username;
                 if (!displayUsername && acc.provider !== 'google') {

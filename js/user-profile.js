@@ -145,27 +145,41 @@ function getUserTop10Key(user, genre = null, type = null) {
 
 // Fonction pour charger le Top 10 d'un utilisateur (version pour page publique)
 async function getUserTop10(user, genre = null, type = null) {
-    const finalType = type || 'anime';
+    const normalizeRequestedType = (value) => {
+        const v = String(value || '').toLowerCase().trim();
+        if (!v) return 'anime';
+        if (v === 'movie') return 'film';
+        if (v === 'doujin' || v === 'doujinshi') return 'manga';
+        return v;
+    };
+    const finalType = normalizeRequestedType(type || 'anime');
+    const matchesSelectedType = (itemContentType, selectedType) => {
+        if (!selectedType) return true;
+        const ct = String(itemContentType || '').toLowerCase().trim();
+        const st = String(selectedType || '').toLowerCase().trim();
+        if (st === 'manga') return ['manga', 'doujin', 'doujinshi', 'manhwa', 'manhua', 'one_shot', 'one shot'].includes(ct);
+        if (st === 'anime') return ['anime', 'tv', 'ova', 'ona', 'special', 'music'].includes(ct);
+        if (st === 'film') return ['film', 'movie'].includes(ct);
+        if (st === 'roman') return ['roman', 'novel', 'light novel', 'light_novel'].includes(ct);
+        return ct === st;
+    };
     
     // IMPORTANT: Si un genre est spécifié, charger depuis localStorage d'abord
     // car les Top 10 par genre sont stockés dans localStorage, pas dans Firebase
     if (genre && typeof genre === 'string' && genre.trim() !== '') {
-        const top10Key = getUserTop10Key(user, genre, finalType);
+        const localTypeKeys = finalType === 'manga' ? ['manga', 'doujin'] : (finalType === 'film' ? ['film', 'movie'] : [finalType]);
         try {
-            const stored = localStorage.getItem(top10Key);
-            if (stored) {
+            for (const localType of localTypeKeys) {
+                const top10Key = getUserTop10Key(user, genre, localType);
+                const stored = localStorage.getItem(top10Key);
+                if (!stored) continue;
                 const top10 = JSON.parse(stored);
-                // S'assurer que c'est un tableau de 10 éléments
-                while (top10.length < 10) {
-                    top10.push(null);
-                }
-                console.log(`📊 Top 10 chargé depuis localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
+                while (top10.length < 10) top10.push(null);
+                console.log(`📊 Top 10 chargé depuis localStorage pour genre: ${genre}, type: ${localType}, utilisateur: ${user.email}`);
                 return top10.slice(0, 10);
-            } else {
-                // Si aucun Top 10 spécifique n'existe pour ce genre, retourner un tableau vide
-                console.log(`📊 Aucun Top 10 trouvé dans localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
-                return new Array(10).fill(null);
             }
+            console.log(`📊 Aucun Top 10 trouvé dans localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
+            return new Array(10).fill(null);
         } catch (err) {
             console.error('❌ Erreur lors du chargement du top 10 depuis localStorage:', err);
             return new Array(10).fill(null);
@@ -180,7 +194,7 @@ async function getUserTop10(user, genre = null, type = null) {
             const top10 = new Array(10).fill(null);
             for (const item of top10Data) {
                 // Filtrer par type si spécifié
-                if (!type || item.contentType === type) {
+                if (matchesSelectedType(item.contentType, type)) {
                     const rang = item.rang || 1;
                     if (rang >= 1 && rang <= 10) {
                         top10[rang - 1] = {
@@ -204,15 +218,14 @@ async function getUserTop10(user, genre = null, type = null) {
     }
     
     // Fallback vers localStorage si Firebase n'est pas disponible (pour Top 10 global)
-    const top10Key = getUserTop10Key(user, null, finalType);
+    const localTypeKeys = finalType === 'manga' ? ['manga', 'doujin'] : (finalType === 'film' ? ['film', 'movie'] : [finalType]);
     try {
-        const stored = localStorage.getItem(top10Key);
-        if (stored) {
+        for (const localType of localTypeKeys) {
+            const top10Key = getUserTop10Key(user, null, localType);
+            const stored = localStorage.getItem(top10Key);
+            if (!stored) continue;
             const top10 = JSON.parse(stored);
-            // S'assurer que c'est un tableau de 10 éléments
-            while (top10.length < 10) {
-                top10.push(null);
-            }
+            while (top10.length < 10) top10.push(null);
             return top10.slice(0, 10);
         }
     } catch (err) {
@@ -246,6 +259,8 @@ function resolvePseudoToEmail(pseudo) {
 
 document.addEventListener('DOMContentLoaded', function() {
     initBannerMuteButton();
+    // Demande produit: masquer les boutons d'abonnement sur la bannière.
+    hideFollowBannerUi();
     const urlParams = new URLSearchParams(window.location.search);
     viewedUserEmail = urlParams.get('user');
     const pseudoParam = urlParams.get('pseudo');
@@ -260,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Charger les données de l'utilisateur
-    loadUserProfile(viewedUserEmail);
+    void loadUserProfile(viewedUserEmail);
     
     // Gérer les onglets
     setupTabs();
@@ -269,6 +284,15 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCollectionFilters();
 });
 
+function hideFollowBannerUi() {
+    const followSection = document.getElementById('profile-follow-section');
+    if (followSection) followSection.style.display = 'none';
+    const followBtn = document.getElementById('profile-follow-btn');
+    if (followBtn) followBtn.style.display = 'none';
+    const followStats = document.getElementById('profile-follow-stats');
+    if (followStats) followStats.style.display = 'none';
+}
+
 function showError(message) {
     document.getElementById('profile-content').style.display = 'none';
     const errorDiv = document.getElementById('error-message');
@@ -276,10 +300,16 @@ function showError(message) {
     errorDiv.querySelector('p').textContent = message;
 }
 
-function loadUserProfile(userEmail) {
+async function loadUserProfile(userEmail) {
+    const normalizedEmail = String(userEmail || '').trim().toLowerCase();
+    if (!normalizedEmail || !normalizedEmail.includes('@')) {
+        showError('Utilisateur introuvable');
+        return;
+    }
+    viewedUserEmail = normalizedEmail;
     // Vérifier si l'utilisateur est banni
     const bannedUsers = JSON.parse(localStorage.getItem('banned_users') || '[]');
-    const isBanned = bannedUsers.some(b => b.email === userEmail);
+    const isBanned = bannedUsers.some(b => String(b.email || '').toLowerCase() === normalizedEmail);
     if (isBanned) {
         showError('Ce profil n\'est pas disponible');
         return;
@@ -289,14 +319,14 @@ function loadUserProfile(userEmail) {
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
     if (currentUser && currentUser.email) {
         const blockedUsers = JSON.parse(localStorage.getItem('blocked_users_' + currentUser.email) || '[]');
-        if (blockedUsers.includes(userEmail)) {
+        if (blockedUsers.map(e => String(e || '').toLowerCase()).includes(normalizedEmail)) {
             showError('Ce profil n\'est pas disponible');
             return;
         }
     }
     
     // Charger le profil depuis localStorage
-    const profileData = localStorage.getItem('profile_' + userEmail);
+    const profileData = localStorage.getItem('profile_' + normalizedEmail);
     let user = null;
     
     if (profileData) {
@@ -307,7 +337,42 @@ function loadUserProfile(userEmail) {
         }
     }
     
-    // Si le profil n'existe pas dans profile_, essayer de trouver dans d'autres endroits
+    // Fallback Firestore si le profil local n'existe pas encore
+    if (!user) {
+        try {
+            const mod = await import('./firebase-service.js');
+            let remote = null;
+            if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
+                const allProfiles = await mod.profileAdminService.listAllUserProfiles();
+                remote = Array.isArray(allProfiles)
+                    ? allProfiles.find((p) => String(p?.email || '').toLowerCase() === normalizedEmail)
+                    : null;
+            }
+            if (!remote && mod && mod.profileAccountService && typeof mod.profileAccountService.getProfileAccountInfo === 'function') {
+                const accountInfo = await mod.profileAccountService.getProfileAccountInfo(normalizedEmail);
+                if (accountInfo) remote = accountInfo;
+            }
+            if (remote) {
+                user = {
+                    email: normalizedEmail,
+                    username: remote.username || remote.name || normalizedEmail.split('@')[0],
+                    name: remote.name || remote.username || normalizedEmail.split('@')[0],
+                    avatar: remote.avatar || remote.picture || null,
+                    picture: remote.picture || remote.avatar || null,
+                    country: remote.country || remote.continent || null,
+                    continent: remote.continent || remote.country || null,
+                    verified: remote.verified === true
+                };
+                try {
+                    localStorage.setItem('profile_' + normalizedEmail, JSON.stringify(user));
+                    if (user.avatar) localStorage.setItem('avatar_' + normalizedEmail, user.avatar);
+                } catch (e) { /* ignore */ }
+            }
+        } catch (e) {
+            console.warn('Chargement profil Firestore indisponible:', e);
+        }
+    }
+
     if (!user) {
         showError('Utilisateur introuvable');
         return;
@@ -315,7 +380,7 @@ function loadUserProfile(userEmail) {
     
     // S'assurer que le profil a bien le pays et la description depuis les autres sources
     const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-    const account = accounts.find(acc => acc.email === userEmail);
+    const account = accounts.find(acc => String(acc.email || '').toLowerCase() === normalizedEmail);
     if (!user.country && (account?.country || account?.continent)) {
         user.country = account.country || account.continent;
     }
@@ -324,7 +389,7 @@ function loadUserProfile(userEmail) {
     }
     
     if (!user.description) {
-        const descriptionKey = 'profile_description_' + userEmail;
+        const descriptionKey = 'profile_description_' + normalizedEmail;
         const description = localStorage.getItem(descriptionKey);
         if (description) {
             user.description = description;
@@ -332,10 +397,10 @@ function loadUserProfile(userEmail) {
     }
     
     // Afficher les informations du profil
-    displayProfileInfo(user, userEmail);
+    displayProfileInfo(user, normalizedEmail);
     
     // Charger la bannière de l'utilisateur
-    loadUserBanner(userEmail);
+    loadUserBanner(normalizedEmail);
     
     // Charger Anime & Manga par défaut (onglet affiché en premier sur le profil utilisateur)
     loadUserAnimeNotes();
@@ -629,7 +694,7 @@ function setupTabs() {
                 savedSection.classList.add('active');
                 setBannerVisibility(savedActiveTab !== 'collection');
                 if (savedActiveTab === 'collection') {
-                    loadUserCollection('all', 'all');
+                    loadUserCollection('all', 'manga');
                 } else if (savedActiveTab === 'reviews') {
                     loadUserAnimeNotes();
                 } else if (savedActiveTab === 'tierlist') {
@@ -664,7 +729,7 @@ function setupTabs() {
                 section.classList.add('active');
                 setBannerVisibility(targetTabName !== 'collection');
                 if (targetTabName === 'collection') {
-                    loadUserCollection('all', 'all');
+                    loadUserCollection('all', 'manga');
                 } else if (targetTabName === 'reviews') {
                     loadUserAnimeNotes();
                 } else if (targetTabName === 'tierlist') {
@@ -725,37 +790,47 @@ function setupCollectionFilters() {
 }
 
 let currentStatusFilter = 'all';
-let currentTypeFilter = 'all';
+let currentTypeFilter = 'manga';
 
 /** Filtre type collection (profil public) : roman/novel, film/movie, anime/TV… */
 function collectionItemMatchesTypeFilterPublic(item, typeFilter) {
     if (!typeFilter || typeFilter === 'all') return true;
     const raw = ((item && (item.type || item.content_type || item.contentType)) || '').toString().toLowerCase().trim();
-    const tf = String(typeFilter).toLowerCase();
-    if (tf === 'roman') return raw === 'roman' || raw === 'novel' || raw === 'light novel';
-    if (tf === 'doujin') return raw === 'doujin' || raw === 'doujinshi';
-    if (tf === 'film') return raw === 'film' || raw === 'movie';
-    if (tf === 'anime') return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(raw);
-    return raw === tf;
+    const tf = String(typeFilter).toLowerCase().trim();
+
+    const normalizeCollectionType = (value) => {
+        const v = String(value || '').toLowerCase().trim();
+        if (!v) return '';
+        if (['tv', 'ova', 'ona', 'special', 'music', 'anime'].includes(v)) return 'anime';
+        if (['movie', 'film'].includes(v)) return 'film';
+        if (['manga', 'doujin', 'doujinshi', 'manhwa', 'manhua', 'one shot', 'one_shot'].includes(v)) return 'manga';
+        if (['roman', 'novel', 'light novel', 'light_novel'].includes(v)) return 'roman';
+        return v;
+    };
+
+    const normalizedRaw = normalizeCollectionType(raw);
+    const normalizedFilter = normalizeCollectionType(tf);
+    return normalizedRaw === normalizedFilter;
 }
 
 /** Type de contenu normalisé pour les notes (profil public) : Firebase + champs API + flags. */
 function resolvePublicNoteContentType(note) {
     if (!note || typeof note !== 'object') return 'manga';
     let ct = String(note.contentType || note.content_type || '').trim().toLowerCase();
-    if (ct === 'doujinshi') return 'doujin';
+    if (ct === 'doujinshi' || ct === 'doujin') return 'manga';
     if (ct === 'novel' || ct === 'light novel' || ct === 'light_novel') return 'roman';
     if (ct === 'film' || ct === 'movie') return 'movie';
-    if (['anime', 'manga', 'manhwa', 'manhua', 'doujin', 'roman'].includes(ct)) return ct;
+    if (['anime', 'manga', 'manhwa', 'manhua', 'roman'].includes(ct)) return ct;
     if (['tv', 'ova', 'ona', 'special', 'music'].includes(ct)) return 'anime';
-    const raw = String(note.type || note.mediaType || note.malType || '').trim().toLowerCase();
-    if (raw === 'doujinshi' || raw === 'doujin') return 'doujin';
+    const raw = String(note.type || note.mediaType || note.malType || note.format || '').trim().toLowerCase();
+    if (raw === 'doujinshi' || raw === 'doujin') return 'manga';
     if (raw === 'movie') return 'movie';
     if (['tv', 'ova', 'ona', 'special', 'music'].includes(raw)) return 'anime';
     if (raw === 'novel' || raw === 'light_novel') return 'roman';
     if (raw === 'manhwa') return 'manhwa';
     if (raw === 'manhua') return 'manhua';
     if (raw === 'manga' || raw === 'one_shot' || raw === 'one shot') return 'manga';
+    if (note.isManga === false || note.isManga === 'false') return 'anime';
     if (note.isManga === true || note.isManga === 'true') return 'manga';
     if (note.isAnime === true || note.isAnime === 'true') return 'anime';
     return ct || 'manga';
@@ -763,7 +838,7 @@ function resolvePublicNoteContentType(note) {
 
 // Fonction pour charger et afficher la collection avec la même structure que list.js
 // Charge depuis Firebase (comme list.html) avec fallback localStorage pour cohérence
-async function loadUserCollection(statusFilter = 'all', typeFilter = 'all') {
+async function loadUserCollection(statusFilter = 'all', typeFilter = 'manga') {
     const collectionSection = document.getElementById('collection-section');
     const collectionContainer = document.getElementById('collection-items');
     const emptyMessage = document.getElementById('empty-collection');
@@ -997,7 +1072,7 @@ function createPublicListItem(item) {
             <span>•</span>
             <span class="${isLongEpisodes ? 'episodes-long' : ''}">${episodesText} ${episodesLabel}</span>
             <span>•</span>
-            <span>${yearText}</span>
+            <span class="item-year">${yearText}</span>
         </div>
         <p class="item-synopsis profile-card-synopsis">${synopsisText}</p>
     `;
@@ -1420,6 +1495,16 @@ async function displayUserAnimeNotesPublic() {
         notes = [];
     }
 
+    const selectedType = window.selectedType || 'manga';
+    const rawTypeCount = {};
+    const resolvedTypeCount = {};
+    notes.forEach((n) => {
+        const raw = String(n?.contentType || n?.content_type || n?.type || '').toLowerCase().trim() || '(vide)';
+        rawTypeCount[raw] = (rawTypeCount[raw] || 0) + 1;
+        const resolved = resolvePublicNoteContentType(n) || '(inconnu)';
+        resolvedTypeCount[resolved] = (resolvedTypeCount[resolved] || 0) + 1;
+    });
+
     const allStarWrap = document.querySelector('.all-star-containers');
     if (allStarWrap) {
         allStarWrap.style.display = 'flex';
@@ -1432,30 +1517,21 @@ async function displayUserAnimeNotesPublic() {
         g.style.opacity = '1';
     });
     
+    const noteMatchesTypePublic = (note, requestedType) => {
+        const t = String(requestedType || '').toLowerCase().trim();
+        const noteType = resolvePublicNoteContentType(note);
+        if (t === 'manga') return ['manga', 'manhwa', 'manhua', 'roman', 'novel'].includes(noteType);
+        if (t === 'anime') return ['anime', 'tv', 'ova', 'ona', 'special', 'music'].includes(noteType);
+        if (t === 'film') return ['movie', 'film'].includes(noteType);
+        if (t === 'roman') return noteType === 'roman' || noteType === 'novel';
+        return true;
+    };
+
     // Filtrer selon le type sélectionné
-    const selectedType = window.selectedType || 'manga';
     let filteredNotes = notes;
     
     if (selectedType !== 'tous') {
-        filteredNotes = notes.filter(note => {
-            const noteType = resolvePublicNoteContentType(note);
-            if (selectedType === 'manga') {
-                return noteType === 'manga';
-            } else if (selectedType === 'manhwa') {
-                return noteType === 'manhwa';
-            } else if (selectedType === 'manhua') {
-                return noteType === 'manhua';
-            } else if (selectedType === 'doujin') {
-                return noteType === 'doujin';
-            } else if (selectedType === 'roman') {
-                return noteType === 'roman' || noteType === 'novel';
-            } else if (selectedType === 'anime') {
-                return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType);
-            } else if (selectedType === 'film') {
-                return ['movie', 'film'].includes(noteType);
-            }
-            return false;
-        });
+        filteredNotes = notes.filter(note => noteMatchesTypePublic(note, selectedType));
     }
     
     const animeNotes = filteredNotes;
@@ -1498,6 +1574,7 @@ async function displayUserAnimeNotesPublic() {
     if (typeof getUserTop10 === 'function') {
         try {
             top10Data = await getUserTop10(userObj, selectedGenres, selectedType !== 'tous' ? selectedType : null);
+            top10Data = (top10Data || []).map(item => (item && noteMatchesTypePublic(item, selectedType)) ? item : null);
             console.log(`📊 Top 10 chargé pour genre: ${selectedGenres || 'aucun'}, type: ${selectedType}`);
             console.log(`📊 Nombre d'éléments dans top10Data: ${top10Data.filter(item => item !== null).length}`);
             // Règle "un seul par série" : comme le Top 10 perso, ne garder qu'une entrée par série (anime/manga)
@@ -1529,6 +1606,7 @@ async function displayUserAnimeNotesPublic() {
                 // Sinon, essayer de charger le Top 10 global
                 try {
                     top10Data = await getUserTop10(userObj, null, selectedType !== 'tous' ? selectedType : null);
+                    top10Data = (top10Data || []).map(item => (item && noteMatchesTypePublic(item, selectedType)) ? item : null);
                     top10Data = filterTop10OnePerSeries(top10Data);
                 } catch (e2) {
                     top10Data = new Array(10).fill(null);
@@ -1635,6 +1713,12 @@ async function displayUserAnimeNotesPublic() {
         });
         
         if (notesForThisStar.length === 0) {
+            const starGroup = (typeof container.closest === 'function' && container.closest('.star-rating-group')) || container.parentNode;
+            const oldPag = starGroup && starGroup.querySelector('.star-pagination');
+            if (oldPag) oldPag.remove();
+            const oldBottomBtn = starGroup && starGroup.querySelector('.star-scroll-to-bottom-btn');
+            if (oldBottomBtn) oldBottomBtn.remove();
+            if (window.starCurrentPagesPublic) window.starCurrentPagesPublic[note] = 1;
             container.innerHTML = '';
             continue;
         }
@@ -1648,20 +1732,24 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
     const totalPages = notesForThisStar.length <= maxPage1
         ? 1
         : 1 + Math.ceil((notesForThisStar.length - maxPage1) / cardsPerPageAfter);
+    const safePage = Math.max(1, Math.min(page || 1, totalPages));
+    if (!window.starCurrentPagesPublic) window.starCurrentPagesPublic = {};
+    window.starCurrentPagesPublic[note] = safePage;
     
-    const pageSize = page === 1 ? maxPage1 : cardsPerPageAfter;
-    const start = page === 1 ? 0 : maxPage1 + (page - 2) * cardsPerPageAfter;
+    const pageSize = safePage === 1 ? maxPage1 : cardsPerPageAfter;
+    const start = safePage === 1 ? 0 : maxPage1 + (safePage - 2) * cardsPerPageAfter;
     const animesToShow = notesForThisStar.slice(start, start + pageSize);
     
-    const oldPag = container.parentNode.querySelector('.star-pagination');
+    const starGroup = (typeof container.closest === 'function' && container.closest('.star-rating-group')) || container.parentNode;
+    const oldPag = starGroup && starGroup.querySelector('.star-pagination');
     if (oldPag) oldPag.remove();
     
     container.innerHTML = '';
     
     // Même hauteur et disposition que le profil perso : page > 1 = container grand (minHeight 13000px) + bouton "Bas"
-    if (page > 1) {
+    if (safePage > 1) {
         // Retirer l'ancien bouton "Bas" s'il existe
-        const oldBottomBtn = container.parentNode.querySelector('.star-scroll-to-bottom-btn');
+        const oldBottomBtn = starGroup && starGroup.querySelector('.star-scroll-to-bottom-btn');
         if (oldBottomBtn) oldBottomBtn.remove();
         
         // Bouton "Bas" pour descendre en bas du container (comme profil perso)
@@ -1694,7 +1782,9 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
         scrollToBottomBtn.onclick = () => {
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         };
-        container.parentNode.insertBefore(scrollToBottomBtn, container);
+        if (starGroup) {
+            starGroup.insertBefore(scrollToBottomBtn, container);
+        }
         
         container.style.display = 'flex';
         container.style.flexWrap = 'wrap';
@@ -1716,7 +1806,7 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
         setTimeout(() => { container.style.minHeight = '13000px'; }, 50);
     } else {
         // Retirer le bouton "Bas" si on revient à la page 1
-        const oldBottomBtn = container.parentNode.querySelector('.star-scroll-to-bottom-btn');
+        const oldBottomBtn = starGroup && starGroup.querySelector('.star-scroll-to-bottom-btn');
         if (oldBottomBtn) oldBottomBtn.remove();
         
         container.style.display = 'flex';
@@ -1803,7 +1893,7 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
         for (let p = 1; p <= totalPages; p++) {
             const btn = document.createElement('button');
             btn.textContent = p;
-            if (p === page) btn.classList.add('active');
+            if (p === safePage) btn.classList.add('active');
             btn.onclick = () => {
                 window.starCurrentPagesPublic[note] = p;
                 renderStarContainerPublic(container, note, notesForThisStar, p, maxPage1, cardsPerPageAfter);
@@ -1811,7 +1901,7 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
             paginationContainer.appendChild(btn);
         }
         
-        if (page > 1) {
+        if (safePage > 1) {
             const hautBtn = document.createElement('button');
             hautBtn.innerHTML = (window.t && window.t('common.scroll_top')) || '↑ Haut';
             hautBtn.title = (window.t && window.t('common.scroll_top_title')) || 'Remonter en haut de la page';
@@ -1820,7 +1910,9 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
             paginationContainer.appendChild(hautBtn);
         }
         
-        container.parentNode.insertBefore(paginationContainer, container.nextSibling);
+        if (starGroup) {
+            starGroup.insertBefore(paginationContainer, container.nextSibling);
+        }
     }
 }
 
@@ -1858,13 +1950,8 @@ function createSortButtonsPublic(reviewsSection) {
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
-        'tous': (window.t && window.t('collection.type.all')) || 'Tous types',
         'anime': (window.t && window.t('genre.content_animes')) || 'Anime',
         'manga': (window.t && window.t('genre.content_mangas')) || 'Manga',
-        'roman': (window.t && window.t('search.type.novel')) || (window.t && window.t('collection.type.roman')) || 'Roman',
-        'doujin': (window.t && window.t('collection.type.doujin')) || 'Doujin',
-        'manhwa': (window.t && window.t('genre.content_manhwa')) || 'Manhwa',
-        'manhua': (window.t && window.t('genre.content_manhua')) || 'Manhua',
         'film': (window.t && window.t('genre.content_films')) || 'Film'
     };
     typeButton.textContent = typeTexts[window.selectedType] || typeTexts['manga'];
@@ -1892,23 +1979,13 @@ function createSortButtonsPublic(reviewsSection) {
         border: 1.5px solid #00b894;
         text-align: left;
     `;
-    var tTous = (window.t && window.t('collection.type.all')) || 'Tous types';
     var tManga = (window.t && window.t('genre.content_mangas')) || 'Manga';
     var tAnime = (window.t && window.t('genre.content_animes')) || 'Anime';
     var tFilm = (window.t && window.t('genre.content_films')) || 'Film';
-    var tRoman = (window.t && window.t('search.type.novel')) || (window.t && window.t('collection.type.roman')) || 'Roman';
-    var tDoujin = (window.t && window.t('collection.type.doujin')) || 'Doujin';
-    var tManhwa = (window.t && window.t('genre.content_manhwa')) || 'Manhwa';
-    var tManhua = (window.t && window.t('genre.content_manhua')) || 'Manhua';
     typeMenu.innerHTML =
-        '<div class="type-menu-item" data-type="tous" style="padding: 10px 22px; cursor: pointer;">' + tTous + '</div>' +
         '<div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">' + tManga + '</div>' +
         '<div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">' + tAnime + '</div>' +
-        '<div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">' + tFilm + '</div>' +
-        '<div class="type-menu-item" data-type="roman" style="padding: 10px 22px; cursor: pointer;">' + tRoman + '</div>' +
-        '<div class="type-menu-item" data-type="doujin" style="padding: 10px 22px; cursor: pointer;">' + tDoujin + '</div>' +
-        '<div class="type-menu-item" data-type="manhwa" style="padding: 10px 22px; cursor: pointer;">' + tManhwa + '</div>' +
-        '<div class="type-menu-item" data-type="manhua" style="padding: 10px 22px; cursor: pointer;">' + tManhua + '</div>';
+        '<div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">' + tFilm + '</div>';
     // Mettre en surbrillance l'option correspondant au type actuel
     const currentType = window.selectedType || 'manga';
     typeMenu.querySelectorAll('.type-menu-item').forEach(opt => {
@@ -1965,10 +2042,6 @@ function createSortButtonsPublic(reviewsSection) {
         if (type === 'anime') return 'Rechercher un anime...';
         if (type === 'film') return 'Rechercher un film...';
         if (type === 'roman') return 'Rechercher un roman...';
-        if (type === 'doujin') return 'Rechercher un doujin...';
-        if (type === 'manhwa') return 'Rechercher un manhwa...';
-        if (type === 'manhua') return 'Rechercher un manhua...';
-        if (type === 'tous') return (window.t && window.t('search.placeholder.generic')) || 'Rechercher...';
         return 'Rechercher un manga...';
     };
     searchInput.placeholder = getTypeSearchPlaceholderPublic(window.selectedType);
@@ -2156,7 +2229,7 @@ function createSortButtonsPublic(reviewsSection) {
 
     // Liste des genres en noms API (anglais) pour le filtre ; affichage traduit via getTranslatedGenre
     let genres = [
-        "Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love", "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Ecchi", "Erotica", "Hentai", "Adult Cast", "Anthropomorphic", "CGDCT", "Childcare", "Combat Sports", "Crossdressing", "Delinquents", "Detective", "Educational", "Gag Humor", "Gore", "Harem", "High Stakes Game", "Historical", "Idols (Female)", "Idols (Male)", "Isekai", "Iyashikei", "Love Polygon", "Romantic Subtext", "Magical Sex Shift", "Magical Girls", "Martial Arts", "Mecha", "Medical", "Military", "Music", "Mythology", "Organized Crime", "Otaku Culture", "Parody", "Performing Arts", "Pets", "Psychological", "Racing", "Reincarnation", "Reverse Harem", "Samurai", "School", "Showbiz", "Space", "Strategy Game", "Super Power", "Survival", "Team Sports", "Time Travel", "Urban Fantasy", "Vampire", "Video Game", "Villainess", "Visual Arts", "Workplace", "Doujin", "Manhwa", "Manhua"
+        "Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love", "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Ecchi", "Erotica", "Hentai", "Adult Cast", "Anthropomorphic", "CGDCT", "Childcare", "Combat Sports", "Crossdressing", "Delinquents", "Detective", "Educational", "Gag Humor", "Gore", "Harem", "High Stakes Game", "Historical", "Idols (Female)", "Idols (Male)", "Isekai", "Iyashikei", "Love Polygon", "Romantic Subtext", "Magical Sex Shift", "Magical Girls", "Martial Arts", "Mecha", "Medical", "Military", "Music", "Mythology", "Organized Crime", "Otaku Culture", "Parody", "Performing Arts", "Pets", "Psychological", "Racing", "Reincarnation", "Reverse Harem", "Samurai", "School", "Showbiz", "Space", "Strategy Game", "Super Power", "Survival", "Team Sports", "Time Travel", "Urban Fantasy", "Vampire", "Video Game", "Villainess", "Visual Arts", "Workplace", "Manhwa", "Manhua"
     ];
 
     var getTranslatedGenreForDisplay = function(apiGenreName) {
@@ -2250,8 +2323,8 @@ function createSortButtonsPublic(reviewsSection) {
             
             console.log('🎯 Clic sur le genre:', genre);
             
-            // Genres "type" : un seul peut être sélectionné (Doujin, Manhwa, Manhua) — comme dans le profil perso
-            const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
+            // Genres "type" : un seul peut être sélectionné (Manhwa, Manhua)
+            const typeGenres = ['Manhwa', 'Manhua'];
             const isTypeGenre = typeGenres.includes(genre);
             
             // Initialiser selectedGenres s'il n'existe pas
@@ -2520,8 +2593,20 @@ function createSortButtonsPublic(reviewsSection) {
             resetPublicProfileGenreSelection();
             const type = item.dataset.type;
             window.selectedType = type;
+            // Nettoyage agressif anti-pagination fantôme lors du switch de type.
+            document.querySelectorAll('.star-rating-group .star-pagination, .star-rating-group .star-scroll-to-bottom-btn, .star-pagination, .star-scroll-to-bottom-btn')
+                .forEach((el) => el.remove());
+            if (!window.starCurrentPagesPublic || typeof window.starCurrentPagesPublic !== 'object') {
+                window.starCurrentPagesPublic = {};
+            }
+            for (let noteValue = 1; noteValue <= 10; noteValue++) {
+                window.starCurrentPagesPublic[noteValue] = 1;
+            }
             typeButton.textContent = typeTexts[type] || item.textContent.trim();
-            searchInput.placeholder = getTypeSearchPlaceholderPublic(type);
+            const searchInputEl = document.getElementById('profile-search-input-public');
+            if (searchInputEl) {
+                searchInputEl.placeholder = getTypeSearchPlaceholderPublic(type);
+            }
             typeMenu.querySelectorAll('.type-menu-item').forEach(opt => {
                 if (opt.dataset.type === type) {
                     opt.style.background = '#00b89422';
@@ -2540,9 +2625,8 @@ function createSortButtonsPublic(reviewsSection) {
             });
             
             // Réafficher les containers d'étoiles si une recherche était active
-            const searchInput = document.getElementById('profile-search-input-public');
-            if (searchInput && searchInput.value.trim()) {
-                performSearchPublic(searchInput.value.trim());
+            if (searchInputEl && searchInputEl.value.trim()) {
+                performSearchPublic(searchInputEl.value.trim());
             }
         });
     });
@@ -2739,7 +2823,7 @@ function createSortButtonsPublic(reviewsSection) {
         // Filtrer selon le type sélectionné (et inclure manhwa/manhua/doujin si leur genre est sélectionné)
         const selectedType = window.selectedType || 'manga';
         const selectedGenresList = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-        const hasTypeGenreSelected = selectedGenresList.some(g => ['Doujin', 'Manhwa', 'Manhua'].includes(g));
+        const hasTypeGenreSelected = selectedGenresList.some(g => ['Manhwa', 'Manhua'].includes(g));
         
         let filteredNotes = notes;
         
@@ -2747,18 +2831,16 @@ function createSortButtonsPublic(reviewsSection) {
             filteredNotes = notes.filter(note => {
                 const noteType = resolvePublicNoteContentType(note);
                 if (selectedType === 'manga') {
-                    // Inclure manga + manhwa/manhua/doujin si leur genre est sélectionné (pour afficher dans le container de genre)
+                    // Inclure manga + roman/novel + manhwa/manhua si leur genre est sélectionné
                     if (noteType === 'manga') return true;
+                    if (noteType === 'roman' || noteType === 'novel') return true;
                     if (hasTypeGenreSelected && noteType === 'manhwa' && selectedGenresList.includes('Manhwa')) return true;
                     if (hasTypeGenreSelected && noteType === 'manhua' && selectedGenresList.includes('Manhua')) return true;
-                    if (hasTypeGenreSelected && noteType === 'doujin' && selectedGenresList.includes('Doujin')) return true;
                     return false;
                 } else if (selectedType === 'manhwa') {
                     return noteType === 'manhwa';
                 } else if (selectedType === 'manhua') {
                     return noteType === 'manhua';
-                } else if (selectedType === 'doujin') {
-                    return noteType === 'doujin';
                 } else if (selectedType === 'anime') {
                     return ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType);
                 } else if (selectedType === 'film') {
@@ -2791,7 +2873,7 @@ function createSortButtonsPublic(reviewsSection) {
             return window.selectedGenres.some(selectedGenre => {
                 const normalizedSelected = selectedGenre.toLowerCase().trim();
                 // Genres "type" (Doujin, Manhwa, Manhua) : matcher par contentType pour que les cartes apparaissent
-                if (['doujin', 'manhwa', 'manhua'].includes(normalizedSelected)) {
+                if (['manhwa', 'manhua'].includes(normalizedSelected)) {
                     const contentTypeMatch = noteContentType === normalizedSelected;
                     const genreMatch = noteGenres.some(noteGenre =>
                         noteGenre === normalizedSelected || noteGenre.includes(normalizedSelected) || normalizedSelected.includes(noteGenre)
@@ -2843,9 +2925,9 @@ function createSortButtonsPublic(reviewsSection) {
         var ofGenreU = (window.t && window.t('genre.of_genre')) || 'du genre :';
         var typeText = selectedType && selectedType !== 'tous' ? ' (' + typeLabelU + ' ' + (selectedType === 'manga' ? (window.t && window.t('genre.content_mangas')) : selectedType === 'manhwa' ? (window.t && window.t('genre.content_manhwa')) : selectedType === 'manhua' ? (window.t && window.t('genre.content_manhua')) : selectedType === 'anime' ? (window.t && window.t('genre.content_animes')) : selectedType === 'film' ? (window.t && window.t('genre.content_films')) : selectedType) + ')' : '';
         const selectedGenres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-        const isMangaGenre = selectedGenres.some(g => ['Doujin', 'Manhwa', 'Manhua'].includes(g));
+        const isMangaGenre = selectedGenres.some(g => ['Manhwa', 'Manhua'].includes(g));
         var contentType = selectedType && selectedType !== 'tous' ? 
-            (selectedType === 'manga' || selectedType === 'doujin' ? (window.t && window.t('genre.content_mangas')) || 'Mangas' : 
+            (selectedType === 'manga' ? (window.t && window.t('genre.content_mangas')) || 'Mangas' : 
              selectedType === 'manhwa' ? (window.t && window.t('genre.content_manhwa')) || 'Manhwas' : 
              selectedType === 'manhua' ? (window.t && window.t('genre.content_manhua')) || 'Manhuas' : 
              selectedType === 'anime' ? (window.t && window.t('genre.content_animes')) || 'Animes' : 
@@ -2994,13 +3076,12 @@ function performSearchPublic(query) {
                 }
                 return String(g).toLowerCase().trim();
             }).filter(s => s && s !== 'genre inconnu' && s !== 'unknown');
-            // Type strict : manga = uniquement manga ; manhwa/manhua/doujin n'apparaissent que si leur type ou genre est sélectionné
+            // Type strict : manga = uniquement manga ; manhwa/manhua n'apparaissent que si leur type ou genre est sélectionné
             const matchesType = selectedType === 'tous' || 
-                (selectedType === 'manga' && noteType === 'manga') ||
+                (selectedType === 'manga' && ['manga', 'roman', 'novel'].includes(noteType)) ||
                 (selectedType === 'roman' && (noteType === 'roman' || noteType === 'novel')) ||
                 (selectedType === 'manhwa' && (noteType === 'manhwa' || (noteType === 'manga' && noteGenresForType.some(ng => ng === 'manhwa' || ng.includes('manhwa'))))) ||
                 (selectedType === 'manhua' && (noteType === 'manhua' || (noteType === 'manga' && noteGenresForType.some(ng => ng === 'manhua' || ng.includes('manhua'))))) ||
-                (selectedType === 'doujin' && (noteType === 'doujin' || (noteType === 'manga' && noteGenresForType.some(ng => ng === 'doujin' || ng.includes('doujin'))))) ||
                 (selectedType === 'anime' && ['anime', 'tv', 'movie', 'ova', 'ona', 'special', 'music'].includes(noteType)) ||
                 (selectedType === 'film' && ['movie', 'film'].includes(noteType));
             if (!matchesType) return false;
@@ -3013,7 +3094,7 @@ function performSearchPublic(query) {
                 }).filter(s => s && s !== 'genre inconnu' && s !== 'unknown');
                 for (const sg of selectedGenresForSearch) {
                     const sgLower = sg.toLowerCase().trim();
-                    if (sgLower === 'doujin' || sgLower === 'manhwa' || sgLower === 'manhua') {
+                    if (sgLower === 'manhwa' || sgLower === 'manhua') {
                         // Accepter si contentType correspond OU si manga avec ce genre dans la liste (beaucoup sont stockés en "manga")
                         const typeMatch = noteType === sgLower;
                         const genreMatch = noteGenres.some(ng => ng === sgLower || ng.includes(sgLower) || sgLower.includes(ng));
@@ -3329,7 +3410,7 @@ function createAnimeStarCard(note) {
     
     // Marquer le type de la carte
     const contentType = (note.contentType || '').toLowerCase();
-    if (['manga', 'doujin', 'manhwa', 'manhua'].includes(contentType) || note.isManga) {
+    if (['manga', 'manhwa', 'manhua'].includes(contentType) || note.isManga) {
         card.setAttribute('data-is-manga', 'true');
         card.classList.add('manga-card');
     }
@@ -3593,6 +3674,8 @@ function waitForProfileSettingsService(maxWaitMs) {
 
 // Fonction pour initialiser le système d'abonnements
 async function initFollowSystem(targetUserEmail) {
+    hideFollowBannerUi();
+    return;
     const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
     const isOwnProfile = currentUser && currentUser.email === targetUserEmail;
 

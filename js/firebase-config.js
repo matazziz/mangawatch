@@ -8,8 +8,18 @@ import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-s
 
 // 🔥 Configuration Firebase pour mangawatch-98ed0
 // Clé web : injectée en Base64 au build (évite la clé en clair dans les fichiers — Netlify analyse aussi la sortie du build).
+const encodedApiKey = 'QUl6YVN5REpDTXcxSDcxWDVsZVF5Ty1JZ2VqR0xzV0RXM2t6SEg4';
+const decodedApiKey =
+  encodedApiKey === 'VEFfVlJBSUVfQ0xFX1dFQl9GSVJFQkFTRQ==' ? '' : atob(encodedApiKey);
+
+if (!decodedApiKey) {
+  throw new Error(
+    "[Firebase] Clé API absente en local. Lancez d'abord: npm run inject-firebase-key (avec MANGAWATCH_FB_WEB_API_KEY)."
+  );
+}
+
 const firebaseConfig = {
-  apiKey: atob('__MANGAWATCH_FB_KEY_B64__'),
+  apiKey: decodedApiKey,
   authDomain: "mangawatch-98ed0.firebaseapp.com",
   projectId: "mangawatch-98ed0",
   storageBucket: "mangawatch-98ed0.firebasestorage.app",

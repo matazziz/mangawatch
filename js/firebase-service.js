@@ -1121,16 +1121,35 @@ export const profileAdminService = {
     return snapshot.docs.map((d) => {
       const data = d.data();
       const email = d.id;
+      const timestampToMs = (value) => {
+        if (!value) return null;
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          const ms = Date.parse(value);
+          return Number.isNaN(ms) ? null : ms;
+        }
+        if (value && typeof value.toMillis === 'function') return value.toMillis();
+        if (value && typeof value.seconds === 'number') return value.seconds * 1000;
+        return null;
+      };
       const name =
         (typeof data.username === 'string' && data.username.trim()) ||
+        (typeof data.pseudo === 'string' && data.pseudo.trim()) ||
         (typeof data.displayName === 'string' && data.displayName.trim()) ||
         (typeof data.name === 'string' && data.name.trim()) ||
         (email.includes('@') ? email.split('@')[0] : email);
       return {
         email,
         name,
+        username:
+          (typeof data.username === 'string' && data.username.trim()) ||
+          (typeof data.pseudo === 'string' && data.pseudo.trim()) ||
+          null,
         avatar: data.avatar || data.photoURL || data.picture || null,
-        verified: data.verified === true
+        verified: data.verified === true,
+        country: data.country || data.continent || null,
+        created_at: timestampToMs(data.created_at || data.createdAt || data.createdAtMs),
+        updated_at: timestampToMs(data.updated_at || data.updatedAt || data.updatedAtMs)
       };
     });
   }

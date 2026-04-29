@@ -657,9 +657,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const typeLower = type.toLowerCase();
         
-        // Normaliser "doujinshi" et "doujin" en "doujin"
+        // Normaliser "doujinshi" et "doujin" en "manga"
         if (typeLower === 'doujinshi' || typeLower === 'doujin') {
-            return 'doujin';
+            return 'manga';
         }
         
         // Normaliser "novel" et "light novel" en "roman"
@@ -694,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return typeLower;
         }
         
-        // Si c'est déjà "anime", "manga", "roman", "doujin", "manhwa", "manhua", "film", le retourner tel quel
+        // Si c'est déjà "anime", "manga", "roman", "manhwa", "manhua", "film", le retourner tel quel
         return typeLower;
     }
 
@@ -733,8 +733,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 matches = true;
             }
         }
-        if (!matches && filterTypeLower === 'doujin') {
-            if (normalizedItemType === 'doujin' || itemTypeLower.includes('doujin')) {
+        if (!matches && (filterTypeLower === 'doujin' || filterTypeLower === 'manga')) {
+            if (normalizedItemType === 'manga' || itemTypeLower.includes('doujin')) {
                 matches = true;
             } else if (itemGenreSuggestsDoujin(item)) {
                 matches = true;

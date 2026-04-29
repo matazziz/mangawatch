@@ -9,6 +9,7 @@ class SearchManager {
         this.debounceTime = 300;
         this.maxResults = 4;
         this.clearBtn = null;
+        this.remoteUsersCache = null;
         
         if (this.searchInput && this.searchResults) {
             this.init();
@@ -153,7 +154,7 @@ class SearchManager {
         try {
             // Ne chercher que pour anime, manga, etc. (pas utilisateur pour l'instant)
             if (selectedType === 'user') {
-                this.displayUserSearchResults(query);
+                await this.displayUserSearchResults(query);
                 return;
             }
             
@@ -397,12 +398,11 @@ class SearchManager {
         this.showResults();
     }
     
-    displayUserSearchResults(query) {
+    async displayUserSearchResults(query) {
         this.searchResults.innerHTML = '';
         
-        // Rechercher les utilisateurs dans localStorage
-        // En production, cela devrait venir d'une API
-        const users = this.searchUsersInLocalStorage(query);
+        // Rechercher les utilisateurs dans localStorage + Firestore
+        const users = await this.searchUsers(query);
         
         if (users.length === 0) {
             this.displayNoResults();
@@ -429,9 +429,9 @@ class SearchManager {
             
             const avatarKey = 'avatar_' + user.email;
             const storedAvatar = localStorage.getItem(avatarKey);
-            const avatarUrl = storedAvatar || user.picture || user.originalAvatar || user.customAvatar || '';
+            const avatarUrl = storedAvatar || user.avatar || user.picture || user.originalAvatar || user.customAvatar || '';
             
-            const isVerified = verifiedUsers.includes(user.email);
+            const isVerified = user.verified === true || verifiedUsers.includes(user.email);
             const verifiedBadge = isVerified ? '<span class="verified-badge-search" title="Utilisateur vérifié">✓</span>' : '';
             
             // Obtenir le pays (code 2 lettres : fr, de, us…)
@@ -468,6 +468,63 @@ class SearchManager {
         });
         
         this.showResults();
+    }
+
+    async fetchRemoteUsersFromFirestore() {
+        const CACHE_TTL_MS = 30000;
+        const now = Date.now();
+        if (
+            Array.isArray(this.remoteUsersCache) &&
+            typeof this.remoteUsersCacheAt === 'number' &&
+            (now - this.remoteUsersCacheAt) < CACHE_TTL_MS
+        ) {
+            return this.remoteUsersCache;
+        }
+        try {
+            const mod = await import('./firebase-service.js');
+            if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
+                const remote = await mod.profileAdminService.listAllUserProfiles();
+                this.remoteUsersCache = Array.isArray(remote) ? remote : [];
+                this.remoteUsersCacheAt = now;
+                return this.remoteUsersCache;
+            }
+        } catch (e) {
+            console.warn('Recherche utilisateur: profils Firestore indisponibles', e);
+        }
+        this.remoteUsersCache = [];
+        this.remoteUsersCacheAt = now;
+        return this.remoteUsersCache;
+    }
+
+    async searchUsers(query) {
+        const results = this.searchUsersInLocalStorage(query);
+        const lowerQuery = query.toLowerCase().trim();
+        const existingEmails = new Set(results.map(u => String(u.email || '').toLowerCase()));
+
+        const remoteUsers = await this.fetchRemoteUsersFromFirestore();
+        remoteUsers.forEach((u) => {
+            if (!u || !u.email) return;
+            const email = String(u.email).toLowerCase();
+            if (!email.includes('@') || existingEmails.has(email)) return;
+            const username = String(u.username || '').toLowerCase();
+            const name = String(u.name || '').toLowerCase();
+            const pseudo = String(u.pseudo || '').toLowerCase();
+            const emailPrefix = email.split('@')[0];
+            const searchable = [username, name, pseudo, email, emailPrefix].filter(Boolean);
+            const matches = searchable.some((v) => v.includes(lowerQuery));
+            if (!matches) return;
+            results.push({
+                email: u.email,
+                name: u.username || u.name || u.email.split('@')[0],
+                picture: u.avatar || '',
+                originalAvatar: u.avatar || '',
+                country: u.country || '',
+                verified: u.verified === true
+            });
+            existingEmails.add(email);
+        });
+
+        return results;
     }
     
     searchUsersInLocalStorage(query) {
@@ -526,7 +583,9 @@ class SearchManager {
     
     selectUserResult(user) {
         // Rediriger vers la page de profil public
-        window.location.href = `user-profile.html?user=${encodeURIComponent(user.email)}`;
+        const email = String(user?.email || '').trim().toLowerCase();
+        if (!email) return;
+        window.location.href = `user-profile.html?user=${encodeURIComponent(email)}`;
     }
     
     selectResult(result) {
