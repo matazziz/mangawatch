@@ -609,61 +609,81 @@ function showGoogleSignUpCompletionForm(googleUser) {
     }
     
     // Créer un nouveau popup pour compléter les informations
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
     const overlay = document.createElement('div');
     overlay.id = 'google-signup-completion-overlay';
     overlay.style.cssText = `
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100dvh;
         background: radial-gradient(ellipse at center, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.95) 100%);
-        z-index: 10000;
+        z-index: 11050;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        padding: 2rem;
+        justify-content: flex-start;
+        padding: max(18px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        box-sizing: border-box;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
     `;
     
     const popup = document.createElement('div');
     popup.style.cssText = `
         background: linear-gradient(135deg, #0a0a0a, #1a1a1a, #2a2a2a);
-        border-radius: 32px;
-        box-shadow: 0 25px 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(0, 196, 93, 0.2);
-        padding: 3rem;
+        border-radius: clamp(12px, 3.2vw, 22px);
+        box-shadow: 0 18px 56px rgba(0,0,0,0.75), 0 0 0 1px rgba(0, 196, 93, 0.2);
+        padding: clamp(0.75rem, 3vw, 1.35rem);
         text-align: center;
-        max-width: 500px;
-        width: 90vw;
+        max-width: min(360px, calc(100vw - 36px));
+        width: 100%;
+        max-height: min(80dvh, calc(100dvh - 32px));
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
         color: white;
         position: relative;
+        flex-shrink: 0;
+        margin-top: 14px;
+        margin-bottom: auto;
+        box-sizing: border-box;
     `;
     
     popup.innerHTML = `
-        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #00c45d, #00e06d); border-radius: 50%; margin: 0 auto 1.5rem auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 25px rgba(0, 196, 93, 0.3);">
-            <i class="fas fa-user-plus" style="font-size: 2rem; color: white;"></i>
+        <div style="width: clamp(40px, 11vw, 56px); height: clamp(40px, 11vw, 56px); background: linear-gradient(135deg, #00c45d, #00e06d); border-radius: 50%; margin: 0 auto 0.65rem auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 18px rgba(0, 196, 93, 0.28);">
+            <i class="fas fa-user-plus" style="font-size: clamp(1.1rem, 4.2vw, 1.45rem); color: white;"></i>
         </div>
         
-        <h2 style="color: #00c45d; margin-bottom: 1rem; font-size: 2rem; font-weight: 700;">Complétez votre profil</h2>
-        <p style="color: #ccc; margin-bottom: 2rem; line-height: 1.6;">Quelques informations supplémentaires pour finaliser votre inscription</p>
+        <h2 style="color: #00c45d; margin-bottom: 0.45rem; font-size: clamp(1.05rem, 4vw, 1.4rem); font-weight: 700; line-height: 1.2;">Complétez votre profil</h2>
+        <p style="color: #ccc; margin-bottom: 0.85rem; line-height: 1.45; font-size: clamp(0.78rem, 2.9vw, 0.88rem);">Quelques informations supplémentaires pour finaliser votre inscription</p>
         
         <form id="google-signup-completion-form">
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.8rem; color: #00e06d; font-weight: 700; text-align: left; font-size: 1.05rem;">Pseudo *</label>
+            <div style="margin-bottom: 1.05rem;">
+                <label style="display: block; margin-bottom: 0.45rem; color: #00e06d; font-weight: 700; text-align: left; font-size: 0.9rem;">Pseudo *</label>
                 <input type="text" id="google-signup-pseudo" required 
                     value="${googleUser.displayName?.split(' ')[0] || googleUser.email?.split('@')[0] || ''}"
                     placeholder="Ex: mon-pseudo-123"
                     pattern="[a-zA-Z0-9_-]+"
                     title="Le pseudo ne peut contenir que des lettres, chiffres, tirets (-) et underscores (_). Les espaces sont interdits."
-                    style="width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box;">
-                <small id="google-signup-pseudo-error" style="display: none; color: #ff4444; margin-top: 0.5rem; text-align: left; font-size: 0.9rem;"></small>
-                <small style="display: block; color: #999; margin-top: 0.5rem; text-align: left; font-size: 0.85rem;">
+                    style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; color: white; font-size: 16px; box-sizing: border-box;">
+                <small id="google-signup-pseudo-error" style="display: none; color: #ff4444; margin-top: 0.35rem; text-align: left; font-size: 0.8rem;"></small>
+                <small style="display: block; color: #999; margin-top: 0.35rem; text-align: left; font-size: 0.76rem; line-height: 1.35;">
                     ⚠️ Le pseudo ne peut contenir que des lettres, chiffres, tirets (-) et underscores (_). Les espaces sont interdits.
                 </small>
             </div>
             
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.8rem; color: #00e06d; font-weight: 700; text-align: left; font-size: 1.05rem;">Langue *</label>
-                <select id="google-signup-langue" required style="width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; cursor: pointer;">
+            <div style="margin-bottom: 1.05rem;">
+                <label style="display: block; margin-bottom: 0.45rem; color: #00e06d; font-weight: 700; text-align: left; font-size: 0.9rem;">Langue *</label>
+                <select id="google-signup-langue" required style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; color: white; font-size: 16px; box-sizing: border-box; cursor: pointer;">
                     <option value="fr" selected>🇫🇷 Français</option>
                     <option value="en">🇺🇸 English</option>
                     <option value="de">🇩🇪 Deutsch</option>
@@ -673,34 +693,34 @@ function showGoogleSignUpCompletionForm(googleUser) {
                 </select>
             </div>
             
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.8rem; color: #00e06d; font-weight: 700; text-align: left; font-size: 1.05rem;">Pays *</label>
-                <select id="google-signup-country" required style="width: 100%; padding: 16px 20px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 16px; color: white; font-size: 16px; box-sizing: border-box; cursor: pointer;">
+            <div style="margin-bottom: 1.05rem;">
+                <label style="display: block; margin-bottom: 0.45rem; color: #00e06d; font-weight: 700; text-align: left; font-size: 0.9rem;">Pays *</label>
+                <select id="google-signup-country" required style="width: 100%; padding: 12px 14px; background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.15); border-radius: 12px; color: white; font-size: 16px; box-sizing: border-box; cursor: pointer;">
                     <option value="" disabled selected>Choisissez votre pays</option>
                 </select>
             </div>
             
-            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; text-align: left;">
-                <input type="checkbox" id="google-signup-is-minor" style="width: 18px; height: 18px; cursor: pointer;">
-                <label for="google-signup-is-minor" style="color: #ccc; cursor: pointer; font-size: 0.95rem;">
+            <div style="margin-bottom: 0.9rem; display: flex; align-items: flex-start; gap: 6px; text-align: left;">
+                <input type="checkbox" id="google-signup-is-minor" style="width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0; cursor: pointer;">
+                <label for="google-signup-is-minor" style="color: #ccc; cursor: pointer; font-size: 0.82rem; line-height: 1.35;">
                     Je suis mineur (moins de 18 ans) - Les contenus à caractère sexuel seront masqués
                 </label>
             </div>
             
-            <div style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; text-align: left;">
-                <input type="checkbox" id="google-signup-terms" required style="width: 18px; height: 18px; cursor: pointer;">
-                <label for="google-signup-terms" style="color: #ccc; cursor: pointer; font-size: 0.9rem;">
+            <div style="margin-bottom: 0.95rem; display: flex; align-items: flex-start; gap: 6px; text-align: left;">
+                <input type="checkbox" id="google-signup-terms" required style="width: 16px; height: 16px; margin-top: 3px; flex-shrink: 0; cursor: pointer;">
+                <label for="google-signup-terms" style="color: #ccc; cursor: pointer; font-size: 0.8rem; line-height: 1.35;">
                     J'accepte les <a href="conditions-utilisation.html" target="_blank" style="color: #00e06d; text-decoration: none; font-weight: 600;">conditions d'utilisation</a> et la <a href="politique-confidentialite.html" target="_blank" style="color: #00e06d; text-decoration: none; font-weight: 600;">politique de confidentialité</a>
                 </label>
             </div>
             
-            <button type="submit" style="width: 100%; background: linear-gradient(135deg, #00c45d, #00e06d); color: white; border: none; padding: 1.2rem; border-radius: 16px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 196, 93, 0.4); transition: all 0.3s ease;">
+            <button type="submit" style="width: 100%; background: linear-gradient(135deg, #00c45d, #00e06d); color: white; border: none; padding: 0.85rem; border-radius: 12px; font-size: 0.98rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 196, 93, 0.35); transition: all 0.3s ease;">
                 Finaliser mon inscription
             </button>
         </form>
         
-        <button onclick="closeGoogleSignUpCompletion()" style="position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #ccc; font-size: 1.5rem; cursor: pointer; padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-            ×
+        <button type="button" id="google-signup-completion-back-btn" aria-label="Retour" onclick="window.goBackFromGoogleSignupCompletionForm && window.goBackFromGoogleSignupCompletionForm()" style="position: absolute; top: 0.4rem; left: 0.4rem; z-index: 2; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #ccc; font-size: 1rem; cursor: pointer; padding: 0; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
         </button>
     `;
     
@@ -817,6 +837,7 @@ function showGoogleSignUpCompletionForm(googleUser) {
         }
         
         // Sauvegarder le compte (accounts est déjà déclaré plus haut)
+        const signupCreatedAt = new Date().toISOString();
         const newAccount = {
             username: pseudo,
             email: googleUser.email,
@@ -825,7 +846,7 @@ function showGoogleSignUpCompletionForm(googleUser) {
             country: country,
             isMinor: isMinor,
             provider: 'google',
-            createdAt: new Date().toISOString()
+            createdAt: signupCreatedAt
         };
         
         accounts.push(newAccount);
@@ -848,7 +869,8 @@ function showGoogleSignUpCompletionForm(googleUser) {
             provider: 'google',
             langue: langue,
             country: country,
-            isMinor: isMinor
+            isMinor: isMinor,
+            createdAt: signupCreatedAt
         };
         
         localStorage.setItem('user', JSON.stringify(userData));
@@ -881,9 +903,34 @@ function showGoogleSignUpCompletionForm(googleUser) {
 
 // Fonction pour fermer le popup de complément
 function closeGoogleSignUpCompletion() {
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
     const overlay = document.getElementById('google-signup-completion-overlay');
     if (overlay) {
         overlay.remove();
+    }
+}
+
+/** Retour au popup connexion / inscription après Google OAuth (déconnexion Firebase + réouvre l’onglet inscription). */
+async function goBackFromGoogleSignupCompletionForm() {
+    closeGoogleSignUpCompletion();
+    try {
+        const { authService } = await import('./firebase-service.js');
+        if (authService && typeof authService.signOut === 'function') {
+            await authService.signOut();
+        }
+    } catch (e) {
+        console.warn('Firebase signOut (retour formulaire inscription Google):', e);
+    }
+    isGoogleSignInInProgress = false;
+    if (typeof window.showAuthPopup === 'function') {
+        window.showAuthPopup();
+        var focusTabInscription = function () {
+            var t = document.getElementById('tab-inscription');
+            if (t) t.click();
+        };
+        requestAnimationFrame(focusTabInscription);
+        setTimeout(focusTabInscription, 120);
     }
 }
 
@@ -893,4 +940,5 @@ if (typeof window !== 'undefined') {
     window.handleFirebaseGoogleSignUp = handleFirebaseGoogleSignUp;
     window.handleLogout = handleLogout;
     window.closeGoogleSignUpCompletion = closeGoogleSignUpCompletion;
+    window.goBackFromGoogleSignupCompletionForm = goBackFromGoogleSignupCompletionForm;
 }

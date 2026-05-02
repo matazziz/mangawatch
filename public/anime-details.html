@@ -1147,10 +1147,12 @@
             }
             
             // Créer l'objet anime complet avec toutes les informations
+            const nowTs = Date.now();
             const animeNote = {
                 id: animeId,
                 note: Number(rating),
-                addedAt: Date.now(),
+                addedAt: nowTs,
+                updatedAt: nowTs,
                 titre: animeTitle,
                 image: animeImage,
                 synopsis: animeSynopsis,
@@ -1196,14 +1198,14 @@
             
             if (existingIndex !== -1) {
                 const originalAddedAt = notes[existingIndex].addedAt;
-                notes[existingIndex] = { ...notes[existingIndex], ...animeNote, addedAt: originalAddedAt };
+                notes[existingIndex] = { ...notes[existingIndex], ...animeNote, addedAt: originalAddedAt, updatedAt: nowTs };
                 notes[existingIndex].contentType = detectedContentType;
                 console.log(`✅ Note mise à jour (localStorage) pour ${detectedContentType} ${animeId}: ${rating}/10`);
             } else {
                 const existingWithDifferentType = notes.findIndex(n => String(n.id) === String(animeId) && n.contentType !== detectedContentType);
                 if (existingWithDifferentType !== -1) {
                     const originalAddedAt = notes[existingWithDifferentType].addedAt;
-                    notes[existingWithDifferentType] = { ...notes[existingWithDifferentType], ...animeNote, addedAt: originalAddedAt, contentType: detectedContentType };
+                    notes[existingWithDifferentType] = { ...notes[existingWithDifferentType], ...animeNote, addedAt: originalAddedAt, contentType: detectedContentType, updatedAt: nowTs };
                     console.log(`✅ Note existante mise à jour (localStorage) avec nouveau contentType pour ${detectedContentType} ${animeId}: ${rating}/10`);
                 } else {
                     notes.push(animeNote);

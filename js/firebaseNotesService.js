@@ -36,12 +36,15 @@ export const firebaseNotesService = {
 
       const notes = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        const tsMillis = (t) =>
+          (t?.toMillis && t.toMillis()) || (typeof t?.seconds === 'number' ? t.seconds * 1000 : null);
         return {
           _docId: doc.id,
           id: data.content_id,
           note: data.note,
           contentType: data.content_type,
-          addedAt: data.added_at?.toMillis ? data.added_at.toMillis() : (data.added_at?.seconds ? data.added_at.seconds * 1000 : Date.now()),
+          addedAt: tsMillis(data.added_at) || Date.now(),
+          updatedAt: tsMillis(data.updated_at),
           titre: data.titre,
           image: data.image,
           synopsis: data.synopsis,

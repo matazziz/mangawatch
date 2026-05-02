@@ -523,20 +523,25 @@ document.addEventListener('DOMContentLoaded', async function() {
                 #auth-popup-overlay {
                     align-items: flex-start !important;
                     justify-content: center !important;
-                    padding: 14px !important;
-                    padding-top: 18px !important;
-                    overflow: hidden !important;
+                    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+                    overflow-y: auto !important;
                     overflow-x: hidden !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    overscroll-behavior: contain !important;
+                    touch-action: pan-y !important;
                 }
 
                 #auth-main-popup {
-                    width: min(420px, calc(100vw - 64px)) !important;
-                    max-width: min(420px, calc(100vw - 64px)) !important;
-                    max-height: calc(100dvh - 28px) !important;
+                    width: min(396px, calc(100vw - 44px)) !important;
+                    max-width: min(396px, calc(100vw - 44px)) !important;
+                    max-height: min(86dvh, calc(100dvh - 36px)) !important;
                     border-radius: 16px !important;
                     padding: 0.45rem 0.55rem 0.75rem 0.55rem !important;
                     overflow-y: auto !important;
                     overflow-x: hidden !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    overscroll-behavior: contain !important;
+                    touch-action: pan-y !important;
                     box-sizing: border-box !important;
                     margin: 0 auto !important;
                 }
@@ -626,9 +631,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             @media (max-width: 480px) {
                 #auth-main-popup {
-                    width: calc(100vw - 52px) !important;
-                    max-width: calc(100vw - 52px) !important;
-                    max-height: calc(100dvh - 22px) !important;
+                    width: calc(100vw - 40px) !important;
+                    max-width: calc(100vw - 40px) !important;
+                    max-height: min(84dvh, calc(100dvh - 28px)) !important;
                     border-radius: 14px !important;
                     padding: 0.35rem 0.45rem 0.65rem 0.45rem !important;
                     margin: 0 auto !important;
@@ -882,6 +887,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Ajouter le popup à l'overlay
         overlay.appendChild(popup);
         document.body.appendChild(overlay);
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
         
         // Réinitialiser le flag après l'ajout au DOM
         setTimeout(() => {
@@ -1461,6 +1468,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                     
                     // Créer le nouveau compte
+                    const signupTs = new Date().toISOString();
                     const newAccount = {
                         username: username,
                         email: email,
@@ -1468,7 +1476,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         langue: langue,
                         country: country,
                         isMinor: isMinor,
-                        created_at: new Date().toISOString()
+                        created_at: signupTs,
+                        createdAt: signupTs
                     };
                     
                     // Sauvegarder le nouveau compte
@@ -1482,7 +1491,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                         picture: 'https://via.placeholder.com/150',
                         langue: langue,
                         country: country,
-                        isMinor: isMinor
+                        isMinor: isMinor,
+                        createdAt: signupTs,
+                        created_at: signupTs
                     };
                     
                     localStorage.setItem('user', JSON.stringify(user));
@@ -1534,6 +1545,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Fonction pour fermer le pop-up
     window.closeAuthPopup = function() {
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
         const overlay = document.getElementById('auth-popup-overlay');
         if (overlay) {
             overlay.remove();

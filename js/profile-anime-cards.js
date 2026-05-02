@@ -215,6 +215,15 @@ async function loadUserNotes(userEmail) {
 
     const noteKey = (n) => `${String(n && n.id)}::${String((n && n.contentType) || 'anime').toLowerCase()}`;
 
+    const noteRecencyMs = (n) => {
+        if (!n) return 0;
+        const u = Number(n.updatedAt);
+        const a = Number(n.addedAt);
+        const base = Number.isFinite(u) && u > 0 ? u : 0;
+        const fallback = Number.isFinite(a) && a > 0 ? a : 0;
+        return Math.max(base, fallback);
+    };
+
     // Essayer Firebase (avec un court retry), puis fusionner avec localStorage
     let firebaseNotes = null;
     if (typeof window.firebaseNotesService === 'undefined' || !window.firebaseNotesService) {
@@ -271,9 +280,16 @@ async function loadUserNotes(userEmail) {
         if (!existing) {
             mergedMap.set(k, n);
         } else {
-            const existingTs = Number(existing.addedAt || 0);
-            const localTs = Number(n.addedAt || 0);
-            if (localTs > existingTs) mergedMap.set(k, { ...existing, ...n });
+            const existingMs = noteRecencyMs(existing);
+            const localMs = noteRecencyMs(n);
+            const sameLegacyAdded =
+                Number(existing.addedAt || 0) === Number(n.addedAt || 0) &&
+                !Number(existing.updatedAt || 0) &&
+                !Number(n.updatedAt || 0);
+            const noteMismatch = Number(existing.note) !== Number(n.note);
+            if (localMs > existingMs || (sameLegacyAdded && noteMismatch)) {
+                mergedMap.set(k, { ...existing, ...n });
+            }
         }
     }
 
@@ -10818,19 +10834,21 @@ async function renderTop10Slots() {
     }
     
     for (let i = 0; i < 10; i++) {
-        // Créer le slot s'il n'existe pas
-        let slot = document.getElementById(`catalogue-card-${i}`);
+        const slotUiIndex = i + 1;
+        // IDs alignés sur createStarBadges : catalogue-card-1 … catalogue-card-10
+        let slot = document.getElementById(`catalogue-card-${slotUiIndex}`);
         if (slot) {
-            // S'assurer que le slot a l'attribut data-slot-index
+            slot.setAttribute('data-top-index', String(i));
             if (!slot.getAttribute('data-slot-index')) {
                 slot.setAttribute('data-slot-index', i);
             }
         }
         if (!slot) {
             slot = document.createElement('div');
-            slot.id = `catalogue-card-${i}`;
+            slot.id = `catalogue-card-${slotUiIndex}`;
             slot.className = 'catalogue-card';
             slot.setAttribute('data-slot-index', i);
+            slot.setAttribute('data-top-index', String(i));
                     slot.style.cssText = `
             flex: 0 0 170px;
             width: 170px;

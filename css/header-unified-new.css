@@ -952,10 +952,32 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         display: none;
     }
     
-    /* Header mobile : MangaWatch réduit, pas d'image Kame House */
+    /* Header mobile : MangaWatch un peu plus compact, pas d'image Kame House */
     .logo-link span {
-        font-size: 0.7rem;
-        letter-spacing: 0.8px;
+        font-size: 0.62rem;
+        letter-spacing: 0.6px;
+    }
+
+    /* Zone tactile plus confortable sur téléphone */
+    .hamburger-btn {
+        width: 40px;
+        height: 36px;
+        padding: 4px 6px;
+        box-sizing: border-box;
+    }
+
+    .hamburger-btn span {
+        width: 24px;
+        height: 3px;
+        margin: 3px auto;
+    }
+
+    .hamburger-btn.active span:nth-child(1) {
+        transform: translateY(10px) rotate(45deg);
+    }
+
+    .hamburger-btn.active span:nth-child(3) {
+        transform: translateY(-10px) rotate(-45deg);
     }
     
     .main-header .logo-image {
@@ -1216,7 +1238,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     .logo-link span {
-        font-size: 0.65rem;
+        font-size: 0.56rem;
+        letter-spacing: 0.45px;
     }
     
     .main-header .logo-image {
@@ -1364,12 +1387,23 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     .hamburger-btn {
-        width: 26px;
-        height: 20px;
+        width: 44px;
+        height: 40px;
+        padding: 6px 8px;
     }
-    
+
     .hamburger-btn span {
-        height: 2.5px;
+        width: 26px;
+        height: 3.5px;
+        margin: 3px auto;
+    }
+
+    .hamburger-btn.active span:nth-child(1) {
+        transform: translateY(11px) rotate(45deg);
+    }
+
+    .hamburger-btn.active span:nth-child(3) {
+        transform: translateY(-11px) rotate(-45deg);
     }
     
     .mobile-menu {

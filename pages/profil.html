@@ -2008,12 +2008,26 @@
             background: rgba(255, 107, 107, 0.3);
         }
         
-        /* Boutons pays : Enregistrer / Annuler très compacts */
+        /* Boutons pays / langue : Enregistrer / Annuler compacts */
         #country-edit-actions .info-save-btn,
-        #country-edit-actions .info-cancel-btn {
-            padding: 0.25rem 0.5rem;
+        #country-edit-actions .info-cancel-btn,
+        #language-edit-actions .info-save-btn,
+        #language-edit-actions .info-cancel-btn {
+            padding: 0.28rem 0.55rem;
             font-size: 0.75rem;
-            margin-top: 0.35rem;
+            margin-top: 0.3rem;
+        }
+        
+        #language-edit-actions,
+        #country-edit-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        #language-edit-actions select#language-select-edit {
+            width: 100%;
+            margin-top: 0;
+            max-width: 100%;
         }
         
         .info-edit-actions {
@@ -2278,6 +2292,34 @@
                 padding: 0.72rem 0.85rem !important;
                 font-size: 0.9rem !important;
                 border-radius: 10px !important;
+            }
+            
+            #language-edit-actions,
+            #country-edit-actions {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 0.4rem !important;
+                margin-top: 0.4rem !important;
+            }
+            #language-edit-actions select#language-select-edit,
+            #country-edit-actions .country-picker-profile {
+                flex: 1 1 100% !important;
+                margin-top: 0 !important;
+            }
+            #language-edit-actions select#language-select-edit {
+                padding: 0.5rem 0.62rem !important;
+                font-size: 0.82rem !important;
+            }
+            #language-edit-actions .info-save-btn,
+            #language-edit-actions .info-cancel-btn,
+            #country-edit-actions .info-save-btn,
+            #country-edit-actions .info-cancel-btn {
+                flex: 1 1 calc(50% - 4px) !important;
+                min-height: auto !important;
+                padding: 0.42rem 0.55rem !important;
+                font-size: 0.72rem !important;
+                margin-top: 0.25rem !important;
+                gap: 0.35rem !important;
             }
 
             .setting-item .edit-btn {
@@ -4744,6 +4786,114 @@
             }
         }
         
+        function getStoredProfileForJoinDate(user) {
+            if (!user || !user.email) return null;
+            try {
+                return JSON.parse(localStorage.getItem('profile_' + user.email) || 'null');
+            } catch (e) {
+                return null;
+            }
+        }
+
+        /** Date d'inscription : compte local, objet user, profil local, timestamp Firestore, ou (plus bas) Firebase Auth. */
+        function getProfileJoinDateRaw(account, user) {
+            var prof = getStoredProfileForJoinDate(user);
+            var candidates = [
+                account && account.createdAt,
+                account && account.created_at,
+                user && user.createdAt,
+                user && user.created_at,
+                prof && prof.createdAt,
+                prof && prof.created_at,
+                prof && prof.joinDate,
+                user && user.joinDate,
+                user && user.joined_at,
+                account && account.registrationDate,
+                account && account.signupDate
+            ];
+            for (var i = 0; i < candidates.length; i++) {
+                var c = candidates[i];
+                if (c === undefined || c === null) continue;
+                if (typeof c === 'object' && (c.seconds != null || typeof c.toMillis === 'function')) {
+                    var ms = typeof c.toMillis === 'function' ? c.toMillis() : Number(c.seconds) * 1000;
+                    var dts = new Date(ms);
+                    if (!isNaN(dts.getTime())) return dts.toISOString();
+                    continue;
+                }
+                var s = String(c).trim();
+                if (!s) continue;
+                var d = new Date(s);
+                if (!isNaN(d.getTime())) return d.toISOString();
+                var num = Number(s);
+                if (!isNaN(num) && num > 1e11) {
+                    var d2 = new Date(num);
+                    if (!isNaN(d2.getTime())) return d2.toISOString();
+                }
+            }
+            return '';
+        }
+
+        function formatJoinDateSettingsField(displayEl, account, user) {
+            if (!displayEl) return;
+            var joinDate = getProfileJoinDateRaw(account, user);
+            var localeForDate = typeof window.getDateLocale === 'function' ? window.getDateLocale() : 'fr-FR';
+            var dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            if (joinDate) {
+                try {
+                    var date = new Date(joinDate);
+                    if (!isNaN(date.getTime())) {
+                        displayEl.value = date.toLocaleDateString(localeForDate, dateOptions);
+                        displayEl.dataset.rawDate = joinDate;
+                        return;
+                    }
+                } catch (e) {}
+                displayEl.value = joinDate;
+                displayEl.dataset.rawDate = '';
+                return;
+            }
+            displayEl.value = (typeof window.t === 'function' && window.t('profile.not_set')) || 'Non renseigné';
+            displayEl.dataset.rawDate = '';
+        }
+
+        async function tryFillJoinDateFromFirebaseAuth(user) {
+            if (!user || !user.email) return;
+            var el = document.getElementById('join-date-display');
+            if (!el) return;
+            if (el.dataset.rawDate && String(el.dataset.rawDate).trim()) return;
+            try {
+                var mod = await import('/js/firebase-service.js');
+                var fbAuth = mod.auth;
+                if (!fbAuth) return;
+                var cur = fbAuth.currentUser;
+                if (!cur || !cur.email || String(cur.email).toLowerCase() !== String(user.email).toLowerCase()) return;
+                var ct = cur.metadata && cur.metadata.creationTime;
+                if (!ct) return;
+                var d = new Date(ct);
+                if (isNaN(d.getTime())) return;
+                var iso = d.toISOString();
+                var localeForDate = typeof window.getDateLocale === 'function' ? window.getDateLocale() : 'fr-FR';
+                el.value = d.toLocaleDateString(localeForDate, { year: 'numeric', month: 'long', day: 'numeric' });
+                el.dataset.rawDate = iso;
+                try {
+                    var u = JSON.parse(localStorage.getItem('user') || 'null');
+                    if (u && u.email && String(u.email).toLowerCase() === String(user.email).toLowerCase()) {
+                        if (!u.createdAt) u.createdAt = iso;
+                        if (!u.created_at) u.created_at = iso;
+                        localStorage.setItem('user', JSON.stringify(u));
+                    }
+                    var accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+                    var idx = accounts.findIndex(function (a) {
+                        return a.email && String(a.email).toLowerCase() === String(user.email).toLowerCase();
+                    });
+                    if (idx >= 0) {
+                        if (!accounts[idx].createdAt) accounts[idx].createdAt = iso;
+                        if (!accounts[idx].created_at) accounts[idx].created_at = iso;
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                    }
+                } catch (_p) {}
+            } catch (_e) {}
+        }
+
         // Fonction pour charger et afficher les informations du compte
         function loadAccountInfo(user) {
             if (!user || !user.email) {
@@ -4753,9 +4903,9 @@
             
             console.log('📋 Chargement informations du compte pour:', user.email);
             
-            // Récupérer depuis accounts (source principale)
+            // Récupérer depuis accounts (source principale), email insensible à la casse
             const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-            const account = accounts.find(acc => acc.email === user.email);
+            const account = accounts.find(acc => acc.email && user.email && acc.email.toLowerCase() === user.email.toLowerCase());
             
             console.log('📋 Account trouvé:', !!account, account ? {
                 username: account.username,
@@ -4800,7 +4950,7 @@
                 };
                 
                 languageDisplay.value = langueNames[languageCode] || (languageCode && languageCode !== 'Non renseigné' ? languageCode : 'Non renseigné');
-                // console.log('✅ Langue affichée:', languageDisplay.value);
+                languageDisplay.dataset.langCode = languageCode;
             } else {
                 console.warn('⚠️ language-display non trouvé');
             }
@@ -4831,37 +4981,13 @@
                 console.warn('⚠️ country-display non trouvé');
             }
             
-            // Date d'inscription (mois traduit selon la langue)
             var joinDateDisplay = document.getElementById('join-date-display');
-            if (joinDateDisplay) {
-                var joinDate = account?.created_at || account?.createdAt || user.created_at || user.createdAt || user.joined_at || user.joinDate || '';
-                var localeForDate = (typeof window.getDateLocale === 'function' ? window.getDateLocale() : 'fr-FR');
-                var dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
-                if (joinDate) {
-                    try {
-                        var date = new Date(joinDate);
-                        if (!isNaN(date.getTime())) {
-                            joinDateDisplay.value = date.toLocaleDateString(localeForDate, dateOptions);
-                            joinDateDisplay.dataset.rawDate = joinDate;
-                            console.log('✅ Date d\'inscription affichée:', joinDateDisplay.value);
-                        } else {
-                            throw new Error('Date invalide');
-                        }
-                    } catch (e) {
-                        joinDateDisplay.value = joinDate;
-                        joinDateDisplay.dataset.rawDate = '';
-                        console.log('✅ Date d\'inscription affichée (raw):', joinDate);
-                    }
-                } else {
-                    var defaultDate = new Date().toISOString();
-                    var date = new Date(defaultDate);
-                    joinDateDisplay.value = date.toLocaleDateString(localeForDate, dateOptions);
-                    joinDateDisplay.dataset.rawDate = defaultDate;
-                    console.log('⚠️ Date d\'inscription non trouvée, utilisation date actuelle:', joinDateDisplay.value);
-                }
-            } else {
-                console.warn('⚠️ join-date-display non trouvé');
-            }
+            formatJoinDateSettingsField(joinDateDisplay, account, user);
+            void tryFillJoinDateFromFirebaseAuth(user);
+            setTimeout(function () {
+              var jd = document.getElementById('join-date-display');
+              if (jd && !jd.dataset.rawDate) void tryFillJoinDateFromFirebaseAuth(JSON.parse(localStorage.getItem('user') || 'null'));
+            }, 1500);
             
             // console.log('✅ Informations du compte chargées et affichées');
         }
@@ -5982,6 +6108,7 @@
                   'ja': '日本語'
               };
               languageDisplay.value = langueNames[userLangue] || (userLangue && userLangue !== 'Non renseigné' ? userLangue : 'Non renseigné');
+              languageDisplay.dataset.langCode = userLangue;
           }
           
           // Charger le pays depuis les comptes ou le profil (traduit via getCountryName)
@@ -6010,32 +6137,14 @@
           }
           
           if (joinDateDisplay) {
-              // Utiliser la date de création du compte ou une date par défaut
-              const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-              const account = accounts.find(acc => acc.email === user.email);
-              // Gérer created_at et createdAt (camelCase)
-              const joinDate = account?.created_at || account?.createdAt || user.created_at || user.createdAt || user.joinDate || user.joined_at || user.lastLogin || new Date().toISOString();
-              try {
-                  const date = new Date(joinDate);
-                  if (!isNaN(date.getTime())) {
-                      const formattedDate = date.toLocaleDateString('fr-FR', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                      });
-                      joinDateDisplay.value = formattedDate;
-                  } else {
-                      throw new Error('Date invalide');
-                  }
-              } catch (e) {
-                  // Fallback : utiliser la date actuelle
-                  const defaultDate = new Date();
-                  joinDateDisplay.value = defaultDate.toLocaleDateString('fr-FR', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                  });
-              }
+              const accountsJb = JSON.parse(localStorage.getItem('accounts') || '[]');
+              const accountJb = accountsJb.find(acc => acc.email && user.email && acc.email.toLowerCase() === user.email.toLowerCase());
+              formatJoinDateSettingsField(joinDateDisplay, accountJb, user);
+              void tryFillJoinDateFromFirebaseAuth(user);
+              setTimeout(function () {
+                var jd2 = document.getElementById('join-date-display');
+                if (jd2 && !jd2.dataset.rawDate) void tryFillJoinDateFromFirebaseAuth(JSON.parse(localStorage.getItem('user') || 'null'));
+              }, 1500);
           }
           
           // Gestionnaire pour la bannière du profil
@@ -7725,25 +7834,27 @@
               let originalLanguage = '';
               languageEditBtn.addEventListener('click', function() {
                   originalLanguage = languageDisplay.value;
-                  // Trouver le code langue correspondant
-                  const langueCodes = {
-                      'Français': 'fr',
-                      'English': 'en',
-                      'Deutsch': 'de',
-                      'Español': 'es',
-                      'Italiano': 'it',
-                      '日本語': 'ja'
+                  var langueCodesLookup = {
+                      'Français': 'fr', 'English': 'en', 'Deutsch': 'de', 'Español': 'es',
+                      'Italiano': 'it', '日本語': 'ja'
                   };
-                  const currentCode = Object.keys(langueCodes).find(key => key === originalLanguage);
-                  if (languageSelectEdit && currentCode) {
-                      languageSelectEdit.value = langueCodes[currentCode] || langueCodes[originalLanguage] || 'fr';
+                  var accountsLc = JSON.parse(localStorage.getItem('accounts') || '[]');
+                  var accLc = accountsLc.find(acc => acc.email === user.email);
+                  var fromStorage = (localStorage.getItem('mangaWatchLanguage') || accLc?.langue || accLc?.language || user.langue || user.language || '').toLowerCase();
+                  var fromDataset = (languageDisplay.dataset.langCode || '').toLowerCase();
+                  var byLabel = langueCodesLookup[originalLanguage];
+                  var code = ['fr','en','de','es','it','ja'].includes(fromStorage) ? fromStorage
+                      : ['fr','en','de','es','it','ja'].includes(fromDataset) ? fromDataset
+                      : (byLabel && ['fr','en','de','es','it','ja'].includes(byLabel) ? byLabel : 'fr');
+                  if (languageSelectEdit) {
+                      languageSelectEdit.value = code;
                   }
                   languageEditBtn.style.display = 'none';
                   if (languageEditActions) languageEditActions.style.display = 'flex';
               });
               
               if (languageSaveBtn && languageSelectEdit) {
-                  languageSaveBtn.addEventListener('click', function() {
+                  languageSaveBtn.addEventListener('click', async function() {
                       const newLangueCode = languageSelectEdit.value;
                       const langueNames = {
                           'fr': 'Français',
@@ -7755,41 +7866,52 @@
                       };
                       const newLangueName = langueNames[newLangueCode] || 'Français';
                       
-                      // Mettre à jour dans les comptes
-                      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                      const accountIndex = accounts.findIndex(acc => acc.email === user.email);
+                      var accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+                      var accountIndex = accounts.findIndex(acc => acc.email === user.email);
                       if (accountIndex !== -1) {
                           accounts[accountIndex].langue = newLangueCode;
                           accounts[accountIndex].language = newLangueCode;
                           localStorage.setItem('accounts', JSON.stringify(accounts));
                       }
                       
-                      // Mettre à jour l'utilisateur
                       user.langue = newLangueCode;
                       user.language = newLangueCode;
                       localStorage.setItem('user', JSON.stringify(user));
                       
-                      // IMPORTANT: Mettre à jour la clé utilisée par le système de localisation
+                      try {
+                          var pk = 'profile_' + user.email;
+                          var prof = JSON.parse(localStorage.getItem(pk) || '{}');
+                          prof.language = newLangueCode;
+                          prof.langue = newLangueCode;
+                          localStorage.setItem(pk, JSON.stringify(prof));
+                      } catch (_p) {}
+                      
                       localStorage.setItem('mangaWatchLanguage', newLangueCode);
                       
-                      // Mettre à jour le système de localisation si disponible
+                      if (window.profileAccountService && typeof window.profileAccountService.setProfileAccountInfo === 'function') {
+                          try {
+                              await window.profileAccountService.setProfileAccountInfo(user.email, { langue: newLangueCode });
+                          } catch (e) {
+                              console.warn('Firestore langue:', e);
+                          }
+                      }
+                      
                       if (window.localization) {
                           window.localization.setLanguage(newLangueCode);
                       } else if (window.changeLanguage) {
                           window.changeLanguage(newLangueCode);
                       }
                       
-                      // Mettre à jour l'affichage
                       languageDisplay.value = newLangueName;
+                      languageDisplay.dataset.langCode = newLangueCode;
                       languageEditBtn.style.display = 'flex';
                       if (languageEditActions) languageEditActions.style.display = 'none';
                       
-                      showToast('Succès', 'Langue modifiée avec succès !', 'success');
+                      showToast((window.t && window.t('profile.success')) || 'Succès', (window.t && window.t('profile.language_modified_success')) || 'Langue enregistrée.', 'success');
                       
-                      // Recharger la page pour appliquer les traductions
-                      setTimeout(() => {
+                      setTimeout(function() {
                           window.location.reload();
-                      }, 500);
+                      }, 450);
                   });
               }
               
@@ -7854,6 +7976,12 @@
                       
                       user.country = newCountryCode;
                       localStorage.setItem('user', JSON.stringify(user));
+                      try {
+                          var pkC = 'profile_' + user.email;
+                          var profC = JSON.parse(localStorage.getItem(pkC) || '{}');
+                          profC.country = newCountryCode;
+                          localStorage.setItem(pkC, JSON.stringify(profC));
+                      } catch (_c) {}
                       
                       countryDisplay.value = newCountryName;
                       countryDisplay.dataset.countryCode = newCountryCode;
