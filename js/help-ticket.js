@@ -41,6 +41,11 @@
         <div id="help-ticket-panel-list" class="help-ticket-panel">
           <div id="help-ticket-list-content"><p class="help-ticket-loading">${t('help.loading')}</p></div>
         </div>
+        <div class="help-ticket-legal" role="navigation" aria-label="${t('help.legal_nav')}">
+          <a href="/pages/politique-confidentialite.html" target="_blank" rel="noopener">${t('help.link_privacy')}</a>
+          <span aria-hidden="true" class="help-ticket-legal-sep">&middot;</span>
+          <a href="/pages/conditions-utilisation.html" target="_blank" rel="noopener">${t('help.link_terms')}</a>
+        </div>
       </div>
     </div>`;
   }
@@ -222,6 +227,25 @@
       }
       .help-ticket-submit:hover { background: #00ffb0; }
       .help-ticket-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+      .help-ticket-legal {
+        padding: 0.75rem 1.25rem 1rem;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        text-align: center;
+        font-size: 0.85rem;
+        line-height: 1.5;
+      }
+      .help-ticket-legal a {
+        color: #74b9ff;
+        text-decoration: none;
+      }
+      .help-ticket-legal a:hover {
+        color: #a29bfe;
+        text-decoration: underline;
+      }
+      .help-ticket-legal-sep {
+        color: #666;
+        margin: 0 0.45rem;
+      }
       @keyframes helpTicketFadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes helpTicketFadeOut { from { opacity: 1; } to { opacity: 0; } }
     `;

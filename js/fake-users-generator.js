@@ -49,16 +49,16 @@
 
     // Images de bannière pour les faux utilisateurs (images locales)
     const bannerImages = [
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png',
-        '/images/kame_house.png'
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png',
+        '/images/porte-torii.png'
     ];
     
     // Descriptions courtes pour les faux utilisateurs

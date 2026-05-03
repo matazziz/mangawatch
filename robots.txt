@@ -1,10 +1,12 @@
+# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
 
-# Pages privees / compte
-Disallow: /pages/profil.html
-Disallow: /pages/list.html
-Disallow: /pages/reset-password.html
+# Espace réservé à la gestion du site — pas besoin de référencement
 Disallow: /pages/admin.html
+Disallow: /public/admin.html
+
+# Evite d'indexer un miroir des pages sous /public/ si les URLs canoniques sont sous /pages/
+Disallow: /public/
 
 Sitemap: https://mangawatch.fr/sitemap.xml
