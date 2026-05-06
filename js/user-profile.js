@@ -163,6 +163,35 @@ async function getUserTop10(user, genre = null, type = null) {
         if (st === 'roman') return ['roman', 'novel', 'light novel', 'light_novel'].includes(ct);
         return ct === st;
     };
+    const normalizeContentType = (value) => {
+        const v = String(value || '').toLowerCase().trim();
+        if (!v) return '';
+        if (v === 'tv') return 'anime';
+        if (v === 'movie') return 'film';
+        if (v === 'doujinshi') return 'doujin';
+        if (v === 'light_novel') return 'light novel';
+        return v;
+    };
+    const buildNoteKey = (itemId, itemType) => `${String(itemId)}::${normalizeContentType(itemType)}`;
+    const sanitizeTop10WithExistingNotes = async (top10Array) => {
+        if (!Array.isArray(top10Array) || top10Array.length === 0) return new Array(10).fill(null);
+        if (typeof window.firebaseNotesService === 'undefined' || !window.firebaseNotesService) {
+            return top10Array.slice(0, 10);
+        }
+        try {
+            const notes = await window.firebaseNotesService.getAllNotes(user.email);
+            const noteKeys = new Set((notes || []).map(n => buildNoteKey(n.id, n.contentType)));
+            return top10Array.slice(0, 10).map(item => {
+                if (!item || !item.id) return null;
+                const itemType = item.contentType || type || finalType || 'anime';
+                // Si la note n'existe plus en base, on masque l'entrée top10 pour le profil public.
+                return noteKeys.has(buildNoteKey(item.id, itemType)) ? item : null;
+            });
+        } catch (err) {
+            console.warn('[Public Top10] Impossible de valider avec les notes Firebase:', err);
+            return top10Array.slice(0, 10);
+        }
+    };
     
     // IMPORTANT: Si un genre est spécifié, charger depuis localStorage d'abord
     // car les Top 10 par genre sont stockés dans localStorage, pas dans Firebase
@@ -176,7 +205,7 @@ async function getUserTop10(user, genre = null, type = null) {
                 const top10 = JSON.parse(stored);
                 while (top10.length < 10) top10.push(null);
                 console.log(`📊 Top 10 chargé depuis localStorage pour genre: ${genre}, type: ${localType}, utilisateur: ${user.email}`);
-                return top10.slice(0, 10);
+                return await sanitizeTop10WithExistingNotes(top10);
             }
             console.log(`📊 Aucun Top 10 trouvé dans localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
             return new Array(10).fill(null);
@@ -211,7 +240,7 @@ async function getUserTop10(user, genre = null, type = null) {
                     }
                 }
             }
-            return top10;
+            return await sanitizeTop10WithExistingNotes(top10);
         } catch (err) {
             console.error('❌ Erreur lors du chargement du top 10 depuis Firebase:', err);
         }
@@ -226,7 +255,7 @@ async function getUserTop10(user, genre = null, type = null) {
             if (!stored) continue;
             const top10 = JSON.parse(stored);
             while (top10.length < 10) top10.push(null);
-            return top10.slice(0, 10);
+            return await sanitizeTop10WithExistingNotes(top10);
         }
     } catch (err) {
         console.error('❌ Erreur lors du chargement du top 10 depuis localStorage:', err);

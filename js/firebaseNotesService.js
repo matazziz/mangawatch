@@ -138,7 +138,7 @@ export const firebaseNotesService = {
    * @param {string} contentType - Type de contenu
    * @returns {Promise<boolean>} Succès ou échec
    */
-  async deleteNote(userEmail, contentId, contentType) {
+  async deleteNote(userEmail, contentId, contentType = null) {
     try {
       const notesRef = collection(db, COLLECTIONS.USER_NOTES);
       const q = query(
@@ -147,9 +147,13 @@ export const firebaseNotesService = {
       );
       
       const querySnapshot = await getDocs(q);
+      const hasExplicitType = contentType !== null && contentType !== undefined && String(contentType).trim() !== '';
+      const normalizedTargetType = hasExplicitType ? String(contentType).trim().toLowerCase() : null;
       const matches = querySnapshot.docs.filter(d => {
         const data = d.data();
-        return String(data.content_id) === String(contentId) && String(data.content_type) === String(contentType);
+        if (String(data.content_id) !== String(contentId)) return false;
+        if (!hasExplicitType) return true;
+        return String(data.content_type || '').trim().toLowerCase() === normalizedTargetType;
       });
       if (matches.length === 0) return false;
 
@@ -304,7 +308,7 @@ export const firebaseTop10Service = {
    * @param {string} contentType - Type de contenu
    * @returns {Promise<boolean>} Succès ou échec
    */
-  async deleteTop10Item(userEmail, contentId, contentType) {
+  async deleteTop10Item(userEmail, contentId, contentType = null) {
     try {
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
       const q = query(
@@ -313,9 +317,13 @@ export const firebaseTop10Service = {
       );
       
       const querySnapshot = await getDocs(q);
+      const hasExplicitType = contentType !== null && contentType !== undefined && String(contentType).trim() !== '';
+      const normalizedTargetType = hasExplicitType ? String(contentType).trim().toLowerCase() : null;
       const matches = querySnapshot.docs.filter(d => {
         const data = d.data();
-        return String(data.content_id) === String(contentId) && String(data.content_type) === String(contentType);
+        if (String(data.content_id) !== String(contentId)) return false;
+        if (!hasExplicitType) return true;
+        return String(data.content_type || '').trim().toLowerCase() === normalizedTargetType;
       });
       if (matches.length === 0) return false;
       const deletePromises = matches.map(doc => deleteDoc(doc.ref));

@@ -143,6 +143,7 @@ window.cleanTop10FromSpecificNote = async function(contentId, contentType, user)
     // Faire un nettoyage basique immédiatement
     const top10Prefix = 'user_top10_' + user.email;
     let totalCleaned = 0;
+    const changedTop10Entries = [];
     
     console.log(`🔍 [VERSION TEMPORAIRE] Recherche de ${contentId} (${contentType}) dans tous les top 10...`);
     
@@ -174,10 +175,30 @@ window.cleanTop10FromSpecificNote = async function(contentId, contentType, user)
             if (hasChanges) {
                 localStorage.setItem(key, JSON.stringify(cleanedTop10));
                 totalCleaned++;
+                changedTop10Entries.push({ key, top10: cleanedTop10 });
                 console.log(`✅ [VERSION TEMPORAIRE] Top 10 mis à jour: ${key}`);
             }
         } catch (e) {
             console.error(`❌ [VERSION TEMPORAIRE] Erreur lors du nettoyage de ${key}:`, e);
+        }
+    }
+
+    // Synchroniser les Top 10 modifiés via setUserTop10:
+    // - global -> Firebase + cache local (impacte la page publique)
+    // - genre -> localStorage
+    for (const entry of changedTop10Entries) {
+        try {
+            const suffix = entry.key.slice(top10Prefix.length);
+            const parts = suffix ? suffix.split('_').filter(Boolean) : [];
+            const knownTypes = new Set(['anime', 'manga', 'roman', 'film', 'doujin', 'manhwa', 'manhua']);
+            const firstPart = parts[0] || null;
+            const keyType = firstPart && knownTypes.has(firstPart) ? firstPart : null;
+            const genreParts = keyType ? parts.slice(1) : parts;
+            const keyGenre = genreParts.length ? genreParts.join('_').replace(/_/g, ' ') : null;
+
+            await setUserTop10(user, entry.top10, keyGenre, keyType);
+        } catch (syncError) {
+            console.warn('⚠️ Échec de synchronisation du Top 10 nettoyé:', syncError);
         }
     }
     
@@ -10436,6 +10457,10 @@ async function setUserTop10(user, top10, genre = null, type = null) {
         }
     }
     
+    // Marquer la mise à jour pour forcer le rafraîchissement au retour sur le profil
+    // et garder la page publique alignée après ajout/retrait d'une carte du Top 10.
+    localStorage.setItem('top10_updated', 'true');
+
     // Déclencher un événement personnalisé pour notifier les mises à jour
     // Mais seulement si renderTop10Slots n'est pas déjà en cours pour éviter les boucles infinies
     if (!isRenderingTop10) {
@@ -13603,7 +13628,7 @@ async function cleanTop10FromSpecificNote(contentId, contentType, user) {
             const itemsToDelete = allTop10Data.filter(item => String(item.id) === String(contentId));
             
             for (const item of itemsToDelete) {
-                await window.firebaseTop10Service.deleteTop10Item(user.email, item.id, item.contentType || 'anime');
+                await window.firebaseTop10Service.deleteTop10Item(user.email, item.id, item.contentType || null);
                 console.log(`🗑️ Suppression depuis Firebase: ${item.id}`);
             }
         } catch (err) {

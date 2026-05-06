@@ -149,14 +149,19 @@ export const supabaseNotesService = {
      * @param {string} contentType - Type de contenu
      * @returns {Promise<boolean>} Succès ou échec
      */
-    async deleteNote(userEmail, contentId, contentType) {
+    async deleteNote(userEmail, contentId, contentType = null) {
         try {
-            const { error } = await supabase
+            let deleteQuery = supabase
                 .from(TABLES.NOTES)
                 .delete()
                 .eq('user_email', userEmail)
-                .eq('content_id', String(contentId))
-                .eq('content_type', contentType);
+                .eq('content_id', String(contentId));
+
+            if (contentType !== null && contentType !== undefined && String(contentType).trim() !== '') {
+                deleteQuery = deleteQuery.eq('content_type', String(contentType).trim().toLowerCase());
+            }
+
+            const { error } = await deleteQuery;
 
             if (error) {
                 console.error('[Supabase Notes] Erreur lors de la suppression:', error);
@@ -305,14 +310,19 @@ export const supabaseTop10Service = {
      * @param {string} contentType - Type de contenu
      * @returns {Promise<boolean>} Succès ou échec
      */
-    async deleteTop10Item(userEmail, contentId, contentType) {
+    async deleteTop10Item(userEmail, contentId, contentType = null) {
         try {
-            const { error } = await supabase
+            let deleteQuery = supabase
                 .from(TABLES.TOP10)
                 .delete()
                 .eq('user_email', userEmail)
-                .eq('content_id', String(contentId))
-                .eq('content_type', contentType);
+                .eq('content_id', String(contentId));
+
+            if (contentType !== null && contentType !== undefined && String(contentType).trim() !== '') {
+                deleteQuery = deleteQuery.eq('content_type', String(contentType).trim().toLowerCase());
+            }
+
+            const { error } = await deleteQuery;
 
             if (error) {
                 console.error('[Supabase Top10] Erreur lors de la suppression:', error);

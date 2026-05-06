@@ -1380,7 +1380,7 @@
         }
         
         // Fonction pour supprimer la note
-        function clearRating(animeId) {
+        async function clearRating(animeId) {
             
             // Détecter le contentType réel de la même manière que dans saveRating
             let detectedContentType = contentType; // Utiliser le type de l'URL par défaut
@@ -1493,6 +1493,30 @@
             try {
                 localStorage.setItem(notesKey, JSON.stringify(filteredNotes));
                 console.log(`Note supprimée pour l'anime ${animeId}`);
+
+                // Supprimer aussi côté cloud pour éviter la réapparition sur un autre appareil.
+                // On tente d'abord avec le type détecté, puis fallback sans type.
+                if (window.firebaseNotesService) {
+                    try {
+                        let deletedInFirebase = await window.firebaseNotesService.deleteNote(user.email, animeId, detectedContentType);
+                        if (!deletedInFirebase) {
+                            deletedInFirebase = await window.firebaseNotesService.deleteNote(user.email, animeId, null);
+                        }
+                        await window.firebaseTop10Service?.deleteTop10Item(user.email, animeId, null);
+                    } catch (cloudErr) {
+                        console.warn('[anime-details] Échec suppression Firebase (note/top10):', cloudErr);
+                    }
+                } else if (window.supabaseNotesService) {
+                    try {
+                        let deletedInSupabase = await window.supabaseNotesService.deleteNote(user.email, animeId, detectedContentType);
+                        if (!deletedInSupabase) {
+                            deletedInSupabase = await window.supabaseNotesService.deleteNote(user.email, animeId, null);
+                        }
+                        await window.supabaseTop10Service?.deleteTop10Item(user.email, animeId, null);
+                    } catch (cloudErr) {
+                        console.warn('[anime-details] Échec suppression Supabase (note/top10):', cloudErr);
+                    }
+                }
                 
                 // Supprimer aussi de animeRatings pour nettoyer complètement
                 const animeRatings = JSON.parse(localStorage.getItem('animeRatings') || '{}');
