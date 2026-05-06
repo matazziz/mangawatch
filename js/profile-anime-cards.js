@@ -1314,7 +1314,7 @@ window.createStarBadges = function createStarBadges() {
 
     // Liste des genres en noms API (pour filtre) ; affichage traduit via getTranslatedGenreForProfile
     let genres = [
-        "Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love", "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Ecchi", "Erotica", "Hentai", "Adult Cast", "Anthropomorphic", "CGDCT", "Childcare", "Combat Sports", "Crossdressing", "Delinquents", "Detective", "Educational", "Gag Humor", "Gore", "Harem", "High Stakes Game", "Historical", "Idols (Female)", "Idols (Male)", "Isekai", "Iyashikei", "Love Polygon", "Romantic Subtext", "Magical Sex Shift", "Magical Girls", "Martial Arts", "Mecha", "Medical", "Military", "Music", "Mythology", "Organized Crime", "Otaku Culture", "Parody", "Performing Arts", "Pets", "Psychological", "Racing", "Reincarnation", "Reverse Harem", "Samurai", "School", "Showbiz", "Space", "Strategy Game", "Super Power", "Survival", "Team Sports", "Time Travel", "Urban Fantasy", "Vampire", "Video Game", "Villainess", "Visual Arts", "Workplace", "Manhwa", "Manhua"
+        "Action", "Adventure", "Avant Garde", "Award Winning", "Boys Love", "Comedy", "Drama", "Fantasy", "Girls Love", "Gourmet", "Horror", "Mystery", "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Ecchi", "Erotica", "Hentai", "Adult Cast", "Anthropomorphic", "CGDCT", "Childcare", "Combat Sports", "Crossdressing", "Delinquents", "Detective", "Educational", "Gag Humor", "Gore", "Harem", "High Stakes Game", "Historical", "Idols (Female)", "Idols (Male)", "Isekai", "Iyashikei", "Love Polygon", "Romantic Subtext", "Magical Sex Shift", "Magical Girls", "Martial Arts", "Mecha", "Medical", "Military", "Music", "Mythology", "Organized Crime", "Otaku Culture", "Parody", "Performing Arts", "Pets", "Psychological", "Racing", "Reincarnation", "Reverse Harem", "Samurai", "School", "Showbiz", "Space", "Strategy Game", "Super Power", "Survival", "Team Sports", "Time Travel", "Urban Fantasy", "Vampire", "Video Game", "Villainess", "Visual Arts", "Workplace"
     ];
     
     // Filtrer les genres interdits pour les mineurs
@@ -1375,59 +1375,13 @@ window.createStarBadges = function createStarBadges() {
     
     // Fonction pour mettre à jour la visibilité des genres selon le type sélectionné (rendue globale)
     window.updateGenresVisibility = function() {
-        const mangaSpecificGenres = ['Manhwa', 'Manhua'];
-        const genreContainer = document.getElementById('genre-sort-container');
-        if (!genreContainer) return;
-        
-        const genreButtons = genreContainer.querySelectorAll('button[data-genre]');
-        
-        genreButtons.forEach(btn => {
-            const genreName = btn.getAttribute('data-genre');
-            const isMangaSpecific = mangaSpecificGenres.includes(genreName);
-            
-            // Afficher les genres spécifiques au manga uniquement si le type est "manga"
-            if (isMangaSpecific) {
-                if (window.selectedType === 'manga') {
-                    btn.style.display = '';
-                    btn.style.visibility = 'visible';
-                } else {
-                    btn.style.display = 'none';
-                    btn.style.visibility = 'hidden';
-                    // Si ce genre était sélectionné, le désélectionner
-                    if (Array.isArray(window.selectedGenres) && window.selectedGenres.includes(genreName)) {
-                        window.selectedGenres = window.selectedGenres.filter(g => g !== genreName);
-                        btn.style.background = '#2a2d36';
-                        btn.style.color = '#00b894';
-                        btn.style.transform = 'translateY(0)';
-                        btn.style.boxShadow = '';
-                        btn.style.border = '2px solid #00b894';
-                        btn.style.fontWeight = '500';
-                        // Réinitialiser l'affichage si plus aucun genre
-                        if (window.selectedGenres.length === 0) {
-                            const resetBtn = document.getElementById('reset-genre-button');
-                            if (resetBtn) resetBtn.style.display = 'none';
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Si un genre spécifique au manga était sélectionné et qu'on change de type, les désélectionner
-        if (Array.isArray(window.selectedGenres) && window.selectedGenres.some(g => mangaSpecificGenres.includes(g)) && window.selectedType !== 'manga') {
-            window.selectedGenres = window.selectedGenres.filter(g => !mangaSpecificGenres.includes(g));
-            // Réinitialiser visuellement les boutons désélectionnés
-            mangaSpecificGenres.forEach(genreName => {
-                const btn = Array.from(genreContainer.querySelectorAll('button[data-genre]'))
-                    .find(b => b.getAttribute('data-genre') === genreName);
-                if (btn) {
-                    btn.style.background = '#2a2d36';
-                    btn.style.color = '#00b894';
-                    btn.style.transform = 'translateY(0)';
-                    btn.style.boxShadow = '';
-                    btn.style.border = '2px solid #00b894';
-                    btn.style.fontWeight = '500';
-                }
-            });
+        // Manhwa/Manhua ne sont plus des genres filtrables.
+        // Ils sont inclus automatiquement dans le type "manga".
+        if (!Array.isArray(window.selectedGenres)) window.selectedGenres = [];
+        const legacyTypeGenres = ['Manhwa', 'Manhua'];
+        const hadLegacySelection = window.selectedGenres.some(g => legacyTypeGenres.includes(g));
+        if (hadLegacySelection) {
+            window.selectedGenres = window.selectedGenres.filter(g => !legacyTypeGenres.includes(g));
             if (typeof applyGenreFilter === 'function') {
                 applyGenreFilter();
             }
@@ -1667,8 +1621,8 @@ window.createStarBadges = function createStarBadges() {
             const genre = e.target.textContent;
             const genreBtn = e.target;
             
-            // Définir les genres "type" (un seul peut être sélectionné)
-            const typeGenres = ['Manhwa', 'Manhua'];
+            // Plus de genres "type" dédiés (manhwa/manhua): inclus dans "manga".
+            const typeGenres = [];
             const isTypeGenre = typeGenres.includes(genre);
             
             // Initialiser selectedGenres s'il n'existe pas
@@ -2328,9 +2282,10 @@ window.createStarBadges = function createStarBadges() {
             if (selectedType && selectedType !== 'tous') {
                 const noteType = normalizeType(note.contentType || note.type);
                 const normalizedSelectedType = normalizeType(selectedType);
-                // Type strict : manga inclut aussi roman/novel ; les autres types restent stricts
+                // Aligner le profil privé sur le profil public:
+                // le filtre "manga" inclut aussi doujin/manhwa/manhua (+ romans legacy).
                 const typeMatch = normalizedSelectedType === 'manga'
-                    ? ['manga', 'roman', 'novel', 'light novel', 'light_novel'].includes(noteType)
+                    ? ['manga', 'doujin', 'doujinshi', 'manhwa', 'manhua', 'roman', 'novel', 'light novel', 'light_novel'].includes(noteType)
                     : noteType === normalizedSelectedType;
                 if (!typeMatch) {
                     return false;
@@ -3830,8 +3785,8 @@ function applyGenreFilter() {
                 }
                 console.log(`✅ [APPLY GENRE FILTER] Inclus "${anime.titre || anime.title}" car type sélectionné est "anime" et animeType est "${animeType}" - poursuite de la vérification des genres`);
             } else if (window.selectedType === 'manga') {
-                // Si le type sélectionné est "manga", seulement les mangas (pas doujin/manhua/manhwa)
-                // SAUF si un genre "type" spécifique est sélectionné
+                // Si le type sélectionné est "manga", inclure le bloc manga complet
+                // (manga + doujin + manhwa + manhua + roman legacy), comme en public.
                 
                 // PROTECTION FORTE: Si contentType est explicitement 'anime' OU isManga est false, 
                 // NE JAMAIS l'inclure dans les conteneurs manga/doujin
@@ -3866,8 +3821,8 @@ function applyGenreFilter() {
                         return false;
                     }
                 } else {
-                    // Si aucun genre "type" n'est sélectionné, inclure manga + roman/novel
-                    if (animeType !== 'manga' && animeType !== 'roman' && animeType !== 'novel') {
+                    // Si aucun genre "type" n'est sélectionné, inclure tous les sous-types manga.
+                    if (!['manga', 'doujin', 'manhwa', 'manhua', 'roman', 'novel'].includes(animeType)) {
                         const typeAmbigu = (anime.contentType == null || anime.contentType === '') && anime.isManga !== false;
                         if (typeAmbigu) {
                             animeType = 'manga';
@@ -6574,7 +6529,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     let strictType = String(
                         anime.contentType || (anime.isManga ? 'manga' : 'anime')
                     ).toLowerCase().trim();
-                    if (strictType === 'doujin') strictType = 'manga';
+                    if (strictType === 'doujin' || strictType === 'doujinshi' || strictType === 'manhwa' || strictType === 'manhua') strictType = 'manga';
                     return strictType === selectedType;
                 }
 
@@ -10501,24 +10456,33 @@ async function cleanTop10FromRemovedNotes() {
     }
     
     // Nettoyer le top 10 pour chaque type
-    const types = ['anime', 'manga', 'doujin'];
+    const normalizeTypeValue = (value) => {
+        const t = String(value || '').toLowerCase().trim();
+        if (!t) return '';
+        if (t === 'tv') return 'anime';
+        if (t === 'movie') return 'film';
+        if (t === 'doujinshi') return 'doujin';
+        return t;
+    };
+    const types = ['anime', 'manga', 'doujin', 'manhwa', 'manhua', 'roman', 'film'];
     const genres = [null, 'Action', 'Comédie', 'Drame', 'Fantasy', 'Horreur', 'Mystère', 'Romance', 'Sci-Fi', 'Slice of Life', 'Thriller'];
     
     for (const type of types) {
         for (const genre of genres) {
-            let top10 = getUserTop10(user, genre, type) || [];
+            let top10 = await getUserTop10(user, genre, type);
+            if (!Array.isArray(top10)) top10 = [];
             let hasChanges = false;
             
             // Vérifier chaque élément du top 10
             for (let i = 0; i < top10.length; i++) {
                 if (top10[i]) {
                     const animeId = top10[i].id;
-                    const itemContentType = top10[i].contentType || type || 'anime';
+                    const itemContentType = normalizeTypeValue(top10[i].contentType || type || 'anime');
                     
                     // Vérifier si une note existe avec le même ID ET le même contentType
-                    const noteExists = notes.some(note => 
+                    const noteExists = notes.some(note =>
                         String(note.id) === String(animeId) && 
-                        note.contentType === itemContentType
+                        normalizeTypeValue(note.contentType) === itemContentType
                     );
                     
                     if (!noteExists) {
@@ -10531,7 +10495,7 @@ async function cleanTop10FromRemovedNotes() {
             
             // Sauvegarder si des changements ont été faits
             if (hasChanges) {
-                setUserTop10(user, top10, genre, type);
+                await setUserTop10(user, top10, genre, type);
             }
         }
     }
@@ -10941,7 +10905,7 @@ async function renderTop10Slots() {
                     // Récupérer le top 10 actuel
                     const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
                     const genre = genres.length > 0 ? genres.sort().join(',') : null;
-                    let top10 = getUserTop10(user, genre, window.selectedType);
+                    let top10 = await getUserTop10(user, genre, window.selectedType);
                     
                     // Récupérer les notes de l'utilisateur depuis Firebase
                     let notes = await loadUserNotes(user.email);
