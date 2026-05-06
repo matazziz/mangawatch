@@ -42,39 +42,39 @@
 [[headers]]
   for = "/*.js"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 # Pas "immutable" 1 an : sinon les mises à jour CSS ne sont jamais vues sans changer l’URL.
 # Le ?v= sur les <link> dans les HTML force un nouveau téléchargement après chaque bump.
 [[headers]]
   for = "/*.css"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "public, max-age=3600, must-revalidate"
 
 [[headers]]
   for = "/*.html"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "no-cache, must-revalidate"
 
 [[headers]]
   for = "/pages/*"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "no-cache, must-revalidate"
 
 [[headers]]
   for = "/public/*"
   [headers.values]
-    Cache-Control = "no-cache, no-store, must-revalidate"
+    Cache-Control = "no-cache, must-revalidate"
 
 [[headers]]
   for = "/*.png"
