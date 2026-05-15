@@ -500,6 +500,11 @@
         .profile-avatar-wrapper {
             position: relative;
             display: inline-block;
+            cursor: pointer;
+        }
+
+        label.profile-avatar-wrapper .profile-avatar {
+            pointer-events: none;
         }
         
         .profile-avatar {
@@ -2927,6 +2932,8 @@
             <span data-i18n="profile.choose_video">Choisir une vidéo</span>
         </label>
         <input type="file" id="banner-video-input" class="banner-file-input" accept="video/*">
+    <input type="file" id="profile-avatar-file-input" class="banner-file-input" accept="image/jpeg,image/png,image/webp,image/*">
+    <script src="/js/profile-avatar-upload.js?v=1"></script>
         
         <!-- Contrôle de volume pour vidéo -->
         <div class="banner-volume-control" id="banner-volume-control" style="display: none;">
@@ -2958,9 +2965,9 @@
             
             <!-- Contenu du header (avatar et pseudo) -->
             <div class="profile-header-content">
-                <div class="profile-avatar-wrapper" id="profile-avatar-wrapper">
+                <label class="profile-avatar-wrapper" id="profile-avatar-wrapper" for="profile-avatar-file-input" title="Modifier la photo de profil" data-i18n-title="profile.profile_photo">
                     <img src="" alt="" id="profile-avatar" class="profile-avatar" data-i18n-alt="profile.avatar_alt" decoding="async" fetchpriority="high" onerror="this.onerror=null; this.src='/images/logo.png';">
-                </div>
+                </label>
                 <div class="profile-info">
                     <h1 id="user-name">
                         <span id="user-name-text"></span>
@@ -3023,7 +3030,7 @@
                         <h3 data-i18n="profile.preferences">Préférences</h3>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.profile_photo">Photo de profil</span></label>
-                            <button class="edit-btn" id="edit-avatar-btn" style="margin-top: 0.5rem;"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></button>
+                            <label class="edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input" style="margin-top: 0.5rem; cursor: pointer;"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
                         </div>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.banner_label">Bannière du profil</span></label>
@@ -3254,208 +3261,20 @@
                 e.preventDefault();
                 e.stopPropagation();
             }
-            // Fonction pour optimiser l'avatar avec qualité maximale
-            function optimizeAvatarQuality(file, maxSize = 2048, quality = 1.0) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-                            
-                            // Calculer les dimensions optimales en gardant le ratio (avatar carré)
-                            if (width > maxSize || height > maxSize) {
-                                const ratio = Math.min(maxSize / width, maxSize / height);
-                                width = Math.round(width * ratio);
-                                height = Math.round(height * ratio);
-                            }
-                            
-                            // S'assurer que les dimensions sont des nombres entiers
-                            width = Math.round(width);
-                            height = Math.round(height);
-                            
-                            canvas.width = width;
-                            canvas.height = height;
-                            
-                            const ctx = canvas.getContext('2d', { 
-                                alpha: true,  // Garder alpha pour les avatars (transparence possible)
-                                willReadFrequently: false
-                            });
-                            
-                            // Paramètres de qualité maximale pour le rendu
-                            ctx.imageSmoothingEnabled = true;
-                            ctx.imageSmoothingQuality = 'high';
-                            
-                            // Support cross-browser
-                            ctx.webkitImageSmoothingEnabled = true;
-                            ctx.mozImageSmoothingEnabled = true;
-                            ctx.msImageSmoothingEnabled = true;
-                            
-                            // Rendre l'image avec la meilleure qualité possible
-                            ctx.drawImage(img, 0, 0, width, height);
-                            
-                            const outMime = quality >= 1.0 ? 'image/png' : 'image/jpeg';
-                            const outExt = quality >= 1.0 ? '.png' : '.jpg';
-                            const baseName = (file.name || 'avatar').replace(/\.[^.]+$/, '');
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    const optimizedFile = new File([blob], baseName + outExt, {
-                                        type: outMime,
-                                        lastModified: Date.now()
-                                    });
-                                    resolve(optimizedFile);
-                                } else {
-                                    reject(new Error('Erreur lors de la conversion en blob'));
-                                }
-                            }, outMime, quality >= 1.0 ? undefined : quality);
-                        };
-                        img.onerror = reject;
-                        img.src = e.target.result;
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
+            if (typeof window.openProfileAvatarFilePicker === 'function') {
+                window.openProfileAvatarFilePicker(e);
+                return;
             }
-            
-            console.log('📸 Clic sur le bouton Modifier la photo de profil');
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = async function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const user = JSON.parse(localStorage.getItem('user') || 'null');
-                    if (!user || !user.email) {
-                        console.error('❌ Utilisateur non trouvé');
-                        return;
-                    }
-                    
-                    try {
-                        const isMobileUpload = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
-                        const maxAvatarSize = isMobileUpload ? 1024 : 2048;
-                        const avatarQuality = isMobileUpload ? 0.88 : 1.0;
-                        console.log('🎨 Optimisation de l\'avatar...', { maxAvatarSize, avatarQuality });
-                        const optimizedFile = await optimizeAvatarQuality(file, maxAvatarSize, avatarQuality);
-                        
-                        // Afficher l'image optimisée immédiatement pour l'aperçu
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            const userAvatar = document.getElementById('user-avatar');
-                            const profileAvatar = document.getElementById('profile-avatar');
-                            const previewUrl = event.target.result;
-                            
-                            // Afficher l'aperçu immédiatement
-                            if (userAvatar) userAvatar.src = previewUrl;
-                            if (profileAvatar) profileAvatar.src = previewUrl;
-                        };
-                        reader.readAsDataURL(optimizedFile);
-                        
-                        // Sauvegarder dans Firebase Storage et Firestore avec le fichier optimisé
-                        if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                            try {
-                                console.log('📤 Upload avatar optimisé vers Firebase Storage...');
-                                const avatarUrl = await window.avatarService.saveAvatar(user.email, optimizedFile);
-                                console.log('✅ Avatar sauvegardé dans Firebase:', avatarUrl);
-                                
-                                // Mettre à jour l'affichage avec l'URL Firebase
-                                const userAvatar = document.getElementById('user-avatar');
-                                const profileAvatar = document.getElementById('profile-avatar');
-                                const dispUrl = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
-                                if (userAvatar) userAvatar.src = dispUrl;
-                                if (profileAvatar) profileAvatar.src = dispUrl;
-                                
-                                // Mettre à jour l'objet user
-                                user.customAvatar = avatarUrl;
-                                user.avatar = avatarUrl;
-                                localStorage.setItem('user', JSON.stringify(user));
-                                
-                                // IMPORTANT : Mettre à jour accounts AVANT syncAndLoadUserData pour éviter que l'ancienne photo soit rechargée
-                                const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                                const accountIndex = accounts.findIndex(acc => acc.email === user.email);
-                                if (accountIndex !== -1) {
-                                    accounts[accountIndex] = {
-                                        ...accounts[accountIndex],
-                                        avatar: avatarUrl,
-                                        customAvatar: avatarUrl
-                                    };
-                                    localStorage.setItem('accounts', JSON.stringify(accounts));
-                                }
-                                
-                                // Mettre à jour aussi la clé dédiée avatar_
-                                localStorage.setItem('avatar_' + user.email, avatarUrl);
-                                
-                                // Mettre à jour profile_
-                                const profileKey = 'profile_' + user.email;
-                                const existingProfileData = localStorage.getItem(profileKey);
-                                let existingProfile = {};
-                                if (existingProfileData) {
-                                    try {
-                                        existingProfile = JSON.parse(existingProfileData);
-                                    } catch (e) {
-                                        console.error('Erreur parsing profile:', e);
-                                    }
-                                }
-                                const updatedProfile = {
-                                    ...existingProfile,
-                                    customAvatar: avatarUrl,
-                                    avatar: avatarUrl,
-                                    email: user.email
-                                };
-                                localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
-                                
-                                // Afficher un message de succès
-                                if (typeof showToast === 'function') {
-                                    showToast('Succès', 'Avatar mis à jour avec succès !', 'success');
-                                }
-                                
-                                // Ne PAS appeler syncAndLoadUserData() car elle pourrait recharger l'ancienne photo
-                                // L'affichage est déjà mis à jour ci-dessus
-                            } catch (error) {
-                                console.error('❌ Erreur lors de la sauvegarde de l\'avatar:', error);
-                                const errorMessage = error.message || error.toString() || '';
-                                
-                                if (errorMessage.includes('SESSION_FIREBASE_REQUISE') || error.code === 'auth/not-authenticated') {
-                                    alert('❌ Session expirée.\n\nDéconnectez-vous puis reconnectez-vous (email ou Google), puis réessayez d\'ajouter votre photo.');
-                                } else if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
-                                    alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
-                                } else {
-                                    alert('❌ Erreur lors de l\'upload de l\'avatar.\n\nErreur : ' + errorMessage);
-                                }
-                            }
-                        } else {
-                            console.error('❌ avatarService non disponible');
-                            alert('❌ Firebase Storage n\'est pas disponible. Vérifiez que firebase-service.js est chargé.');
-                        }
-                    } catch (optimizeError) {
-                        console.error('❌ Erreur lors de l\'optimisation de l\'avatar:', optimizeError);
-                        alert('❌ Erreur lors de l\'optimisation de l\'avatar. Tentative avec le fichier original...');
-                        
-                        // Fallback : utiliser le fichier original si l'optimisation échoue
-                        if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                            try {
-                                const avatarUrl = await window.avatarService.saveAvatar(user.email, file);
-                                const userAvatar = document.getElementById('user-avatar');
-                                const profileAvatar = document.getElementById('profile-avatar');
-                                const dispUrlFb = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
-                                if (userAvatar) userAvatar.src = dispUrlFb;
-                                if (profileAvatar) profileAvatar.src = dispUrlFb;
-                                user.customAvatar = avatarUrl;
-                                user.avatar = avatarUrl;
-                                localStorage.setItem('user', JSON.stringify(user));
-                                localStorage.setItem('avatar_' + user.email, avatarUrl);
-                            } catch (error) {
-                                console.error('❌ Erreur lors de la sauvegarde avec fichier original:', error);
-                            }
-                        }
-                    }
-                }
-            };
-            input.click();
+            var input = document.getElementById('profile-avatar-file-input');
+            if (input) {
+                input.value = '';
+                input.click();
+            } else {
+                alert('Impossible d\'ouvrir la galerie photo. Rechargez la page.');
+            }
         };
-        
-        // Initialisation Google Sign-In
+
+                // Initialisation Google Sign-In
         window.onload = function() {
             // Vérifier si l'utilisateur est connecté
             const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -4074,28 +3893,10 @@
         
         // Fonction pour attacher le gestionnaire d'événement au bouton de modification de l'avatar
         function attachAvatarEditHandler() {
-            const editAvatarBtn = document.getElementById('edit-avatar-btn');
-            console.log('🔍 Recherche du bouton edit-avatar-btn:', editAvatarBtn);
-            if (editAvatarBtn) {
-                // Supprimer l'ancien attribut pour permettre la réattachement si nécessaire
-                if (editAvatarBtn.hasAttribute('data-listener-attached')) {
-                    console.log('⚠️ Le gestionnaire est déjà attaché, suppression de l\'ancien...');
-                    // Créer un nouveau bouton pour supprimer tous les anciens gestionnaires
-                    const newBtn = editAvatarBtn.cloneNode(true);
-                    editAvatarBtn.parentNode.replaceChild(newBtn, editAvatarBtn);
-                    const freshBtn = document.getElementById('edit-avatar-btn');
-                    freshBtn.setAttribute('data-listener-attached', 'true');
-                    freshBtn.addEventListener('click', window.handleAvatarEditClick);
-                    console.log('✅ Nouveau gestionnaire attaché au bouton cloné');
-                    return true;
-                }
-                editAvatarBtn.setAttribute('data-listener-attached', 'true');
-                editAvatarBtn.addEventListener('click', window.handleAvatarEditClick);
-                console.log('✅ Gestionnaire d\'événement attaché au bouton edit-avatar-btn');
-                return true;
+            if (typeof window.initProfileAvatarUpload === 'function') {
+                window.initProfileAvatarUpload();
             }
-            console.warn('❌ Bouton edit-avatar-btn non trouvé dans le DOM');
-            return false;
+            return !!document.getElementById('profile-avatar-file-input');
         }
         
         // La fonction handleAvatarEditClick est déjà définie avant window.onload, pas besoin de la redéfinir ici
@@ -5517,213 +5318,10 @@
 
       document.addEventListener('DOMContentLoaded', function() {
         // Définir la fonction directement ici pour être sûr qu'elle est disponible
-        if (typeof window.handleAvatarEditClick !== 'function') {
-            // Fonction pour optimiser l'avatar avec qualité maximale (réutilisable)
-            function optimizeAvatarQualityForUpload(file, maxSize = 2048, quality = 1.0) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-                            
-                            // Calculer les dimensions optimales en gardant le ratio (avatar carré)
-                            if (width > maxSize || height > maxSize) {
-                                const ratio = Math.min(maxSize / width, maxSize / height);
-                                width = Math.round(width * ratio);
-                                height = Math.round(height * ratio);
-                            }
-                            
-                            // S'assurer que les dimensions sont des nombres entiers
-                            width = Math.round(width);
-                            height = Math.round(height);
-                            
-                            canvas.width = width;
-                            canvas.height = height;
-                            
-                            const ctx = canvas.getContext('2d', { 
-                                alpha: true,  // Garder alpha pour les avatars (transparence possible)
-                                willReadFrequently: false
-                            });
-                            
-                            // Paramètres de qualité maximale pour le rendu
-                            ctx.imageSmoothingEnabled = true;
-                            ctx.imageSmoothingQuality = 'high';
-                            
-                            // Support cross-browser
-                            ctx.webkitImageSmoothingEnabled = true;
-                            ctx.mozImageSmoothingEnabled = true;
-                            ctx.msImageSmoothingEnabled = true;
-                            
-                            // Rendre l'image avec la meilleure qualité possible
-                            ctx.drawImage(img, 0, 0, width, height);
-                            
-                            const outMime = quality >= 1.0 ? 'image/png' : 'image/jpeg';
-                            const outExt = quality >= 1.0 ? '.png' : '.jpg';
-                            const baseName = (file.name || 'avatar').replace(/\.[^.]+$/, '');
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    const optimizedFile = new File([blob], baseName + outExt, {
-                                        type: outMime,
-                                        lastModified: Date.now()
-                                    });
-                                    resolve(optimizedFile);
-                                } else {
-                                    reject(new Error('Erreur lors de la conversion en blob'));
-                                }
-                            }, outMime, quality >= 1.0 ? undefined : quality);
-                        };
-                        img.onerror = reject;
-                        img.src = e.target.result;
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
-            
-            window.handleAvatarEditClick = function(e) {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                console.log('📸 Clic sur le bouton Modifier la photo de profil');
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = async function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const user = JSON.parse(localStorage.getItem('user') || 'null');
-                        if (!user || !user.email) {
-                            console.error('❌ Utilisateur non trouvé');
-                            return;
-                        }
-                        
-                        try {
-                            const isMobileUpload = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
-                            const maxAvatarSize = isMobileUpload ? 1024 : 2048;
-                            const avatarQuality = isMobileUpload ? 0.88 : 1.0;
-                            console.log('🎨 Optimisation de l\'avatar...', { maxAvatarSize, avatarQuality });
-                            const optimizedFile = await optimizeAvatarQualityForUpload(file, maxAvatarSize, avatarQuality);
-                            
-                            // Afficher l'image optimisée immédiatement pour l'aperçu
-                            const reader = new FileReader();
-                            reader.onload = function(event) {
-                                const userAvatar = document.getElementById('user-avatar');
-                                const profileAvatar = document.getElementById('profile-avatar');
-                                const previewUrl = event.target.result;
-                                
-                                // Afficher l'aperçu immédiatement
-                                if (userAvatar) userAvatar.src = previewUrl;
-                                if (profileAvatar) profileAvatar.src = previewUrl;
-                            };
-                            reader.readAsDataURL(optimizedFile);
-                            
-                            // Sauvegarder dans Firebase Storage et Firestore avec le fichier optimisé
-                            if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                                try {
-                                    console.log('📤 Upload avatar optimisé vers Firebase Storage...');
-                                    const avatarUrl = await window.avatarService.saveAvatar(user.email, optimizedFile);
-                                    console.log('✅ Avatar sauvegardé dans Firebase:', avatarUrl);
-                                    
-                                    // Mettre à jour l'affichage avec l'URL Firebase
-                                    const userAvatar = document.getElementById('user-avatar');
-                                    const profileAvatar = document.getElementById('profile-avatar');
-                                    const dispUrl2 = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
-                                    if (userAvatar) userAvatar.src = dispUrl2;
-                                    if (profileAvatar) profileAvatar.src = dispUrl2;
-                                    
-                                    // Mettre à jour l'objet user
-                                    user.customAvatar = avatarUrl;
-                                    user.avatar = avatarUrl;
-                                    localStorage.setItem('user', JSON.stringify(user));
-                                    
-                                    // IMPORTANT : Mettre à jour accounts AVANT syncAndLoadUserData pour éviter que l'ancienne photo soit rechargée
-                                    const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                                    const accountIndex = accounts.findIndex(acc => acc.email === user.email);
-                                    if (accountIndex !== -1) {
-                                        accounts[accountIndex] = {
-                                            ...accounts[accountIndex],
-                                            avatar: avatarUrl,
-                                            customAvatar: avatarUrl
-                                        };
-                                        localStorage.setItem('accounts', JSON.stringify(accounts));
-                                    }
-                                    
-                                    // Mettre à jour aussi la clé dédiée avatar_
-                                    localStorage.setItem('avatar_' + user.email, avatarUrl);
-                                    
-                                    // Mettre à jour profile_
-                                    const profileKey = 'profile_' + user.email;
-                                    const existingProfileData = localStorage.getItem(profileKey);
-                                    let existingProfile = {};
-                                    if (existingProfileData) {
-                                        try {
-                                            existingProfile = JSON.parse(existingProfileData);
-                                        } catch (e) {
-                                            console.error('Erreur parsing profile:', e);
-                                        }
-                                    }
-                                    const updatedProfile = {
-                                        ...existingProfile,
-                                        customAvatar: avatarUrl,
-                                        avatar: avatarUrl,
-                                        email: user.email
-                                    };
-                                    localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
-                                    
-                                    // Afficher un message de succès
-                                    if (typeof showToast === 'function') {
-                                        showToast('Succès', 'Avatar mis à jour avec succès !', 'success');
-                                    }
-                                    
-                                    // Ne PAS appeler syncAndLoadUserData() car elle pourrait recharger l'ancienne photo
-                                    // L'affichage est déjà mis à jour ci-dessus
-                                } catch (error) {
-                                    console.error('❌ Erreur lors de la sauvegarde de l\'avatar:', error);
-                                    const errorMessage = error.message || error.toString() || '';
-                                    
-                                    if (errorMessage.includes('SESSION_FIREBASE_REQUISE') || error.code === 'auth/not-authenticated') {
-                                        alert('❌ Session expirée.\n\nDéconnectez-vous puis reconnectez-vous (email ou Google), puis réessayez d\'ajouter votre photo.');
-                                    } else if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
-                                        alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
-                                    } else {
-                                        alert('❌ Erreur lors de l\'upload de l\'avatar.\n\nErreur : ' + errorMessage);
-                                    }
-                                }
-                            } else {
-                                console.error('❌ avatarService non disponible');
-                                alert('❌ Firebase Storage n\'est pas disponible. Vérifiez que firebase-service.js est chargé.');
-                            }
-                        } catch (optimizeError) {
-                            console.error('❌ Erreur lors de l\'optimisation de l\'avatar:', optimizeError);
-                            alert('❌ Erreur lors de l\'optimisation de l\'avatar. Tentative avec le fichier original...');
-                            
-                            // Fallback : utiliser le fichier original si l'optimisation échoue
-                            if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                                try {
-                                    const avatarUrl = await window.avatarService.saveAvatar(user.email, file);
-                                    const userAvatar = document.getElementById('user-avatar');
-                                    const profileAvatar = document.getElementById('profile-avatar');
-                                    const dispUrlFb2 = (window.upgradeProfileAvatarUrl || function (u) { return u; })(avatarUrl);
-                                    if (userAvatar) userAvatar.src = dispUrlFb2;
-                                    if (profileAvatar) profileAvatar.src = dispUrlFb2;
-                                    user.customAvatar = avatarUrl;
-                                    user.avatar = avatarUrl;
-                                    localStorage.setItem('user', JSON.stringify(user));
-                                    localStorage.setItem('avatar_' + user.email, avatarUrl);
-                                } catch (error) {
-                                    console.error('❌ Erreur lors de la sauvegarde avec fichier original:', error);
-                                }
-                            }
-                        }
-                    }
-                };
-                input.click();
-            };
-            console.log('✅ handleAvatarEditClick définie dans DOMContentLoaded');
+        if (typeof window.initProfileAvatarUpload === 'function') {
+            window.initProfileAvatarUpload();
+        }
+
         }
         
         // Attacher le gestionnaire d'événement pour le bouton avatar
@@ -5731,25 +5329,9 @@
             attachAvatarEditHandler();
         }
         
-        // Utiliser la délégation d'événements pour s'assurer que le bouton fonctionne même s'il est dans un onglet
-        document.addEventListener('click', function(e) {
-            const target = e.target;
-            // Vérifier si le clic est sur le bouton ou sur un élément à l'intérieur (comme l'icône)
-            const btn = target.id === 'edit-avatar-btn' ? target : target.closest('#edit-avatar-btn');
-            if (btn) {
-                console.log('🎯 Clic détecté via délégation d\'événements sur edit-avatar-btn');
-                e.preventDefault();
-                e.stopPropagation();
-                if (typeof window.handleAvatarEditClick === 'function') {
-                    console.log('✅ Appel de handleAvatarEditClick...');
-                    window.handleAvatarEditClick(e);
-                } else {
-                    console.error('❌ handleAvatarEditClick n\'est toujours pas une fonction!');
-                }
-            }
-        });
-        
-        // Test supplémentaire : vérifier que le bouton existe et est cliquable
+        // Photo de profil : label[for] + profile-avatar-upload.js (évite double ouverture sur iOS)
+
+                // Test supplémentaire : vérifier que le bouton existe et est cliquable
         // Utiliser window.onload pour s'assurer que tout est chargé
         window.addEventListener('load', function() {
             console.log('🔄 window.onload déclenché, vérification des éléments...');
