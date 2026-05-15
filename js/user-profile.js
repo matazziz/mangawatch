@@ -723,7 +723,7 @@ function setupTabs() {
                 savedSection.classList.add('active');
                 setBannerVisibility(savedActiveTab !== 'collection');
                 if (savedActiveTab === 'collection') {
-                    loadUserCollection('all', 'manga');
+                    loadUserCollection('all', 'anime');
                 } else if (savedActiveTab === 'reviews') {
                     loadUserAnimeNotes();
                 } else if (savedActiveTab === 'tierlist') {
@@ -758,7 +758,7 @@ function setupTabs() {
                 section.classList.add('active');
                 setBannerVisibility(targetTabName !== 'collection');
                 if (targetTabName === 'collection') {
-                    loadUserCollection('all', 'manga');
+                    loadUserCollection('all', 'anime');
                 } else if (targetTabName === 'reviews') {
                     loadUserAnimeNotes();
                 } else if (targetTabName === 'tierlist') {
@@ -819,7 +819,7 @@ function setupCollectionFilters() {
 }
 
 let currentStatusFilter = 'all';
-let currentTypeFilter = 'manga';
+let currentTypeFilter = 'anime';
 
 /** Filtre type collection (profil public) : roman/novel, film/movie, anime/TV… */
 function collectionItemMatchesTypeFilterPublic(item, typeFilter) {
@@ -1974,8 +1974,8 @@ function createSortButtonsPublic(reviewsSection) {
     // === AJOUT BOUTON FILTRAGE PAR TYPE ===
     let typeButton = document.createElement('button');
     typeButton.id = 'filter-by-type-btn';
-    // Définir "manga" comme type par défaut
-    window.selectedType = 'manga';
+    // Définir "anime" comme type par défaut
+    window.selectedType = 'anime';
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
@@ -1983,7 +1983,7 @@ function createSortButtonsPublic(reviewsSection) {
         'manga': (window.t && window.t('genre.content_mangas')) || 'Manga',
         'film': (window.t && window.t('genre.content_films')) || 'Film'
     };
-    typeButton.textContent = typeTexts[window.selectedType] || typeTexts['manga'];
+    typeButton.textContent = typeTexts[window.selectedType] || typeTexts['anime'];
     typeButton.style.cssText = sortButton.style.cssText + 'margin-left: 0; margin-right: 8px;';
     typeButton.style.display = 'inline-block';
 
@@ -2012,8 +2012,8 @@ function createSortButtonsPublic(reviewsSection) {
     var tAnime = (window.t && window.t('genre.content_animes')) || 'Anime';
     var tFilm = (window.t && window.t('genre.content_films')) || 'Film';
     typeMenu.innerHTML =
-        '<div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">' + tManga + '</div>' +
         '<div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">' + tAnime + '</div>' +
+        '<div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">' + tManga + '</div>' +
         '<div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">' + tFilm + '</div>';
     // Mettre en surbrillance l'option correspondant au type actuel
     const currentType = window.selectedType || 'manga';

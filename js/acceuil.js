@@ -260,6 +260,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         afficherPopup = false;
         console.log('⚠️ Mode dev activé, popup désactivé');
     }
+
+    // === BLOQUER LE SCROLL IMMÉDIATEMENT SI POPUP REQUIS ===
+    // On bloque le scroll dès maintenant pour éviter que l'utilisateur puisse
+    // scroller la page pendant la seconde d'attente avant l'affichage du popup.
+    if (afficherPopup) {
+        try {
+            document.documentElement.style.overflow = 'hidden';
+            document.documentElement.style.overscrollBehavior = 'none';
+            if (document.body) {
+                document.body.style.overflow = 'hidden';
+                document.body.style.overscrollBehavior = 'none';
+                document.body.style.touchAction = 'none';
+            }
+            // Sur mobile, body.style.overflow ne suffit pas toujours.
+            // On ajoute aussi un blocage des événements wheel/touchmove en attendant le popup.
+            const blockScrollEarly = function(e) {
+                // Si le popup est déjà affiché, le popup gère lui-même son défilement interne
+                if (document.getElementById('auth-popup-overlay')) return;
+                e.preventDefault();
+            };
+            window.__authBlockScrollEarly = blockScrollEarly;
+            window.addEventListener('wheel', blockScrollEarly, { passive: false });
+            window.addEventListener('touchmove', blockScrollEarly, { passive: false });
+            // Empêcher aussi les flèches / Page Up / Page Down / Espace
+            const blockKeysEarly = function(e) {
+                if (document.getElementById('auth-popup-overlay')) return;
+                const keys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
+                if (keys.includes(e.key)) e.preventDefault();
+            };
+            window.__authBlockKeysEarly = blockKeysEarly;
+            window.addEventListener('keydown', blockKeysEarly, { passive: false });
+            console.log('🔒 Scroll bloqué en attendant le popup');
+        } catch (e) {
+            console.warn('Impossible de bloquer le scroll précocement:', e);
+        }
+    }
     
 
     // --- POP-UP CONNEXION/INSCRIPTION AU PREMIER ACCÈS ---
@@ -889,7 +925,58 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.body.appendChild(overlay);
         document.documentElement.style.overflow = 'hidden';
         document.body.style.overflow = 'hidden';
-        
+        document.documentElement.style.overscrollBehavior = 'none';
+        document.body.style.overscrollBehavior = 'none';
+
+        // Bloquer le scroll en arrière-plan : autoriser le scroll uniquement
+        // à l'intérieur du popup (overlay scrollable + form-inscription scrollable).
+        const blockBackgroundScroll = function(e) {
+            // Trouver si l'événement vient de l'intérieur de l'overlay du popup
+            const target = e.target;
+            const overlayEl = document.getElementById('auth-popup-overlay');
+            if (!overlayEl) return; // popup fermé, on ne bloque plus
+            if (overlayEl.contains(target)) {
+                // À l'intérieur du popup, on autorise le scroll de l'overlay/du form
+                return;
+            }
+            e.preventDefault();
+        };
+        window.__authBlockBackgroundScroll = blockBackgroundScroll;
+        window.addEventListener('wheel', blockBackgroundScroll, { passive: false });
+        window.addEventListener('touchmove', blockBackgroundScroll, { passive: false });
+
+        // Bloquer aussi les touches de défilement quand le focus est hors champs
+        const blockBackgroundKeys = function(e) {
+            const overlayEl = document.getElementById('auth-popup-overlay');
+            if (!overlayEl) return;
+            // Si le focus est dans un champ de formulaire à l'intérieur du popup, on n'intercepte rien
+            const active = document.activeElement;
+            if (active && overlayEl.contains(active)) {
+                const tag = (active.tagName || '').toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable) {
+                    return;
+                }
+            }
+            const keys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
+            if (keys.includes(e.key)) e.preventDefault();
+        };
+        window.__authBlockBackgroundKeys = blockBackgroundKeys;
+        window.addEventListener('keydown', blockBackgroundKeys, { passive: false });
+
+        // Une fois que le popup officiel est en place, on retire le blocage "early"
+        // pour ne pas avoir double interception (le popup gère son propre scroll interne).
+        try {
+            if (window.__authBlockScrollEarly) {
+                window.removeEventListener('wheel', window.__authBlockScrollEarly);
+                window.removeEventListener('touchmove', window.__authBlockScrollEarly);
+                delete window.__authBlockScrollEarly;
+            }
+            if (window.__authBlockKeysEarly) {
+                window.removeEventListener('keydown', window.__authBlockKeysEarly);
+                delete window.__authBlockKeysEarly;
+            }
+        } catch (e) { /* ignore */ }
+
         // Réinitialiser le flag après l'ajout au DOM
         setTimeout(() => {
             isPopupOpening = false;
@@ -988,12 +1075,12 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             // Gestionnaires de soumission des formulaires
             if (formConnexion) {
-                formConnexion.addEventListener('submit', function(event) {
+                formConnexion.addEventListener('submit', async function(event) {
                     event.preventDefault();
                     console.log('Tentative de connexion...');
                     
                     // Récupérer les données du formulaire
-                    const email = document.getElementById('connexion-email').value;
+                    const email = document.getElementById('connexion-email').value.trim();
                     const password = document.getElementById('connexion-password').value;
                     const stayConnected = document.getElementById('connexion-stay-connected').checked;
                     
@@ -1010,19 +1097,107 @@ document.addEventListener('DOMContentLoaded', async function() {
                         return;
                     }
                     
-                    // Vérifier les comptes existants
+                    // Vérifier les comptes existants (vérification locale rapide)
                     const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                    const account = accounts.find(acc => acc.email === email && acc.password === password);
+                    let account = accounts.find(acc => acc.email === email && acc.password === password);
                     
+                    // === AUTHENTIFICATION FIREBASE AUTH ===
+                    // Cette étape est OBLIGATOIRE pour pouvoir uploader un avatar,
+                    // accéder aux fonctionnalités Firebase, etc.
+                    let firebaseUid = null;
+                    let firebaseAuthSuccess = false;
+                    try {
+                        console.log('🔐 Authentification Firebase Auth...');
+                        const { authService } = await import('./firebase-service.js');
+                        try {
+                            const result = await authService.signInWithEmail(email, password);
+                            firebaseUid = result.user?.uid || null;
+                            firebaseAuthSuccess = true;
+                            console.log('✅ Authentification Firebase réussie, uid:', firebaseUid);
+                        } catch (signInError) {
+                            // Si l'utilisateur n'existe pas encore sur Firebase Auth (compte legacy
+                            // créé avant l'intégration Firebase), on essaie de migrer en créant
+                            // automatiquement le compte Firebase Auth, mais SEULEMENT si la
+                            // vérification locale (account) est valide.
+                            const isUserNotFound = signInError?.code === 'auth/user-not-found' ||
+                                                   signInError?.code === 'auth/invalid-credential' ||
+                                                   signInError?.code === 'auth/invalid-login-credentials';
+                            if (isUserNotFound && account) {
+                                console.log('🔄 Migration : création du compte Firebase Auth pour compte legacy...');
+                                try {
+                                    const result = await authService.signUpWithEmail(email, password);
+                                    firebaseUid = result.user?.uid || null;
+                                    firebaseAuthSuccess = true;
+                                    console.log('✅ Migration Firebase Auth réussie, uid:', firebaseUid);
+                                } catch (signUpError) {
+                                    console.warn('⚠️ Migration Firebase Auth échouée:', signUpError);
+                                    // Si l'email est déjà pris sur Firebase mais avec un autre mdp,
+                                    // c'est probablement un mauvais mot de passe.
+                                    if (signUpError?.code === 'auth/email-already-in-use') {
+                                        showAuthErrorModal('Email ou mot de passe incorrect');
+                                        return;
+                                    }
+                                    // Sinon on continue sans Firebase (l'avatar ne fonctionnera pas mais la connexion oui)
+                                }
+                            } else if (!account) {
+                                // Pas de compte local ET échec Firebase => identifiants invalides
+                                showAuthErrorModal('Email ou mot de passe incorrect');
+                                return;
+                            } else {
+                                // Mot de passe Firebase incorrect mais local correct (cas rare de désync)
+                                console.warn('⚠️ Désynchronisation mdp Firebase/local:', signInError?.code);
+                            }
+                        }
+                    } catch (importError) {
+                        console.error('❌ Erreur import firebase-service:', importError);
+                        // On continue avec l'authentification locale uniquement
+                    }
+
+                    // Si on n'a pas de compte local mais Firebase a réussi, on doit en recréer un
+                    if (!account && firebaseAuthSuccess) {
+                        console.log('🔄 Reconstitution du compte local depuis Firebase Auth');
+                        const reconstructedAccount = {
+                            username: email.split('@')[0],
+                            email: email,
+                            password: password,
+                            langue: 'fr',
+                            country: 'fr',
+                            isMinor: false,
+                            uid: firebaseUid,
+                            provider: 'email',
+                            createdAt: new Date().toISOString()
+                        };
+                        accounts.push(reconstructedAccount);
+                        localStorage.setItem('accounts', JSON.stringify(accounts));
+                        account = reconstructedAccount;
+                    }
+
                     if (!account) {
                         showAuthErrorModal('Email ou mot de passe incorrect');
                         return;
+                    }
+
+                    // Mettre à jour l'uid sur le compte local s'il vient d'être créé
+                    if (firebaseUid && !account.uid) {
+                        account.uid = firebaseUid;
+                        const idx = accounts.findIndex(a => a.email === email);
+                        if (idx >= 0) {
+                            accounts[idx] = account;
+                            localStorage.setItem('accounts', JSON.stringify(accounts));
+                        }
                     }
                     
                     // Vérifier si l'utilisateur est banni
                     const bannedUsers = JSON.parse(localStorage.getItem('banned_users') || '[]');
                     const isBanned = bannedUsers.some(b => b.email === email);
                     if (isBanned) {
+                        // Déconnecter Firebase si on s'était connecté
+                        if (firebaseAuthSuccess) {
+                            try {
+                                const { authService } = await import('./firebase-service.js');
+                                await authService.signOut();
+                            } catch (e) { /* ignore */ }
+                        }
                         showAuthErrorModal('Ce compte a été banni. Contactez l\'administrateur pour plus d\'informations.');
                         return;
                     }
@@ -1030,10 +1205,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Créer la session utilisateur
                     const user = {
                         name: account.username,
+                        username: account.username,
                         email: account.email,
                         picture: 'https://via.placeholder.com/150',
                         langue: account.langue || 'fr',
-                        country: account.country || account.continent || 'fr'
+                        country: account.country || account.continent || 'fr',
+                        uid: firebaseUid || account.uid || null,
+                        provider: account.provider || 'email'
                     };
                     
                     localStorage.setItem('user', JSON.stringify(user));
@@ -1390,7 +1568,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         
             if (formInscription) {
-                formInscription.addEventListener('submit', function(event) {
+                formInscription.addEventListener('submit', async function(event) {
                     event.preventDefault();
                     console.log('Tentative d\'inscription...');
                     
@@ -1467,6 +1645,42 @@ document.addEventListener('DOMContentLoaded', async function() {
                         return;
                     }
                     
+                    // Validation du mot de passe (Firebase Auth exige au moins 6 caractères)
+                    if (password.length < 6) {
+                        showAuthErrorModal('Le mot de passe doit contenir au moins 6 caractères.');
+                        return;
+                    }
+
+                    // === CRÉATION DU COMPTE FIREBASE AUTH ===
+                    // Cette étape est OBLIGATOIRE pour pouvoir uploader un avatar,
+                    // écrire dans Firestore avec les règles de sécurité, etc.
+                    let firebaseUid = null;
+                    try {
+                        console.log('🔐 Création du compte Firebase Auth...');
+                        const { authService } = await import('./firebase-service.js');
+                        const result = await authService.signUpWithEmail(email, password);
+                        firebaseUid = result.user?.uid || null;
+                        console.log('✅ Compte Firebase Auth créé, uid:', firebaseUid);
+                    } catch (fbError) {
+                        console.error('❌ Erreur création Firebase Auth:', fbError);
+                        let msg = 'Erreur lors de la création du compte. Veuillez réessayer.';
+                        if (fbError?.code === 'auth/email-already-in-use') {
+                            msg = 'Cet email est déjà utilisé. Connectez-vous au lieu de créer un compte.';
+                        } else if (fbError?.code === 'auth/invalid-email') {
+                            msg = 'Adresse email invalide.';
+                        } else if (fbError?.code === 'auth/weak-password') {
+                            msg = 'Mot de passe trop faible (minimum 6 caractères).';
+                        } else if (fbError?.code === 'auth/network-request-failed') {
+                            msg = 'Erreur réseau. Vérifiez votre connexion internet.';
+                        } else if (fbError?.code === 'auth/operation-not-allowed') {
+                            msg = 'L\'inscription par email/mot de passe n\'est pas activée. Contactez l\'administrateur.';
+                        } else if (fbError?.message) {
+                            msg = 'Erreur : ' + fbError.message;
+                        }
+                        showAuthErrorModal(msg);
+                        return; // STOP : on ne crée PAS le compte si Firebase Auth a échoué
+                    }
+
                     // Créer le nouveau compte
                     const signupTs = new Date().toISOString();
                     const newAccount = {
@@ -1476,6 +1690,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         langue: langue,
                         country: country,
                         isMinor: isMinor,
+                        uid: firebaseUid,
+                        provider: 'email',
                         created_at: signupTs,
                         createdAt: signupTs
                     };
@@ -1487,11 +1703,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Créer la session utilisateur
                     const user = {
                         name: username,
+                        username: username,
                         email: email,
                         picture: 'https://via.placeholder.com/150',
                         langue: langue,
                         country: country,
                         isMinor: isMinor,
+                        uid: firebaseUid,
+                        provider: 'email',
                         createdAt: signupTs,
                         created_at: signupTs
                     };
@@ -1503,6 +1722,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                         sessionStorage.removeItem('mangawatch_session_active');
                     } else {
                         sessionStorage.setItem('mangawatch_session_active', '1');
+                    }
+
+                    // Synchroniser le profil Firestore (pseudo / pays / langue) si possible
+                    if (typeof window.profileAccountService !== 'undefined') {
+                        try {
+                            await window.profileAccountService.setProfileAccountInfo(email, {
+                                username: username,
+                                country: country,
+                                langue: langue
+                            });
+                            console.log('✅ Profil synchronisé sur Firestore');
+                        } catch (e) {
+                            console.warn('Sync profil Firestore (inscription email):', e);
+                        }
                     }
                     
                     // Ajouter le nouvel utilisateur à la liste avec un avatar aléatoire
@@ -1547,10 +1780,34 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.closeAuthPopup = function() {
         document.documentElement.style.overflow = '';
         document.body.style.overflow = '';
+        document.documentElement.style.overscrollBehavior = '';
+        document.body.style.overscrollBehavior = '';
+        document.body.style.touchAction = '';
         const overlay = document.getElementById('auth-popup-overlay');
         if (overlay) {
             overlay.remove();
         }
+        // Retirer les blocages de scroll en arrière-plan posés à l'ouverture
+        try {
+            if (window.__authBlockBackgroundScroll) {
+                window.removeEventListener('wheel', window.__authBlockBackgroundScroll);
+                window.removeEventListener('touchmove', window.__authBlockBackgroundScroll);
+                delete window.__authBlockBackgroundScroll;
+            }
+            if (window.__authBlockBackgroundKeys) {
+                window.removeEventListener('keydown', window.__authBlockBackgroundKeys);
+                delete window.__authBlockBackgroundKeys;
+            }
+            if (window.__authBlockScrollEarly) {
+                window.removeEventListener('wheel', window.__authBlockScrollEarly);
+                window.removeEventListener('touchmove', window.__authBlockScrollEarly);
+                delete window.__authBlockScrollEarly;
+            }
+            if (window.__authBlockKeysEarly) {
+                window.removeEventListener('keydown', window.__authBlockKeysEarly);
+                delete window.__authBlockKeysEarly;
+            }
+        } catch (e) { /* ignore */ }
     };
     
     // Fonction pour afficher/masquer le modal de mot de passe oublié
@@ -2720,15 +2977,41 @@ document.addEventListener('DOMContentLoaded', async function() {
             isLoggedIn: localStorage.getItem('isLoggedIn'),
             rememberMe: localStorage.getItem('rememberMe')
         });
-                setTimeout(() => {
+        const ensureAuthPopupVisible = () => {
+            const hasOverlay = !!document.getElementById('auth-popup-overlay');
+            if (!hasOverlay && typeof showAuthPopup === 'function') {
+                showAuthPopup();
+            }
+        };
+
+        // Si l'utilisateur interagit avant le timeout, forcer l'affichage immédiat.
+        const eagerPopupEvents = ['scroll', 'wheel', 'touchmove', 'touchstart', 'click', 'keydown'];
+        const eagerPopupHandler = () => {
+            ensureAuthPopupVisible();
+            eagerPopupEvents.forEach(evt => window.removeEventListener(evt, eagerPopupHandler, true));
+        };
+        eagerPopupEvents.forEach(evt => window.addEventListener(evt, eagerPopupHandler, { passive: false, capture: true }));
+
+        // Empêcher la navigation tant que la popup d'auth n'est pas visible.
+        document.addEventListener('click', function authGuardClick(e) {
+            if (document.getElementById('auth-popup-overlay')) return;
+            const targetLink = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+            if (!targetLink) return;
+            e.preventDefault();
+            e.stopPropagation();
+            ensureAuthPopupVisible();
+        }, true);
+
+        setTimeout(() => {
             console.log('🎯 Affichage du popup maintenant !');
             if (typeof showAuthPopup === 'function') {
-            showAuthPopup();
+                showAuthPopup();
+                eagerPopupEvents.forEach(evt => window.removeEventListener(evt, eagerPopupHandler, true));
             } else {
                 console.error('❌ showAuthPopup n\'est pas une fonction !');
             }
-        }, 1000);
-                } else {
+        }, 100);
+    } else {
         console.log('❌ Popup désactivé - Raison:', {
             user: localStorage.getItem('user') ? 'utilisateur présent' : 'pas d\'utilisateur',
             isLoggedIn: localStorage.getItem('isLoggedIn'),

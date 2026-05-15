@@ -326,6 +326,26 @@ body {
     align-items: stretch;
 }
 
+/* Desktop large: éviter des cartes trop larges sur grands écrans (24"+). */
+@media (min-width: 769px) {
+    .list-grid {
+        grid-template-columns: repeat(auto-fit, minmax(270px, 320px));
+        justify-content: center;
+        gap: 22px;
+    }
+
+    .list-item {
+        width: 100%;
+        max-width: 320px;
+        justify-self: center;
+        min-height: 460px;
+    }
+
+    .item-image {
+        height: 310px;
+    }
+}
+
 /* Pagination */
 .pagination-container {
     display: flex;

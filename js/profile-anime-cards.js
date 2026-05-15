@@ -234,7 +234,28 @@ async function loadUserNotes(userEmail) {
         localNotes = [];
     }
 
-    const noteKey = (n) => `${String(n && n.id)}::${String((n && n.contentType) || 'anime').toLowerCase()}`;
+    const deletedNotesKey = 'deleted_content_notes_' + userEmail;
+    let deletedNotes = [];
+    try {
+        deletedNotes = JSON.parse(localStorage.getItem(deletedNotesKey) || '[]');
+        if (!Array.isArray(deletedNotes)) deletedNotes = [];
+    } catch (e) {
+        deletedNotes = [];
+    }
+
+    const normalizeType = (value) => {
+        const t = String(value || '').toLowerCase().trim();
+        if (!t) return '';
+        if (t === 'tv') return 'anime';
+        if (t === 'movie') return 'film';
+        if (t === 'doujinshi') return 'doujin';
+        return t;
+    };
+
+    const deletedKey = (n) => `${String(n && n.id)}::${normalizeType(n && n.contentType)}`;
+    const deletedSet = new Set(deletedNotes.filter(n => n && n.id).map(deletedKey));
+
+    const noteKey = (n) => `${String(n && n.id)}::${normalizeType((n && n.contentType) || 'anime')}`;
 
     const noteRecencyMs = (n) => {
         if (!n) return 0;
@@ -275,7 +296,7 @@ async function loadUserNotes(userEmail) {
 
             const notes = await window.firebaseNotesService.getAllNotes(userEmail);
             if (Array.isArray(notes)) {
-                firebaseNotes = notes;
+                firebaseNotes = notes.filter(n => !deletedSet.has(noteKey(n)));
             }
         } catch (err) {
             console.error('[loadUserNotes] Erreur lors du chargement Firebase:', err);
@@ -285,7 +306,22 @@ async function loadUserNotes(userEmail) {
     // Pas de Firebase dispo: fallback local direct
     if (!firebaseNotes) {
         console.warn('[loadUserNotes] Firebase indisponible, fallback localStorage');
-        return localNotes;
+        return localNotes.filter(n => !deletedSet.has(noteKey(n)));
+    }
+
+    // Purge cloud des notes explicitement supprimées (une fois par session utilisateur).
+    if (deletedNotes.length > 0 && window.__deletedCloudPurgeDoneForUser !== userEmail) {
+        window.__deletedCloudPurgeDoneForUser = userEmail;
+        try {
+            for (const d of deletedNotes) {
+                if (!d || !d.id) continue;
+                await window.firebaseNotesService.deleteNote(userEmail, d.id, d.contentType || null);
+                await window.firebaseTop10Service?.deleteTop10Item(userEmail, d.id, d.contentType || null);
+            }
+            console.log(`[loadUserNotes] Purge cloud des notes supprimées: ${deletedNotes.length}`);
+        } catch (purgeErr) {
+            console.warn('[loadUserNotes] Échec purge cloud des notes supprimées:', purgeErr);
+        }
     }
 
     // Fusion robuste: on garde la version la plus récente par (id + contentType)
@@ -296,6 +332,7 @@ async function loadUserNotes(userEmail) {
     }
     for (const n of localNotes) {
         if (!n || !n.id) continue;
+        if (deletedSet.has(noteKey(n))) continue;
         const k = noteKey(n);
         const existing = mergedMap.get(k);
         if (!existing) {
@@ -320,7 +357,9 @@ async function loadUserNotes(userEmail) {
     // Backfill Firebase pour les notes locales manquantes (critique sync mobile -> PC)
     try {
         const firebaseKeys = new Set((firebaseNotes || []).filter(n => n && n.id).map(noteKey));
-        const missingInFirebase = localNotes.filter(n => n && n.id && !firebaseKeys.has(noteKey(n)));
+        const missingInFirebase = localNotes.filter(
+            n => n && n.id && !deletedSet.has(noteKey(n)) && !firebaseKeys.has(noteKey(n))
+        );
         if (missingInFirebase.length > 0) {
             for (const n of missingInFirebase) {
                 await window.firebaseNotesService.saveNote(userEmail, {
@@ -1050,8 +1089,8 @@ window.createStarBadges = function createStarBadges() {
     // === AJOUT BOUTON FILTRAGE PAR TYPE ===
     let typeButton = document.createElement('button');
     typeButton.id = 'filter-by-type-btn';
-    // Type par défaut: manga (séparation claire des types)
-    window.selectedType = 'manga';
+    // Type par défaut: anime
+    window.selectedType = 'anime';
     
     // Restaurer le texte du bouton type selon la valeur sauvegardée (traduit)
     const typeTexts = {
@@ -1063,7 +1102,7 @@ window.createStarBadges = function createStarBadges() {
         'film': _pt('profile.search_movie'),
         'tous': _pt('profile.type_all')
     };
-    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.search_manga');
+    typeButton.textContent = typeTexts[window.selectedType] || _pt('profile.search_anime');
     typeButton.style.cssText = sortButton.style.cssText + 'margin-left: 0; margin-right: 8px;';
     typeButton.style.display = 'inline-block';
 
@@ -1089,8 +1128,8 @@ window.createStarBadges = function createStarBadges() {
         text-align: left;
     `;
     typeMenu.innerHTML = `
-        <div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">${_pt('profile.search_manga')}</div>
-        <div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_anime')}</div>
+        <div class="type-menu-item" data-type="anime" style="padding: 10px 22px; cursor: pointer; background: #00b89422; color: #00b894; font-weight: bold;">${_pt('profile.search_anime')}</div>
+        <div class="type-menu-item" data-type="manga" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_manga')}</div>
         <div class="type-menu-item" data-type="film" style="padding: 10px 22px; cursor: pointer;">${_pt('profile.search_movie')}</div>
     `;
 
@@ -10585,25 +10624,17 @@ async function renderTop10Slots() {
     let allNotes = await loadUserNotes(user.email);
     
     // Déterminer le type réel pour le filtrage des notes
-    // Si un genre "type" est sélectionné (Doujin, Manhwa, Manhua), utiliser ce type pour le filtrage
+    // (Manhwa/Manhua ne sont plus des genres dédiés; inclus automatiquement via manga)
     let filterType = type;
     if (type === 'manga') {
-        const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
-        if (genres.some(g => typeGenres.includes(g))) {
-            if (genres.includes('Doujin')) {
-                filterType = 'doujin';
-            } else if (genres.includes('Manhwa')) {
-                filterType = 'manhwa';
-            } else if (genres.includes('Manhua')) {
-                filterType = 'manhua';
-            }
-        }
+        filterType = 'manga';
     }
     
     if (filterType === 'manga') {
-        // Pour le type manga, inclure aussi les anciens doujins (normalises en manga)
+        // Pour le type manga, inclure manga + sous-types manga.
         notes = allNotes.filter(note => {
             if (note.contentType === 'doujin' || note.contentType === 'doujinshi') return true;
+            if (note.contentType === 'manhwa' || note.contentType === 'manhua') return true;
             if (note.contentType === 'manga') return true;
             // Pour les anciennes notes sans contentType, garder les contenus manga
             return note.isManga === true || note.isManga === 'true';

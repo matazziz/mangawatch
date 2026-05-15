@@ -304,11 +304,14 @@ function restorePageState() {
                 if (elements.orderFilter) {
                     if (state.orderFilterValue) {
                         // Utiliser la valeur sauvegardée directement (gère le cas "relevance")
-                        elements.orderFilter.value = state.orderFilterValue;
-                        console.log('Order filter restauré depuis orderFilterValue:', state.orderFilterValue);
+                        const savedOrderValue = (state.orderFilterValue === 'popularity' || state.orderFilterValue === 'favorites')
+                            ? 'start_date'
+                            : state.orderFilterValue;
+                        elements.orderFilter.value = savedOrderValue;
+                        console.log('Order filter restauré depuis orderFilterValue:', savedOrderValue);
                         
                         // Si c'est "relevance" et qu'il y a une recherche, s'assurer qu'on n'a pas order_by dans les filtres
-                        if (state.orderFilterValue === 'relevance') {
+                        if (savedOrderValue === 'relevance') {
                             // Si on a une recherche, supprimer order_by pour laisser l'API gérer la pertinence
                             if (state.searchTerm && state.searchTerm.trim() !== '') {
                                 delete currentFilters.order_by;
@@ -320,10 +323,10 @@ function restorePageState() {
                         // Fallback : utiliser order_by depuis les filtres (pour compatibilité)
                         const orderByMapping = {
                             'score': 'score',
-                            'popularity': 'popularity',
                             'title': 'title',
                             'start_date': 'start_date',
-                            "favorites": "popularity" // favorites n'existe pas dans l'interface, utiliser popularity
+                            "favorites": "start_date",
+                            "popularity": "start_date"
                         };
                         const interfaceValue = orderByMapping[state.currentFilters.order_by] || 'score';
                         elements.orderFilter.value = interfaceValue;
@@ -1351,11 +1354,124 @@ function getPersonalStatus(malId) {
         
         const listKey = 'user_list_' + user.email;
         const userList = JSON.parse(localStorage.getItem(listKey) || '[]');
-        const item = userList.find(item => item.id === malId.toString());
-        return item ? item.status : null;
+        const targetId = String(malId || '').trim();
+        const item = userList.find(item => {
+            const candidateIds = [item?.id, item?.mal_id, item?.malId]
+                .map(v => String(v || '').trim())
+                .filter(Boolean);
+            return candidateIds.includes(targetId);
+        });
+        return normalizePersonalStatus(item ? item.status : null);
     } catch (error) {
         console.error('Erreur lors de la récupération du statut personnel:', error);
         return null;
+    }
+}
+
+function normalizePersonalStatus(status) {
+    const raw = String(status || '').toLowerCase().trim();
+    if (!raw) return null;
+
+    const compact = raw.replace(/\s+/g, '-').replace(/_/g, '-');
+    const aliases = {
+        'watching': 'watching',
+        'en-cours': 'watching',
+        'completed': 'completed',
+        'complete': 'completed',
+        'finished': 'completed',
+        'on-hold': 'on-hold',
+        'onhold': 'on-hold',
+        'paused': 'on-hold',
+        'en-pause': 'on-hold',
+        'dropped': 'dropped',
+        'abandoned': 'dropped',
+        'abandonne': 'dropped',
+        'plan-to-watch': 'plan-to-watch',
+        'plan-to-read': 'plan-to-watch',
+        'plan_to_watch': 'plan-to-watch',
+        'to-watch': 'plan-to-watch',
+        'a-voir': 'plan-to-watch'
+    };
+
+    return aliases[compact] || compact;
+}
+
+function normalizeCollectionTypeForStatus(value) {
+    const raw = String(value || '').toLowerCase().trim().replace(/\s+/g, '-').replace(/_/g, '-');
+    if (!raw) return '';
+    if (['manga', 'doujin', 'doujinshi', 'one-shot', 'one-shots', 'oneshot'].includes(raw)) return 'manga';
+    if (['novel', 'light-novel', 'roman'].includes(raw)) return 'novel';
+    if (['manhwa'].includes(raw)) return 'manhwa';
+    if (['manhua'].includes(raw)) return 'manhua';
+    if (['movie', 'film'].includes(raw)) return 'film';
+    if (['anime', 'tv', 'ova', 'ona', 'special', 'music'].includes(raw)) return 'anime';
+    return raw;
+}
+
+function collectionItemMatchesSelectedTypeForStatus(item, selectedType, selectedAnimeSubtype) {
+    const normalizedSelectedType = normalizeCollectionTypeForStatus(selectedType || '');
+    if (!normalizedSelectedType) return true;
+
+    const itemType = normalizeCollectionTypeForStatus(item?.type || item?.content_type || item?.contentType || '');
+    if (normalizedSelectedType !== 'anime') {
+        return itemType === normalizedSelectedType;
+    }
+
+    // Cas anime : si un sous-type est choisi (film/tv/ova/ona/special/music),
+    // le statut global ne doit afficher que ce sous-type.
+    const normalizedSubtype = normalizeCollectionTypeForStatus(selectedAnimeSubtype || '');
+    if (normalizedSubtype && normalizedSubtype !== 'anime') {
+        return itemType === normalizedSubtype;
+    }
+
+    return itemType === 'anime' || itemType === 'film';
+}
+
+function mapCollectionItemToDisplayContent(item) {
+    const imageUrl = item?.imageUrl || item?.image || item?.images?.jpg?.large_image_url || item?.images?.jpg?.image_url || '';
+    const yearNum = Number(item?.year);
+    const safeYear = Number.isFinite(yearNum) ? yearNum : null;
+    const genres = Array.isArray(item?.genres) ? item.genres.map(g => (typeof g === 'string' ? g : (g?.name || '')).trim()).filter(Boolean) : [];
+    const malId = item?.mal_id || item?.malId || item?.id;
+
+    return {
+        mal_id: malId,
+        title: item?.title || item?.titleEnglish || item?.titre || 'Sans titre',
+        score: Number(item?.score) || 0,
+        synopsis: item?.synopsis || '',
+        genres,
+        type: item?.type || '',
+        episodes: item?.episodes ?? null,
+        volumes: item?.volumes ?? null,
+        images: {
+            jpg: {
+                large_image_url: imageUrl,
+                image_url: imageUrl
+            }
+        },
+        published: { prop: { from: { year: safeYear } } },
+        aired: { prop: { from: { year: safeYear } } }
+    };
+}
+
+function getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype) {
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (!user || !user.email) return [];
+
+        const userList = JSON.parse(localStorage.getItem(`user_list_${user.email}`) || '[]');
+        if (!Array.isArray(userList) || userList.length === 0) return [];
+
+        const filtered = userList.filter(item => {
+            const itemStatus = normalizePersonalStatus(item?.status);
+            if (itemStatus !== selectedStatus) return false;
+            return collectionItemMatchesSelectedTypeForStatus(item, selectedType, selectedAnimeSubtype);
+        });
+
+        return filtered.map(mapCollectionItemToDisplayContent);
+    } catch (error) {
+        console.warn('⚠️ Impossible de préparer la vue globale par statut:', error);
+        return [];
     }
 }
 
@@ -1374,6 +1490,7 @@ function mapApiStatusToPersonal(apiStatus) {
 function displayContentList(contentList) {
     const mangaGrid = document.getElementById('manga-grid');
     if (!mangaGrid) return;
+    currentMangaList = Array.isArray(contentList) ? [...contentList] : [];
     
     console.log('Affichage de', contentList.length, 'éléments');
     
@@ -1381,23 +1498,27 @@ function displayContentList(contentList) {
     const originalContentList = [...contentList];
     let sortedContentList = [...contentList];
     if (elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '') {
-        const selectedStatus = elements.statusFilter.value;
+        const selectedStatus = normalizePersonalStatus(elements.statusFilter.value);
+        const selectedType = elements.typeFilter ? elements.typeFilter.value : '';
+        const selectedAnimeSubtype = elements.animeTypeFilter ? elements.animeTypeFilter.value : '';
         console.log('🔍 Filtrage par statut personnel:', selectedStatus);
-        
-        sortedContentList = sortedContentList.filter(item => {
-            const personalStatus = getPersonalStatus(item.mal_id) || '';
-            return personalStatus === selectedStatus;
-        });
+
+        const globalStatusContent = getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype);
+        if (globalStatusContent.length > 0) {
+            sortedContentList = globalStatusContent;
+        } else {
+            sortedContentList = sortedContentList.filter(item => {
+                const personalStatus = normalizePersonalStatus(getPersonalStatus(item.mal_id)) || '';
+                return personalStatus === selectedStatus;
+            });
+        }
         
         console.log(`📋 Résultat du filtrage statut "${selectedStatus}": ${sortedContentList.length} élément(s)`);
 
-        // Évite l'effet "page vide" quand un statut sauvegardé ne matche rien
-        if (sortedContentList.length === 0 && originalContentList.length > 0) {
-            console.warn(`⚠️ Aucun résultat pour le statut "${selectedStatus}", fallback sur la liste complète`);
-            sortedContentList = [...originalContentList];
-            if (elements.statusFilter) {
-                elements.statusFilter.value = '';
-            }
+        // Garder le filtre actif même s'il n'y a aucun résultat :
+        // l'utilisateur doit voir un état vide explicite, pas un reset silencieux du filtre.
+        if (sortedContentList.length === 0) {
+            console.warn(`⚠️ Aucun résultat pour le statut "${selectedStatus}" avec les filtres courants`);
         }
     }
     
@@ -2791,7 +2912,6 @@ function updateFilters() {
             const orderByMap = {
                 'relevance': 'score',
                 'score': 'score',
-                'popularity': 'popularity',
                 'favorites': 'favorites',
                 'title': 'title',
                 'start_date': 'start_date' // Utiliser 'start_date' pour tous les types

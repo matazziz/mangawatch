@@ -97,7 +97,9 @@ class Localization {
                 'rating': 'Note minimale',
                 'relevance': 'Pertinence',
                 'title': 'Ordre alphabétique',
-                'start_date': 'Date de sortie',
+                'start_date': 'Prochaines sorties',
+                'sort_alphabetical': 'Ordre alphabétique',
+                'upcoming_releases': 'Prochaines sorties',
                 
                 // Pagination
                 'pagination.previous': 'Précédent',
@@ -832,6 +834,8 @@ class Localization {
                 'relevance': 'Relevance',
                 'title': 'Alphabetical Order',
                 'start_date': 'Release Date',
+                'sort_alphabetical': 'Alphabetical Order',
+                'upcoming_releases': 'Upcoming releases',
                 
                 // Pagination
                 'pagination.previous': 'Previous',
@@ -1539,6 +1543,8 @@ class Localization {
                 'relevance': 'Relevanz',
                 'title': 'Alphabetische Reihenfolge',
                 'start_date': 'Erscheinungsdatum',
+                'sort_alphabetical': 'Alphabetische Reihenfolge',
+                'upcoming_releases': 'Kommende Veröffentlichungen',
                 
                 // Pagination
                 'pagination.previous': 'Zurück',
@@ -2075,6 +2081,8 @@ class Localization {
                 'relevance': 'Relevancia',
                 'title': 'Orden Alfabético',
                 'start_date': 'Fecha de Lanzamiento',
+                'sort_alphabetical': 'Orden Alfabético',
+                'upcoming_releases': 'Próximos lanzamientos',
                 
                 // Pagination
                 'pagination.previous': 'Anterior',
@@ -2613,6 +2621,8 @@ class Localization {
                 'relevance': 'Rilevanza',
                 'title': 'Ordine Alfabetico',
                 'start_date': 'Data di Uscita',
+                'sort_alphabetical': 'Ordine Alfabetico',
+                'upcoming_releases': 'Prossime uscite',
                 
                 // Pagination
                 'pagination.previous': 'Precedente',
@@ -3155,6 +3165,8 @@ class Localization {
                 'relevance': '関連性',
                 'title': 'アルファベット順',
                 'start_date': 'リリース日',
+                'sort_alphabetical': 'アルファベット順',
+                'upcoming_releases': '近日公開',
                 
                 // Pagination
                 'pagination.previous': '前へ',
