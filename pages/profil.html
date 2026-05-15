@@ -1716,6 +1716,39 @@
             margin-right: 0.5rem;
             font-size: 1rem;
         }
+
+        .setting-item .profile-photo-edit-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            width: auto;
+            max-width: 100%;
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            letter-spacing: 0;
+            text-transform: none;
+            color: #fff;
+            background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
+            border: none;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 184, 148, 0.25);
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        .setting-item .profile-photo-edit-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.35);
+            background: linear-gradient(135deg, #00d4aa 0%, #00e6c4 100%);
+        }
+
+        .setting-item .profile-photo-edit-btn i {
+            margin-right: 0;
+            font-size: 0.9rem;
+        }
         
         .account-actions .logout-btn {
             background: transparent;
@@ -2337,6 +2370,13 @@
                 font-size: 0.95rem !important;
             }
 
+            .setting-item .profile-photo-edit-btn {
+                width: auto !important;
+                max-width: 100% !important;
+                padding: 0.45rem 0.85rem !important;
+                font-size: 0.85rem !important;
+            }
+
             .account-actions {
                 gap: 0.65rem !important;
             }
@@ -2932,8 +2972,6 @@
             <span data-i18n="profile.choose_video">Choisir une vidéo</span>
         </label>
         <input type="file" id="banner-video-input" class="banner-file-input" accept="video/*">
-    <input type="file" id="profile-avatar-file-input" class="banner-file-input" accept="image/jpeg,image/png,image/webp,image/*">
-    <script src="/js/profile-avatar-upload.js?v=1"></script>
         
         <!-- Contrôle de volume pour vidéo -->
         <div class="banner-volume-control" id="banner-volume-control" style="display: none;">
@@ -2955,6 +2993,9 @@
             <span data-i18n="profile.close">Fermer</span>
         </button>
     </div>
+
+    <input type="file" id="profile-avatar-file-input" class="banner-file-input" accept="image/jpeg,image/png,image/webp,image/*">
+    <script src="/js/profile-avatar-upload.js?v=2"></script>
 
     <main class="profile-container">
         <div class="profile-header" id="profile-header">
@@ -3030,7 +3071,7 @@
                         <h3 data-i18n="profile.preferences">Préférences</h3>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.profile_photo">Photo de profil</span></label>
-                            <label class="edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input" style="margin-top: 0.5rem; cursor: pointer;"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
+                            <label class="profile-photo-edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
                         </div>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.banner_label">Bannière du profil</span></label>
