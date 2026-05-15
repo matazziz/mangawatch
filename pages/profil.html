@@ -1442,7 +1442,7 @@
             margin-bottom: 0;
         }
         
-        .setting-item label {
+        .setting-item > label:not(.edit-btn) {
             display: block;
             color: #a5b1c2;
             font-size: 0.95rem;
@@ -1669,8 +1669,15 @@
             transform: translateY(-1px);
         }
         
-        .setting-item .edit-btn {
+        .setting-item .edit-btn,
+        .setting-item label.edit-btn {
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
+            width: auto;
+            max-width: 100%;
+            margin-top: 0.5rem;
+            margin-bottom: 0;
             padding: 0.9rem 6rem;
             font-size: 1.15rem;
             font-weight: 500;
@@ -1681,6 +1688,9 @@
             color: white;
             box-shadow: 0 4px 12px rgba(0, 184, 148, 0.25);
             border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            box-sizing: border-box;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
@@ -2267,7 +2277,7 @@
                 margin-bottom: 1rem !important;
             }
 
-            .setting-item label,
+            .setting-item > label:not(.edit-btn),
             .settings-card label {
                 font-size: 0.78rem !important;
                 margin-bottom: 0.45rem !important;
@@ -2330,8 +2340,10 @@
                 gap: 0.35rem !important;
             }
 
-            .setting-item .edit-btn {
-                width: 100% !important;
+            .setting-item .edit-btn,
+            .setting-item label.edit-btn {
+                width: auto !important;
+                max-width: 100% !important;
                 justify-content: center !important;
                 padding: 0.72rem 0.9rem !important;
                 font-size: 0.95rem !important;
@@ -3031,11 +3043,11 @@
                         <h3 data-i18n="profile.preferences">Préférences</h3>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.profile_photo">Photo de profil</span></label>
-                            <label class="edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input" style="margin-top: 0.5rem; cursor: pointer;"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
+                            <label class="edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
                         </div>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.banner_label">Bannière du profil</span></label>
-                            <button class="edit-btn" id="edit-banner-btn" style="margin-top: 0.5rem;"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></button>
+                            <button type="button" class="edit-btn" id="edit-banner-btn"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></button>
                         </div>
                         <div class="setting-item" id="banner-volume-setting" style="display: none;">
                             <label><i class="fas fa-volume-up"></i> <span data-i18n="profile.banner_video_volume">Volume de la bannière vidéo</span></label>
