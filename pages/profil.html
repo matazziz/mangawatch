@@ -1716,39 +1716,6 @@
             margin-right: 0.5rem;
             font-size: 1rem;
         }
-
-        .setting-item .profile-photo-edit-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.45rem;
-            width: auto;
-            max-width: 100%;
-            margin-top: 0.5rem;
-            padding: 0.5rem 1rem;
-            font-size: 0.92rem;
-            font-weight: 600;
-            letter-spacing: 0;
-            text-transform: none;
-            color: #fff;
-            background: linear-gradient(135deg, #00b894 0%, #00d4aa 100%);
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 184, 148, 0.25);
-            cursor: pointer;
-            box-sizing: border-box;
-        }
-
-        .setting-item .profile-photo-edit-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 184, 148, 0.35);
-            background: linear-gradient(135deg, #00d4aa 0%, #00e6c4 100%);
-        }
-
-        .setting-item .profile-photo-edit-btn i {
-            margin-right: 0;
-            font-size: 0.9rem;
-        }
         
         .account-actions .logout-btn {
             background: transparent;
@@ -2368,13 +2335,6 @@
                 justify-content: center !important;
                 padding: 0.72rem 0.9rem !important;
                 font-size: 0.95rem !important;
-            }
-
-            .setting-item .profile-photo-edit-btn {
-                width: auto !important;
-                max-width: 100% !important;
-                padding: 0.45rem 0.85rem !important;
-                font-size: 0.85rem !important;
             }
 
             .account-actions {
@@ -3071,7 +3031,7 @@
                         <h3 data-i18n="profile.preferences">Préférences</h3>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.profile_photo">Photo de profil</span></label>
-                            <label class="profile-photo-edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
+                            <label class="edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input" style="margin-top: 0.5rem; cursor: pointer;"><i class="fas fa-image"></i> <span data-i18n="profile.modify">Modifier</span></label>
                         </div>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> <span data-i18n="profile.banner_label">Bannière du profil</span></label>
@@ -5362,8 +5322,6 @@
         if (typeof window.initProfileAvatarUpload === 'function') {
             window.initProfileAvatarUpload();
         }
-
-        }
         
         // Attacher le gestionnaire d'événement pour le bouton avatar
         if (typeof attachAvatarEditHandler === 'function') {
@@ -5828,12 +5786,14 @@
               if (bannerEditMenu) bannerEditMenu.classList.add('active');
               if (bannerEditOverlay) bannerEditOverlay.classList.add('active');
           }
+          window.openBannerMenu = openBannerMenu;
           
           // Fonction pour fermer le menu modal
           function closeBannerMenu() {
               if (bannerEditMenu) bannerEditMenu.classList.remove('active');
               if (bannerEditOverlay) bannerEditOverlay.classList.remove('active');
           }
+          window.closeBannerMenu = closeBannerMenu;
           
             // Charger et afficher les utilisateurs bloqués
           function loadBlockedUsers() {
@@ -6430,15 +6390,18 @@
               }
           }
           
-          // Ouvrir le menu d'édition depuis le bouton dans les préférences
-          if (bannerEditBtn) {
-              bannerEditBtn.addEventListener('click', function(e) {
-                  e.preventDefault();
+          function onEditBannerClick(e) {
+                  if (e) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                  }
                   openBannerMenu();
-                  updateVolumeControlVisibility();
+                  if (typeof updateVolumeControlVisibility === 'function') {
+                      updateVolumeControlVisibility();
+                  }
                   
                   // Charger le volume actuel si c'est une vidéo
-                  if (bannerVideo.classList.contains('active')) {
+                  if (bannerVideo && bannerVideo.classList.contains('active')) {
                       const user = JSON.parse(localStorage.getItem('user') || 'null');
                       if (user && user.email) {
                           const bannerData = localStorage.getItem('profile_banner_' + user.email);
@@ -6458,7 +6421,12 @@
                           }
                       }
                   }
-              });
+          }
+
+          // Ouvrir le menu d'édition depuis le bouton dans les préférences
+          if (bannerEditBtn && bannerEditBtn.dataset.mwBannerBound !== '1') {
+              bannerEditBtn.dataset.mwBannerBound = '1';
+              bannerEditBtn.addEventListener('click', onEditBannerClick);
           }
           
           // ========== SYSTÈME D'ABONNEMENTS ==========
