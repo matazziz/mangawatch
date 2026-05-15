@@ -715,3 +715,11 @@ html {
     font-size: 0.72rem !important;
   }
 }
+
+/* Top 10 : images plus grandes sur PC uniquement (mobile = tailles JS d'origine) */
+@media (min-width: 769px) {
+  #reviews-section > .card-list .catalogue-card[id^="catalogue-card-"] img[id^="top-"],
+  #reviews-section > .card-list .catalogue-card[id^="catalogue-card-"] .catalogue-image-placeholder {
+    object-fit: cover;
+  }
+}

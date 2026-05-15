@@ -193,51 +193,56 @@ async function getUserTop10(user, genre = null, type = null) {
         }
     };
     
-    // IMPORTANT: Si un genre est spécifié, charger depuis localStorage d'abord
-    // car les Top 10 par genre sont stockés dans localStorage, pas dans Firebase
+    // Top 10 par genre : Firebase uniquement (profil public = données du propriétaire, pas du visiteur)
     if (genre && typeof genre === 'string' && genre.trim() !== '') {
-        const localTypeKeys = finalType === 'manga' ? ['manga', 'doujin'] : (finalType === 'film' ? ['film', 'movie'] : [finalType]);
-        try {
-            for (const localType of localTypeKeys) {
-                const top10Key = getUserTop10Key(user, genre, localType);
-                const stored = localStorage.getItem(top10Key);
-                if (!stored) continue;
-                const top10 = JSON.parse(stored);
-                while (top10.length < 10) top10.push(null);
-                console.log(`📊 Top 10 chargé depuis localStorage pour genre: ${genre}, type: ${localType}, utilisateur: ${user.email}`);
-                return await sanitizeTop10WithExistingNotes(top10);
+        if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
+            try {
+                const genreKey = window.firebaseTop10Service.normalizeGenreKey
+                    ? window.firebaseTop10Service.normalizeGenreKey(genre)
+                    : String(genre).toLowerCase().replace(/\s+/g, '_').replace(/,/g, '_');
+                if (typeof window.firebaseTop10Service.getTop10Slots === 'function') {
+                    const top10 = await window.firebaseTop10Service.getTop10Slots(user.email, {
+                        genreKey: genreKey,
+                        type: finalType
+                    });
+                    return await sanitizeTop10WithExistingNotes(top10);
+                }
+            } catch (err) {
+                console.error('❌ Erreur lors du chargement du top 10 genre depuis Firebase:', err);
             }
-            console.log(`📊 Aucun Top 10 trouvé dans localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
-            return new Array(10).fill(null);
-        } catch (err) {
-            console.error('❌ Erreur lors du chargement du top 10 depuis localStorage:', err);
-            return new Array(10).fill(null);
         }
+        return new Array(10).fill(null);
     }
     
-    // Si aucun genre n'est spécifié, charger depuis Firebase (Top 10 global)
+    // Top 10 global depuis Firebase (scope global uniquement)
     if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
         try {
-            const top10Data = await window.firebaseTop10Service.getTop10(user.email);
-            // Convertir en tableau de 10 éléments avec null pour les emplacements vides
+            if (typeof window.firebaseTop10Service.getTop10Slots === 'function') {
+                const top10 = await window.firebaseTop10Service.getTop10Slots(user.email, {
+                    genreKey: '',
+                    type: finalType
+                });
+                return await sanitizeTop10WithExistingNotes(top10);
+            }
+            const top10Data = await window.firebaseTop10Service.getTop10(user.email, {
+                genreKey: '',
+                type: finalType
+            });
             const top10 = new Array(10).fill(null);
             for (const item of top10Data) {
-                // Filtrer par type si spécifié
-                if (matchesSelectedType(item.contentType, type)) {
-                    const rang = item.rang || 1;
-                    if (rang >= 1 && rang <= 10) {
-                        top10[rang - 1] = {
-                            id: item.id,
-                            titre: item.titre,
-                            title: item.titre,
-                            name: item.titre,
-                            contentType: item.contentType,
-                            image: item.image,
-                            synopsis: item.synopsis,
-                            genres: item.genres || [],
-                            score: item.score || 0
-                        };
-                    }
+                const rang = item.rang || 1;
+                if (rang >= 1 && rang <= 10) {
+                    top10[rang - 1] = {
+                        id: item.id,
+                        titre: item.titre,
+                        title: item.titre,
+                        name: item.titre,
+                        contentType: item.contentType,
+                        image: item.image,
+                        synopsis: item.synopsis,
+                        genres: item.genres || [],
+                        score: item.score || 0
+                    };
                 }
             }
             return await sanitizeTop10WithExistingNotes(top10);
@@ -246,22 +251,27 @@ async function getUserTop10(user, genre = null, type = null) {
         }
     }
     
-    // Fallback vers localStorage si Firebase n'est pas disponible (pour Top 10 global)
-    const localTypeKeys = finalType === 'manga' ? ['manga', 'doujin'] : (finalType === 'film' ? ['film', 'movie'] : [finalType]);
-    try {
-        for (const localType of localTypeKeys) {
-            const top10Key = getUserTop10Key(user, null, localType);
-            const stored = localStorage.getItem(top10Key);
-            if (!stored) continue;
-            const top10 = JSON.parse(stored);
-            while (top10.length < 10) top10.push(null);
-            return await sanitizeTop10WithExistingNotes(top10);
-        }
-    } catch (err) {
-        console.error('❌ Erreur lors du chargement du top 10 depuis localStorage:', err);
-    }
-    // Fallback vers tableau vide si rien n'est trouvé
     return new Array(10).fill(null);
+}
+
+function stripPublicProfileEditControls() {
+    const reviewsSection = document.getElementById('reviews-section');
+    if (!reviewsSection) return;
+    reviewsSection.querySelectorAll('.card-more-btn, .card-more-menu, .select-top10-btn').forEach(function(el) {
+        el.remove();
+    });
+    reviewsSection.querySelectorAll('.catalogue-card').forEach(function(card) {
+        card.setAttribute('draggable', 'false');
+        card.removeAttribute('data-in-top10');
+    });
+}
+
+function applyPublicTop10SlotGridPosition(card, slotIndex) {
+    if (!card || slotIndex < 0 || slotIndex > 9) return;
+    const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+    const cols = narrow ? 2 : 5;
+    card.style.gridColumn = String((slotIndex % cols) + 1);
+    card.style.gridRow = String(Math.floor(slotIndex / cols) + 1);
 }
 
 // Résoudre un pseudo en email (accounts.username ou profile.name)
@@ -1285,29 +1295,16 @@ function createStarBadgesPublic() {
     // Créer le conteneur des cartes Top 10 (même style et taille que le Top 10 perso)
     const catalogueContainer = document.createElement('div');
     catalogueContainer.className = 'card-list';
-    const narrowTop10Public = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+    const top10Layout = typeof window.getTop10LayoutMetrics === 'function'
+        ? window.getTop10LayoutMetrics()
+        : { titleFontSize: '1.08rem', imgWidth: '138px', imgHeight: '184px' };
     catalogueContainer.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(5, 175px);
-        grid-template-rows: repeat(2, auto);
-        gap: 1.5rem;
         margin: 1.5rem auto 2.5rem auto;
-        padding: ${narrowTop10Public ? '0' : '0 1.5rem'};
         position: relative;
         z-index: 1;
-        width: ${narrowTop10Public ? '100%' : 'fit-content'};
-        max-width: ${narrowTop10Public ? '100%' : 'calc(100% - 3rem)'};
-        justify-content: center;
-        justify-items: center;
-        box-sizing: border-box;
     `;
-    if (narrowTop10Public) {
-        catalogueContainer.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
-        catalogueContainer.style.gridTemplateRows = 'repeat(5, auto)';
-        catalogueContainer.style.gap = '8px';
-    } else if (window.innerWidth < 1200) {
-        catalogueContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
-        catalogueContainer.style.maxWidth = '100%';
+    if (typeof window.applyTop10ContainerGridStyles === 'function') {
+        window.applyTop10ContainerGridStyles(catalogueContainer);
     }
     
     // Créer exactement 10 cartes (1 à 10) pour le Top 10
@@ -1317,24 +1314,20 @@ function createStarBadgesPublic() {
         card.id = `catalogue-card-${i}`;
         card.setAttribute('data-top-index', i-1);
         card.setAttribute('draggable', 'false');
+        applyPublicTop10SlotGridPosition(card, i - 1);
         card.style.cssText = `
             position: relative;
             background: #23262f;
             border: 2px solid #00b894;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
             padding: 1.2rem 0.7rem 1rem 0.7rem;
-            height: 320px;
-            width: 175px;
-            overflow: hidden;
-            box-sizing: border-box;
             transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
         `;
+        if (typeof window.applyTop10SlotCardStyles === 'function') {
+            window.applyTop10SlotCardStyles(card, { bordered: true });
+        }
         
         const badge = document.createElement('div');
         badge.className = 'catalogue-position';
@@ -1359,19 +1352,9 @@ function createStarBadgesPublic() {
         // Image placeholder (exactement comme dans profile-anime-cards.js)
         const image = document.createElement('div');
         image.className = 'catalogue-image-placeholder';
-        image.style.cssText = `
-            width: 110px;
-            height: 145px;
-            background: #2a2d36;
-            border-radius: 10px;
-            margin: 0 auto 0.8rem auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #bdbdbd;
-            font-size: 2.2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
+        image.style.cssText = typeof window.getTop10PlaceholderStyleCss === 'function'
+            ? window.getTop10PlaceholderStyleCss()
+            : `width:${top10Layout.imgWidth};height:${top10Layout.imgHeight};background:#2a2d36;border-radius:10px;margin:0 auto 0.8rem auto;display:flex;align-items:center;justify-content:center;color:#bdbdbd;font-size:2.4rem;box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
         image.innerHTML = `${i}`;
 
         // Titre (dédié)
@@ -1380,7 +1363,7 @@ function createStarBadgesPublic() {
         titre.id = `top-${i}-title`;
         titre.style.cssText = `
             color: #00b894;
-            font-size: 1.1rem;
+            font-size: ${top10Layout.titleFontSize};
             font-weight: 800;
             text-align: center;
             margin-top: 0.5rem;
@@ -1394,15 +1377,10 @@ function createStarBadgesPublic() {
         // Créer un élément image pour remplacer le placeholder plus tard
         const imgElement = document.createElement('img');
         imgElement.id = `top-${i}-image`;
-        imgElement.style.cssText = `
-            width: 110px;
-            height: 145px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin: 0 auto 0.8rem auto;
-            display: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
+        const imgCss = typeof window.getTop10ImageStyleCss === 'function'
+            ? window.getTop10ImageStyleCss()
+            : `width:${top10Layout.imgWidth};height:${top10Layout.imgHeight};object-fit:cover;display:block;object-position:center center;margin:0 auto 0.8rem auto;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
+        imgElement.style.cssText = imgCss + 'display:none;';
         imgElement.onerror = function() {
             this.style.display = 'none';
             image.style.display = 'flex';
@@ -1664,12 +1642,21 @@ async function displayUserAnimeNotesPublic() {
         }
     }
     
+    while (top10Data.length < 10) top10Data.push(null);
+    top10Data = top10Data.slice(0, 10);
+
     // Afficher le Top 10 du propriétaire
     for (let i = 0; i < 10; i++) {
         const top10Item = top10Data[i];
         const cardId = `catalogue-card-${i + 1}`;
         const card = document.getElementById(cardId);
-        
+        if (card) {
+            applyPublicTop10SlotGridPosition(card, i);
+            if (typeof window.applyTop10SlotCardStyles === 'function') {
+                window.applyTop10SlotCardStyles(card, { bordered: true });
+            }
+        }
+
         if (card && top10Item) {
             // top10Item peut être un objet avec titre/image ou directement une note
             const imageUrl = top10Item.image || top10Item.images?.jpg?.large_image_url || top10Item.images?.jpg?.image_url || '/images/default-anime.svg';
@@ -1682,7 +1669,11 @@ async function displayUserAnimeNotesPublic() {
             
             if (img) {
                 img.src = imageUrl;
-                img.style.display = 'block';
+                if (typeof window.getTop10ImageStyleCss === 'function') {
+                    img.style.cssText = window.getTop10ImageStyleCss();
+                } else {
+                    img.style.display = 'block';
+                }
                 if (placeholder) placeholder.style.display = 'none';
             }
             if (titleEl) {
@@ -1717,6 +1708,8 @@ async function displayUserAnimeNotesPublic() {
             card.onclick = null;
         }
     }
+
+    stripPublicProfileEditControls();
     
     if (animeNotes.length === 0) {
         // Vider tous les containers d'étoiles

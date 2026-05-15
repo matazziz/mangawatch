@@ -6,6 +6,162 @@ function _profileT(key) {
     return (typeof window.t === 'function' && window.t(key)) || (window.localization && window.localization.get(key)) || key;
 }
 
+function isPublicUserProfilePage() {
+    const path = (window.location.pathname || '').toLowerCase();
+    return path.includes('user-profile');
+}
+
+function isTop10SlotFilled(item) {
+    return !!(item && item.id != null && String(item.id).trim() !== '');
+}
+
+function disconnectTop10SlotObserver(slot) {
+    if (slot && slot._top10MoreBtnObserver) {
+        slot._top10MoreBtnObserver.disconnect();
+        slot._top10MoreBtnObserver = null;
+    }
+}
+
+function clearTop10SlotEditControls(slot) {
+    if (!slot) return;
+    disconnectTop10SlotObserver(slot);
+    slot.querySelectorAll('.card-more-btn, .card-more-menu').forEach(function(el) { el.remove(); });
+    slot.removeAttribute('data-anime-id');
+}
+
+/** Type normalisé pour les notes (aligné sur le profil public). */
+function resolveProfileNoteContentType(note) {
+    if (!note || typeof note !== 'object') return 'manga';
+    let ct = String(note.contentType || note.content_type || '').trim().toLowerCase();
+    if (ct === 'doujinshi' || ct === 'doujin') return 'manga';
+    if (ct === 'novel' || ct === 'light novel' || ct === 'light_novel') return 'roman';
+    if (ct === 'film' || ct === 'movie') return 'film';
+    if (['anime', 'manga', 'manhwa', 'manhua', 'roman'].includes(ct)) return ct;
+    if (['tv', 'ova', 'ona', 'special', 'music'].includes(ct)) return 'anime';
+    const raw = String(note.type || note.mediaType || note.malType || note.format || '').trim().toLowerCase();
+    if (raw === 'doujinshi' || raw === 'doujin') return 'manga';
+    if (raw === 'movie') return 'film';
+    if (['tv', 'ova', 'ona', 'special', 'music'].includes(raw)) return 'anime';
+    if (raw === 'novel' || raw === 'light_novel') return 'roman';
+    if (raw === 'manhwa') return 'manhwa';
+    if (raw === 'manhua') return 'manhua';
+    if (raw === 'manga' || raw === 'one_shot' || raw === 'one shot') return 'manga';
+    if (note.isManga === false || note.isManga === 'false') return 'anime';
+    if (note.isManga === true || note.isManga === 'true') return 'manga';
+    if (note.isAnime === true || note.isAnime === 'true') return 'anime';
+    return ct || 'manga';
+}
+
+function isMangaFamilyContentType(type) {
+    const t = String(type || '').toLowerCase().trim();
+    return ['manga', 'doujin', 'doujinshi', 'manhwa', 'manhua', 'roman', 'novel', 'one_shot', 'one shot'].includes(t);
+}
+
+/** Dimensions du Top 10 (profil perso + public). */
+function getTop10LayoutMetrics() {
+    const narrow = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+    if (narrow) {
+        return {
+            narrow: true,
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gridTemplateRows: 'repeat(5, auto)',
+            gap: '8px',
+            cardWidth: '100%',
+            cardMaxWidth: '100%',
+            cardMinWidth: '0',
+            cardHeight: '320px',
+            imgWidth: '110px',
+            imgHeight: '145px',
+            placeholderFontSize: '2.2rem',
+            titleFontSize: '1.1rem'
+        };
+    }
+    return {
+        narrow: false,
+        gridTemplateColumns: 'repeat(5, 200px)',
+        gridTemplateRows: 'repeat(2, auto)',
+        gap: '1.25rem',
+        cardWidth: '200px',
+        cardMaxWidth: '200px',
+        cardMinWidth: '200px',
+        cardHeight: '388px',
+        imgWidth: '138px',
+        imgHeight: '184px',
+        placeholderFontSize: '2.4rem',
+        titleFontSize: '1.08rem'
+    };
+}
+
+function applyTop10ContainerGridStyles(container) {
+    if (!container) return;
+    const m = getTop10LayoutMetrics();
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = m.gridTemplateColumns;
+    container.style.gridTemplateRows = m.gridTemplateRows;
+    container.style.gap = m.gap;
+    container.style.justifyContent = 'center';
+    container.style.justifyItems = 'center';
+    container.style.boxSizing = 'border-box';
+    if (m.narrow) {
+        container.style.width = '100%';
+        container.style.maxWidth = '100%';
+        container.style.padding = '0';
+    } else {
+        container.style.width = 'fit-content';
+        container.style.maxWidth = 'calc(100% - 3rem)';
+        container.style.padding = '0 1.5rem';
+    }
+}
+
+function applyTop10SlotCardStyles(card, options) {
+    if (!card) return;
+    const m = getTop10LayoutMetrics();
+    const bordered = options && options.bordered;
+    card.style.boxSizing = 'border-box';
+    card.style.position = 'relative';
+    card.style.display = 'flex';
+    card.style.flexDirection = 'column';
+    card.style.alignItems = 'center';
+    card.style.justifyContent = 'flex-start';
+    card.style.overflow = 'hidden';
+    card.style.width = m.cardWidth;
+    card.style.maxWidth = m.cardMaxWidth;
+    card.style.minWidth = m.cardMinWidth;
+    card.style.height = m.cardHeight;
+    card.style.minHeight = m.cardHeight;
+    if (bordered) {
+        card.style.border = '2px solid #00b894';
+    }
+}
+
+function getTop10ImageStyleCss() {
+    const m = getTop10LayoutMetrics();
+    return `width:${m.imgWidth};height:${m.imgHeight};object-fit:cover;display:block;object-position:center center;margin:0 auto 0.8rem auto;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
+}
+
+function getTop10PlaceholderStyleCss() {
+    const m = getTop10LayoutMetrics();
+    return `width:${m.imgWidth};height:${m.imgHeight};background:#2a2d36;border-radius:10px;margin:0 auto 0.8rem auto;display:flex;align-items:center;justify-content:center;color:#bdbdbd;font-size:${m.placeholderFontSize};box-shadow:0 2px 8px rgba(0,0,0,0.2);`;
+}
+
+if (typeof window !== 'undefined') {
+    window.getTop10LayoutMetrics = getTop10LayoutMetrics;
+    window.applyTop10ContainerGridStyles = applyTop10ContainerGridStyles;
+    window.applyTop10SlotCardStyles = applyTop10SlotCardStyles;
+    window.getTop10ImageStyleCss = getTop10ImageStyleCss;
+    window.getTop10PlaceholderStyleCss = getTop10PlaceholderStyleCss;
+}
+
+/** Doujin uniquement si explicitement indiqué (pas via ecchi/erotica seul). */
+function isExplicitDoujinNote(note) {
+    if (!note) return false;
+    const ct = String(note.contentType || note.content_type || '').toLowerCase().trim();
+    if (ct === 'doujin' || ct === 'doujinshi') return true;
+    const titre = (note.titre || note.title || note.name || '').toLowerCase();
+    const noteId = note.id ? String(note.id).toLowerCase() : '';
+    return titre.includes('doujin') || titre.includes('totally captivated') || noteId.includes('doujin');
+}
+
 function enforceMobileSearchGenreCardsLayout(containerEl) {
     if (!containerEl || typeof window.matchMedia !== 'function' || !window.matchMedia('(max-width: 768px)').matches) return;
     containerEl.style.setProperty('display', 'grid', 'important');
@@ -739,31 +895,13 @@ window.createStarBadges = function createStarBadges() {
     // Créer le conteneur des cartes
     const catalogueContainer = document.createElement('div');
     catalogueContainer.className = 'card-list';
-    const narrowTop10 = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+    const top10Layout = getTop10LayoutMetrics();
     catalogueContainer.style.cssText = `
-        display: grid;
-        grid-template-columns: repeat(5, 175px);
-        grid-template-rows: repeat(2, auto);
-        gap: 1.5rem;
         margin: 1.5rem auto 2.5rem auto;
-        padding: ${narrowTop10 ? '0' : '0 1.5rem'};
         position: relative;
         z-index: 1;
-        width: ${narrowTop10 ? '100%' : 'fit-content'};
-        max-width: ${narrowTop10 ? '100%' : 'calc(100% - 3rem)'};
-        justify-content: center;
-        justify-items: center;
-        box-sizing: border-box;
     `;
-    
-    if (narrowTop10) {
-        catalogueContainer.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
-        catalogueContainer.style.gridTemplateRows = 'repeat(5, auto)';
-        catalogueContainer.style.gap = '8px';
-    } else if (window.innerWidth < 1200) {
-        catalogueContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
-        catalogueContainer.style.maxWidth = '100%';
-    }
+    applyTop10ContainerGridStyles(catalogueContainer);
 
     // Auto-scroll désactivé pour éviter les bugs de scroll
     // let autoScrollInterval = null;
@@ -802,18 +940,11 @@ window.createStarBadges = function createStarBadges() {
             border: 1.5px solid #bdbdbd;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
             padding: 1.2rem 0.7rem 1rem 0.7rem;
-            height: 320px;
-            width: 175px;
-            overflow: hidden;
-            box-sizing: border-box;
             transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
         `;
+        applyTop10SlotCardStyles(card);
 
         // Badge ou médaille (position)
         const badge = document.createElement('div');
@@ -839,19 +970,7 @@ window.createStarBadges = function createStarBadges() {
         // Image placeholder
         const image = document.createElement('div');
         image.className = 'catalogue-image-placeholder';
-        image.style.cssText = `
-            width: 110px;
-            height: 145px;
-            background: #2a2d36;
-            border-radius: 10px;
-            margin: 0 auto 0.8rem auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #bdbdbd;
-            font-size: 2.2rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        `;
+        image.style.cssText = getTop10PlaceholderStyleCss();
         image.innerHTML = `${i}`;
 
         // Titre (dédié)
@@ -859,7 +978,7 @@ window.createStarBadges = function createStarBadges() {
         titre.className = 'anime-title';
         titre.style.cssText = `
             color: #00b894;
-            font-size: 1.1rem;
+            font-size: ${top10Layout.titleFontSize};
             font-weight: 800;
             text-align: center;
             margin-top: 0.5rem;
@@ -945,7 +1064,7 @@ window.createStarBadges = function createStarBadges() {
             top10 = top10.map(item => item || null);
             
             // Sauvegarder le top 10 mis à jour
-            setUserTop10(user, top10, genre, window.selectedType);
+            await setUserTop10(user, top10, genre, window.selectedType);
             
             // Réinitialiser la sélection
             if (window.selectedTop10Card) {
@@ -3045,6 +3164,10 @@ window.createStarBadges = function createStarBadges() {
                     return false; // Types différents, ce n'est pas la même carte
                 }
                 
+                if (top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentType, type)) {
+                    return false;
+                }
+                
                 // Pour les animes ET mangas, comparer aussi par titre de base et similarité
                 // MAIS seulement si les deux sont du même type (anime/anime ou manga/manga, pas de mélange)
                 if ((type === 'anime' || type === 'manga') && 
@@ -3108,32 +3231,6 @@ window.createStarBadges = function createStarBadges() {
                             }
                         }
                     }
-                }
-                
-                // Pour les films UNIQUEMENT, comparer aussi par titre de base et similarité
-                // MAIS seulement si les deux sont des films (pas d'anime)
-                if (type === 'film' && top10ContentType === 'film' && cardContentType === 'film') {
-                    const top10Title = a.titre || a.title || a.name || '';
-                    const cardTitleFromVar = cardTitle || '';
-                    
-                    if (!top10Title || !cardTitleFromVar) {
-                        return false;
-                    }
-                    
-                    const top10BaseTitle = extractBaseAnimeTitle(top10Title, 'film');
-                    const cardBaseTitle = extractBaseAnimeTitle(cardTitleFromVar, 'film');
-                    
-                    // Normaliser les titres de base pour la comparaison
-                    const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                    const normalizedCardBase = (cardBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                    
-                    // Si les titres de base correspondent exactement, masquer le bouton
-                    if (normalizedTop10Base && normalizedCardBase && normalizedTop10Base === normalizedCardBase) {
-                        return true;
-                    }
-                    
-                    // Pour les films, ne PAS utiliser la similarité, seulement la comparaison exacte par titre de base
-                    // (Les films ne doivent être comparés que par ID ou titre de base identique)
                 }
                 
                 return false;
@@ -5850,6 +5947,8 @@ function debounce(func, wait) {
 
 // Exposer la fonction globalement
 window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
+    if (isPublicUserProfilePage()) return;
+
     console.log('🎬 displayUserAnimeNotes appelée');
     
     // Monitoring des appels excessifs
@@ -6189,94 +6288,25 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 return false; // Exclure les contenus sans titre valide
             }
             
-            // Toujours détecter le type réel de l'anime (même si aucun filtre n'est appliqué)
-            // Déterminer le type de l'anime
-            // IMPORTANT: Ne pas utiliser isManga comme fallback car cela peut causer des erreurs
-            let animeType = anime.contentType || 'anime';
-            
-            // Liste de titres connus qui sont des animes, pas des mangas (Kingdom exclu : anime+manga)
-            const knownAnimeTitles = ['high school dxd', 'high school d×d', 'food wars', 'shokugeki', 
+            const knownAnimeTitles = ['high school dxd', 'high school d×d', 'food wars', 'shokugeki',
                                      'kaguya', 'steins gate', 'grand blue'];
             const animeTitle = (anime.titre || anime.title || anime.name || '').toLowerCase();
             const isKnownAnime = knownAnimeTitles.some(title => animeTitle.includes(title));
-            
-            // Si c'est un anime connu, forcer le type à 'anime' même si isManga est true
-            if (isKnownAnime) {
+
+            let animeType = resolveProfileNoteContentType(anime);
+            if (isKnownAnime || anime.contentType === 'anime' || anime.isManga === false) {
                 animeType = 'anime';
-            } else if (!anime.contentType && anime.isManga) {
-                // Fallback pour les anciennes notes qui utilisent isManga (seulement si ce n'est pas un anime connu)
-                animeType = 'manga';
-            }
-            
-            // Détecter les doujins, romans, manhua et manhwa basé sur le titre ou d'autres critères
-            // PRIORITÉ: Utiliser contentType d'abord, puis détecter par titre/genres
-            // IMPORTANT: Ne pas surcharger le contentType 'anime' si il est explicitement défini
-            // IMPORTANT: Ne jamais classer un anime connu comme doujin
-            if (anime.contentType === 'anime' || isKnownAnime) {
-                // Si contentType est explicitement 'anime' ou si c'est un anime connu, ne jamais le changer
-                animeType = 'anime';
-            } else if (anime.contentType === 'doujin') {
+            } else if (isExplicitDoujinNote(anime)) {
                 animeType = 'doujin';
-            } else if (anime.contentType === 'roman') {
-                animeType = 'roman';
             } else if (anime.contentType === 'manhua') {
                 animeType = 'manhua';
             } else if (anime.contentType === 'manhwa') {
                 animeType = 'manhwa';
-            } else if (anime.contentType === 'manga') {
-                animeType = 'manga';
+            } else if (anime.contentType === 'roman') {
+                animeType = 'roman';
             } else if (anime.contentType === 'film') {
                 animeType = 'film';
-            } else if (!isKnownAnime && anime.titre && (
-                anime.titre.toLowerCase().includes('doujin') ||
-                anime.titre.toLowerCase().includes('totally captivated') ||
-                anime.titre.toLowerCase().includes('hentai') ||
-                // Détection plus large pour les doujins
-                anime.titre.toLowerCase().includes('sex') ||
-                anime.titre.toLowerCase().includes('adult') ||
-                // Ne pas utiliser 'ecchi' dans le titre - c'est un genre, pas un type de contenu
-                // anime.titre.toLowerCase().includes('ecchi') ||
-                // Détection STRICTE par genres - seulement si c'est vraiment explicite (hentai, erotica, adult)
-                // IMPORTANT: Ne pas utiliser "ecchi", "mature", "yuri", "yaoi", "boys love", "girls love", "smut"
-                // car ce sont des genres, pas des types de contenu
-                (anime.genres && anime.genres.some(g => {
-                    const gLower = g.toLowerCase();
-                    return gLower.includes('hentai') || 
-                           gLower.includes('erotica') || 
-                           gLower.includes('adult');
-                })) ||
-                // Vérifier aussi l'ID
-                (anime.id && String(anime.id).toLowerCase().includes('doujin'))
-            )) {
-                animeType = 'doujin';
-            } else if (anime.titre && (
-                anime.titre.toLowerCase().includes('roman') ||
-                anime.titre.toLowerCase().includes('novel') ||
-                (anime.id && anime.id.toString().includes('roman'))
-            )) {
-                animeType = 'roman';
-            } else if (anime.titre && (
-                anime.titre.toLowerCase().includes('manhua') ||
-                anime.titre.toLowerCase().includes('sq: begin w/your name') ||
-                anime.titre.toLowerCase().includes('sq begin') ||
-                anime.titre.toLowerCase().includes('begin w/your name') ||
-                anime.titre.toLowerCase().includes('begin with your name') ||
-                (anime.id && anime.id.toString().includes('manhua'))
-            )) {
-                animeType = 'manhua';
-            } else if (anime.titre && (
-                anime.titre.toLowerCase().includes('manhwa') ||
-                (anime.id && anime.id.toString().includes('manhwa')) ||
-                // Détection par patterns typiques des manhwa coréens
-                anime.titre.toLowerCase().includes('on the way to meet mom') ||
-                anime.titre.toLowerCase().includes('solo leveling') ||
-                anime.titre.toLowerCase().includes('tower of god') ||
-                anime.titre.toLowerCase().includes('noblesse') ||
-                anime.titre.toLowerCase().includes('the beginning after the end')
-            )) {
-                animeType = 'manhwa';
             }
-            // Si aucun type spécial n'est détecté et que contentType n'est pas défini, garder 'anime' par défaut
             
             // Filtrer par type si un type est sélectionné (et que ce n'est pas "Tous types" ou "tous")
             const selectedType = window.selectedType;
@@ -6298,25 +6328,20 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 console.log(`🔍 [STEINS;GATE FILTER] Avant vérification genres: animeType=${animeType}, selectedGenres=${JSON.stringify(selectedGenres)}, selectedType=${selectedType}`);
             }
             
-            // Vérifier uniquement les genres pour les doujins/manhua/manhwa
-            // Les autres types (anime, manga, film, etc.) passent sans restriction de genre
-            if (animeType === 'doujin' && !selectedGenres.includes('Doujin') && selectedType !== 'doujin') {
-                if (anime.id === 9253) {
-                    console.log(`❌ [STEINS;GATE FILTER] Exclu: doujin sans genre`);
+            // Sous-types manga : visibles dans l'onglet Manga (comme le profil public)
+            if (selectedType === 'manga') {
+                if (anime.contentType === 'anime' || anime.isManga === false) return false;
+                if (!isMangaFamilyContentType(animeType) && !anime.isManga) return false;
+            } else {
+                if (animeType === 'doujin' && !selectedGenres.includes('Doujin') && selectedType !== 'doujin') {
+                    return false;
                 }
-                return false;
-            }
-            if (animeType === 'manhua' && !selectedGenres.includes('Manhua') && selectedType !== 'manhua') {
-                if (anime.id === 9253) {
-                    console.log(`❌ [STEINS;GATE FILTER] Exclu: manhua sans genre`);
+                if (animeType === 'manhua' && !selectedGenres.includes('Manhua') && selectedType !== 'manhua') {
+                    return false;
                 }
-                return false;
-            }
-            if (animeType === 'manhwa' && !selectedGenres.includes('Manhwa') && selectedType !== 'manhwa') {
-                if (anime.id === 9253) {
-                    console.log(`❌ [STEINS;GATE FILTER] Exclu: manhwa sans genre`);
+                if (animeType === 'manhwa' && !selectedGenres.includes('Manhwa') && selectedType !== 'manhwa') {
+                    return false;
                 }
-                return false;
             }
             
             // Pour tous les autres types (anime, manga, film, etc.), continuer pour vérifier la note
@@ -6635,16 +6660,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 } else if (!anime.contentType && anime.isManga) {
                     // Fallback pour les anciennes notes qui utilisent encore isManga (seulement si ce n'est pas un anime connu)
                     animeType = 'manga';
-                } else if (!isKnownAnimeFilter && anime.titre && (
-                    anime.titre.toLowerCase().includes('doujin') ||
-                    anime.titre.toLowerCase().includes('totally captivated') ||
-                    anime.titre.toLowerCase().includes('hentai') ||
-                    (anime.genres && anime.genres.some(g => {
-                        const gLower = g.toLowerCase();
-                        // Détection STRICTE - seulement hentai, erotica, adult (PAS ecchi)
-                        return gLower.includes('erotica') || gLower.includes('adult') || gLower.includes('hentai');
-                    }))
-                )) {
+                } else if (isExplicitDoujinNote(anime)) {
                     animeType = 'doujin';
                 } else if (anime.contentType === 'roman' || (anime.titre && (
                     anime.titre.toLowerCase().includes('roman') ||
@@ -6695,28 +6711,21 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 }
                 // Si le type sélectionné est "manga", afficher UNIQUEMENT les mangas (pas les anime)
                 else if (selectedType === 'manga') {
-                    // IMPORTANT: Si c'est un manga dans les notes (même si c'est dans la liste des animes connus), l'inclure
-                    if (animeType === 'manga' || isMangaInNotes) {
+                    if (anime.contentType === 'anime' || anime.isManga === false) {
+                        shouldInclude = false;
+                    } else if (animeType === 'manga' || animeType === 'doujin' || isMangaInNotes) {
                         shouldInclude = true;
                     } else if (!anime.contentType && anime.isManga) {
-                        // Si isManga est true mais pas de contentType, considérer comme manga
                         shouldInclude = true;
                     } else if (animeType === 'manhua' || animeType === 'manhwa') {
-                        // Permettre les manhua/manhwa si leur genre est sélectionné
                         const genreToCheck = animeType === 'manhua' ? 'Manhua' : 'Manhwa';
-                        if (selectedGenres.includes(genreToCheck)) {
-                            shouldInclude = true;
-                        } else {
-                            shouldInclude = false;
-                        }
+                        shouldInclude = selectedGenres.includes(genreToCheck);
+                    } else if (isMangaFamilyContentType(animeType)) {
+                        shouldInclude = true;
+                    } else if (isKnownAnimeFilter && !isMangaInNotes) {
+                        shouldInclude = false;
                     } else {
-                        // Exclure les anime et autres types
-                        // Si c'est un anime connu et que ce n'est pas un manga dans les notes, exclure
-                        if (isKnownAnimeFilter && !isMangaInNotes) {
-                            shouldInclude = false;
-                        } else {
-                            shouldInclude = false;
-                        }
+                        shouldInclude = false;
                     }
                 }
                 // Si le type sélectionné est "anime", afficher UNIQUEMENT les anime
@@ -6766,16 +6775,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     animeType = 'manga';
                 }
                 
-                // Détecter les doujins, manhua, manhwa
-                if (anime.contentType === 'doujin' || (anime.titre && (
-                    anime.titre.toLowerCase().includes('doujin') ||
-                    anime.titre.toLowerCase().includes('totally captivated') ||
-                    anime.titre.toLowerCase().includes('hentai') ||
-                    (anime.genres && anime.genres.some(g => {
-                        const gLower = g.toLowerCase();
-                        return gLower.includes('erotica') || gLower.includes('adult') || gLower.includes('hentai');
-                    }))
-                ))) {
+                if (isExplicitDoujinNote(anime)) {
                     animeType = 'doujin';
                 } else if (anime.contentType === 'manhua' || (anime.titre && anime.titre.toLowerCase().includes('manhua'))) {
                     animeType = 'manhua';
@@ -7483,6 +7483,10 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                                 return false; // Types différents, ce n'est pas la même carte
                             }
                             
+                            if (top10ButtonHideUsesIdOnlyForFilms(animeContentType, top10ContentType, type)) {
+                                return false;
+                            }
+                            
                             // Pour les animes UNIQUEMENT, comparer aussi par titre de base et similarité
                             // MAIS seulement si les deux sont des anime (pas de film)
                             if (type === 'anime' && top10ContentType === 'anime' && animeContentType === 'anime') {
@@ -7528,32 +7532,6 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                                 }
                             }
                             
-                            // Pour les films UNIQUEMENT, comparer aussi par titre de base et similarité
-                            // MAIS seulement si les deux sont des films (pas d'anime)
-                            if (type === 'film' && top10ContentType === 'film' && animeContentType === 'film') {
-                                const top10Title = a.titre || a.title || a.name || '';
-                                const animeTitleFromVar = animeTitle || '';
-                                
-                                if (!top10Title || !animeTitleFromVar) {
-                                    return false;
-                                }
-                                
-                                const top10BaseTitle = extractBaseAnimeTitle(top10Title, 'film');
-                                const animeBaseTitle = extractBaseAnimeTitle(animeTitleFromVar, 'film');
-                                
-                                // Normaliser les titres de base pour la comparaison
-                                const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                                const normalizedAnimeBase = (animeBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                                
-                                // Si les titres de base correspondent exactement, masquer le bouton
-                                if (normalizedTop10Base && normalizedAnimeBase && normalizedTop10Base === normalizedAnimeBase) {
-                                    return true;
-                                }
-                                
-                                // Pour les films, ne PAS utiliser la similarité, seulement la comparaison exacte par titre de base
-                                // (Les films ne doivent être comparés que par ID ou titre de base identique)
-                            }
-                            
                             return false;
                         });
                         shouldHideButton = isInGenreTop10;
@@ -7595,6 +7573,10 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                             // Si les types sont différents (ex: film vs anime), ne pas comparer par titre
                             if (top10ContentType && animeContentType && top10ContentType !== animeContentType) {
                                 return false; // Types différents, ce n'est pas la même carte
+                            }
+                            
+                            if (top10ButtonHideUsesIdOnlyForFilms(animeContentType, top10ContentType, type)) {
+                                return false;
                             }
                             
                             // Pour les animes UNIQUEMENT, comparer aussi par titre de base et similarité
@@ -7659,20 +7641,6 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                                         return true;
                                     }
                                 }
-                            }
-                            
-                            // Pour les films UNIQUEMENT, comparer aussi par titre de base et similarité
-                            // MAIS seulement si les deux sont des films (pas d'anime)
-                            if (type === 'film' && top10ContentType === 'film' && animeContentType === 'film') {
-                                const top10Title = a.titre || a.title || a.name || '';
-                                const top10BaseTitle = extractBaseAnimeTitle(top10Title, 'film');
-                                const animeBaseTitle = extractBaseAnimeTitle(animeTitle, 'film');
-                                // Si les titres de base correspondent exactement, masquer le bouton
-                                if (top10BaseTitle && animeBaseTitle && top10BaseTitle === animeBaseTitle) {
-                                    return true;
-                                }
-                                // Pour les films, ne PAS utiliser la similarité, seulement la comparaison exacte par titre de base
-                                // (Les films ne doivent être comparés que par ID ou titre de base identique)
                             }
                             
                             return false;
@@ -8631,6 +8599,12 @@ function extractBaseAnimeTitle(title, contentType = null) {
     baseTitle = baseTitle.replace(/^[-():\s]+|[-():\s]+$/g, '');
     
     return baseTitle || title; // Retourner le titre original si le résultat est vide
+}
+
+// Films : masquer le bouton "..." uniquement si l'ID est dans le top 10
+// (plusieurs films d'une même œuvre peuvent coexister dans le top 10)
+function top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentType, contextType) {
+    return cardContentType === 'film' || top10ContentType === 'film' || contextType === 'film';
 }
 
 // Fonction pour comparer deux titres d'anime, film ou manga et déterminer s'ils sont similaires (même série)
@@ -10226,115 +10200,86 @@ function normalizeTop10Type(type) {
 async function getUserTop10(user, genre = null, type = null) {
     const finalType = normalizeTop10Type(type);
     
-    // IMPORTANT: Si un genre est spécifié, charger depuis localStorage d'abord
-    // car les Top 10 par genre sont stockés dans localStorage, pas dans Firebase
+    // Top 10 par genre : stockage séparé du top 10 global
     if (genre && typeof genre === 'string' && genre.trim() !== '') {
         const top10Key = getUserTop10Key(user, genre, finalType);
         try {
             const stored = localStorage.getItem(top10Key);
             if (stored) {
                 const top10 = JSON.parse(stored);
-                // S'assurer que c'est un tableau de 10 éléments
                 while (top10.length < 10) {
                     top10.push(null);
                 }
-                console.log(`📊 Top 10 chargé depuis localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
                 return top10.slice(0, 10);
-            } else {
-                // Si aucun Top 10 spécifique n'existe pour ce genre dans localStorage,
-                // vérifier si on est sur la page publique (user-profile) et essayer Firebase
-                // car les Top 10 peuvent être synchronisés différemment
-                console.log(`📊 Aucun Top 10 trouvé dans localStorage pour genre: ${genre}, type: ${finalType}, utilisateur: ${user.email}`);
-                
-                // Si Firebase est disponible, essayer de charger depuis Firebase
-                // et filtrer par genre en vérifiant les genres des contenus
-                if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
-                    try {
-                        const top10Data = await window.firebaseTop10Service.getTop10(user.email);
-                        const genreArray = genre.split(',').map(g => g.trim().toLowerCase());
-                        
-                        // Filtrer par type et par genre
-                        const filteredTop10 = new Array(10).fill(null);
-                        for (const item of top10Data) {
-                            if (!finalType || item.contentType === finalType) {
-                                // Vérifier si le contenu a au moins un des genres sélectionnés
-                                const itemGenres = (item.genres || []).map(g => {
-                                    if (typeof g === 'object' && g !== null && g.name) {
-                                        return String(g.name).toLowerCase().trim();
-                                    }
-                                    return String(g).toLowerCase().trim();
-                                });
-                                
-                                const hasMatchingGenre = genreArray.some(selectedGenre => {
-                                    return itemGenres.some(itemGenre => {
-                                        return itemGenre === selectedGenre || 
-                                               itemGenre.includes(selectedGenre) || 
-                                               selectedGenre.includes(itemGenre);
-                                    });
-                                });
-                                
-                                if (hasMatchingGenre) {
-                                    const rang = item.rang || 1;
-                                    if (rang >= 1 && rang <= 10) {
-                                        filteredTop10[rang - 1] = {
-                                            id: item.id,
-                                            titre: item.titre,
-                                            title: item.titre,
-                                            name: item.titre,
-                                            contentType: item.contentType,
-                                            image: item.image,
-                                            synopsis: item.synopsis,
-                                            genres: item.genres || [],
-                                            score: item.score || 0
-                                        };
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // Vérifier si on a trouvé des éléments
-                        const hasItems = filteredTop10.some(item => item !== null);
-                        if (hasItems) {
-                console.log(`📊 Top 10 chargé depuis Firebase (filtré par genre) pour genre: ${genre}, type: ${finalType || 'all'}`);
-                            return filteredTop10;
-                        }
-                    } catch (err) {
-                        console.error('❌ Erreur lors du chargement du top 10 depuis Firebase:', err);
+            }
+
+            // Fallback Firebase (profil public / autre appareil)
+            if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
+                if (typeof window.firebaseTop10Service.getTop10Slots === 'function') {
+                    const genreKey = window.firebaseTop10Service.normalizeGenreKey
+                        ? window.firebaseTop10Service.normalizeGenreKey(genre)
+                        : genre;
+                    const slots = await window.firebaseTop10Service.getTop10Slots(user.email, {
+                        genreKey: genreKey,
+                        type: finalType
+                    });
+                    if (slots.some(item => item !== null)) {
+                        return slots;
                     }
                 }
-                
-                // Si aucun Top 10 spécifique n'existe, retourner un tableau vide
-                return new Array(10).fill(null);
             }
+
+            return new Array(10).fill(null);
         } catch (err) {
             console.error('❌ Erreur lors du chargement du top 10 depuis localStorage:', err);
             return new Array(10).fill(null);
         }
     }
     
-    // Si aucun genre n'est spécifié, charger depuis Firebase (Top 10 global)
+    // Top 10 global : localStorage en priorité (évite le flash pendant la synchro Firebase)
+    const globalLocalKey = getUserTop10Key(user, null, finalType);
+    try {
+        const globalStored = localStorage.getItem(globalLocalKey);
+        if (globalStored) {
+            const localTop10 = JSON.parse(globalStored);
+            while (localTop10.length < 10) localTop10.push(null);
+            return localTop10.slice(0, 10);
+        }
+    } catch (err) {
+        console.error('❌ Erreur lors du chargement du top 10 global depuis localStorage:', err);
+    }
+
+    // Si aucun genre n'est spécifié, charger depuis Firebase (Top 10 global uniquement)
     if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
         try {
-            const top10Data = await window.firebaseTop10Service.getTop10(user.email);
-            // Convertir en tableau de 10 éléments avec null pour les emplacements vides
+            if (typeof window.firebaseTop10Service.getTop10Slots === 'function') {
+                const top10FromFirebase = await window.firebaseTop10Service.getTop10Slots(user.email, {
+                    genreKey: '',
+                    type: finalType
+                });
+                if (top10FromFirebase.some(item => item !== null)) {
+                    return top10FromFirebase;
+                }
+            }
+            const top10Data = await window.firebaseTop10Service.getTop10(user.email, {
+                genreKey: '',
+                type: finalType
+            });
             const top10 = new Array(10).fill(null);
             for (const item of top10Data) {
-                // Filtrer par type si spécifié
-                if (!finalType || item.contentType === finalType) {
-                    const rang = item.rang || 1;
-                    if (rang >= 1 && rang <= 10) {
-                        top10[rang - 1] = {
-                            id: item.id,
-                            titre: item.titre,
-                            title: item.titre,
-                            name: item.titre,
-                            contentType: item.contentType,
-                            image: item.image,
-                            synopsis: item.synopsis,
-                            genres: item.genres || [],
-                            score: item.score || 0
-                        };
-                    }
+                const rang = item.rang || 1;
+                if (rang >= 1 && rang <= 10) {
+                    top10[rang - 1] = {
+                        id: item.id,
+                        titre: item.titre,
+                        title: item.titre,
+                        name: item.titre,
+                        contentType: item.contentType,
+                        image: item.image,
+                        synopsis: item.synopsis,
+                        genres: item.genres || [],
+                        score: item.score || 0
+                    };
                 }
             }
             const hasItems = top10.some(item => item !== null);
@@ -10389,66 +10334,82 @@ async function setUserTop10(user, top10, genre = null, type = null) {
     }
     
     const finalType = normalizeTop10Type(type);
-    
-    // Top 10 par genre : Firebase ne gère pas les clés par genre, donc toujours utiliser localStorage
-    // (sinon on écraserait le Top 10 global au lieu d'enregistrer le Top 10 du genre)
-    if (genre && typeof genre === 'string' && genre.trim() !== '') {
-        const top10Key = getUserTop10Key(user, genre, finalType);
-        try {
-            localStorage.setItem(top10Key, JSON.stringify(cleanTop10));
+    const hasGenre = genre && typeof genre === 'string' && genre.trim() !== '';
+    const localKey = getUserTop10Key(user, hasGenre ? genre : null, finalType);
+
+    window.top10SaveInProgress = true;
+    try {
+        // Toujours écrire le cache local en premier pour un affichage stable (pas de flash)
+        localStorage.setItem(localKey, JSON.stringify(cleanTop10));
+
+        if (hasGenre) {
             console.log('✅ Top 10 (genre) sauvegardé dans localStorage, genre:', genre, 'type:', finalType || 'all');
-        } catch (err) {
-            console.error('❌ Erreur lors de la sauvegarde localStorage (genre):', err);
-            throw err;
-        }
-    } else if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
-        // Top 10 global : Firebase
-        try {
-            const existingTop10 = await window.firebaseTop10Service.getTop10(user.email);
-            for (const item of existingTop10) {
-                const itemType = item.contentType || 'anime';
-                if (!finalType || itemType === finalType) {
-                    await window.firebaseTop10Service.deleteTop10Item(user.email, item.id, itemType);
-                }
-            }
-            for (let i = 0; i < cleanTop10.length; i++) {
-                if (cleanTop10[i]) {
-                    const itemContentType = cleanTop10[i].contentType || finalType;
-                    await window.firebaseTop10Service.saveTop10Item(user.email, {
-                        id: cleanTop10[i].id,
-                        contentType: itemContentType,
-                        rang: i + 1,
-                        titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
-                        image: cleanTop10[i].image,
-                        synopsis: cleanTop10[i].synopsis,
-                        genres: cleanTop10[i].genres || [],
-                        score: cleanTop10[i].score || 0
+            if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
+                try {
+                    const genreKey = window.firebaseTop10Service.normalizeGenreKey
+                        ? window.firebaseTop10Service.normalizeGenreKey(genre)
+                        : String(genre).toLowerCase().replace(/\s+/g, '_').replace(/,/g, '_');
+                    await window.firebaseTop10Service.deleteTop10Scope(user.email, {
+                        genreKey: genreKey,
+                        type: finalType
                     });
+                    for (let i = 0; i < cleanTop10.length; i++) {
+                        if (cleanTop10[i]) {
+                            const itemContentType = cleanTop10[i].contentType || finalType || 'anime';
+                            await window.firebaseTop10Service.saveTop10Item(user.email, {
+                                id: cleanTop10[i].id,
+                                contentType: itemContentType,
+                                genreKey: genreKey,
+                                rang: i + 1,
+                                titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
+                                image: cleanTop10[i].image,
+                                synopsis: cleanTop10[i].synopsis,
+                                genres: cleanTop10[i].genres || [],
+                                score: cleanTop10[i].score || 0
+                            });
+                        }
+                    }
+                    console.log('✅ Top 10 (genre) sauvegardé dans Firebase, genre:', genre);
+                } catch (err) {
+                    console.error('❌ Erreur lors de la sauvegarde Firebase (genre):', err);
                 }
             }
-            console.log('✅ Top 10 global sauvegardé dans Firebase pour type:', finalType || 'all');
-            // Toujours maintenir un cache local pour affichage instantané
-            const localKey = getUserTop10Key(user, null, finalType);
-            localStorage.setItem(localKey, JSON.stringify(cleanTop10));
-        } catch (err) {
-            console.error('❌ Erreur lors de la sauvegarde Firebase:', err);
-            // Fallback local en cas d'échec cloud
+        } else if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
+            // Top 10 global : synchro Firebase (scope global uniquement, pas les top 10 par genre)
             try {
-                const localKey = getUserTop10Key(user, null, finalType);
-                localStorage.setItem(localKey, JSON.stringify(cleanTop10));
-            } catch (e) {}
-            throw err;
-        }
-    } else {
-        // Top 10 global, fallback localStorage
-        const top10Key = getUserTop10Key(user, null, finalType);
-        try {
-            localStorage.setItem(top10Key, JSON.stringify(cleanTop10));
+                await window.firebaseTop10Service.deleteTop10Scope(user.email, {
+                    genreKey: '',
+                    type: finalType
+                });
+                for (let i = 0; i < cleanTop10.length; i++) {
+                    if (cleanTop10[i]) {
+                        const itemContentType = cleanTop10[i].contentType || finalType;
+                        await window.firebaseTop10Service.saveTop10Item(user.email, {
+                            id: cleanTop10[i].id,
+                            contentType: itemContentType,
+                            genreKey: '',
+                            rang: i + 1,
+                            titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
+                            image: cleanTop10[i].image,
+                            synopsis: cleanTop10[i].synopsis,
+                            genres: cleanTop10[i].genres || [],
+                            score: cleanTop10[i].score || 0
+                        });
+                    }
+                }
+                console.log('✅ Top 10 global sauvegardé dans Firebase pour type:', finalType || 'all');
+            } catch (err) {
+                console.error('❌ Erreur lors de la sauvegarde Firebase:', err);
+                throw err;
+            }
+        } else {
             console.log('✅ Top 10 sauvegardé dans localStorage pour type:', finalType || 'all');
-        } catch (err) {
-            console.error('❌ Erreur lors de la sauvegarde localStorage:', err);
-            throw err;
         }
+    } catch (err) {
+        console.error('❌ Erreur lors de la sauvegarde du top 10:', err);
+        throw err;
+    } finally {
+        window.top10SaveInProgress = false;
     }
     
     // Marquer la mise à jour pour forcer le rafraîchissement au retour sur le profil
@@ -10466,6 +10427,11 @@ async function setUserTop10(user, top10, genre = null, type = null) {
             } 
         });
         document.dispatchEvent(event);
+    }
+
+    // Masquer immédiatement les boutons "..." sur les cartes visibles (pages étoiles > 1 incluses)
+    if (typeof refreshAllCardMoreButtons === 'function') {
+        setTimeout(() => refreshAllCardMoreButtons(true), 0);
     }
     
     return cleanTop10;
@@ -10549,7 +10515,19 @@ async function cleanTop10FromRemovedNotes() {
 let isRenderingTop10 = false;
 let lastRenderTime = 0;
 
-async function renderTop10Slots() {
+function top10MatchesCurrentView(genre, type) {
+    const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
+    const currentGenre = genres.length > 0 ? genres.slice().sort().join(',') : null;
+    const currentType = window.selectedType || null;
+    const eventGenre = (genre && String(genre).trim()) ? String(genre).trim() : null;
+    const eventType = type || null;
+    return String(eventGenre || '') === String(currentGenre || '') &&
+           String(eventType || '') === String(currentType || '');
+}
+
+async function renderTop10Slots(forcedTop10 = null) {
+    if (isPublicUserProfilePage()) return;
+
     // Protection contre les appels multiples (debounce)
     const now = Date.now();
     if (isRenderingTop10) {
@@ -10575,7 +10553,10 @@ async function renderTop10Slots() {
     
     // Si le type sélectionné est 'tous', récupérer tous les top 10 et les combiner
     let top10 = [];
-    if (type === 'tous') {
+    if (forcedTop10 && Array.isArray(forcedTop10)) {
+        top10 = forcedTop10.slice(0, 10).map(item => item || null);
+        while (top10.length < 10) top10.push(null);
+    } else if (type === 'tous') {
         const types = ['anime', 'manga', 'doujin', 'manhwa', 'manhua', 'film'];
         for (const t of types) {
             const typeTop10 = await getUserTop10(user, genre, t) || [];
@@ -10797,62 +10778,23 @@ async function renderTop10Slots() {
     const reviewsSection = document.getElementById('reviews-section');
     if (!reviewsSection) return;
     
-    const narrowTop10Grid = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+    const top10LayoutRender = getTop10LayoutMetrics();
     let top10Container = reviewsSection.querySelector('.card-list');
     if (!top10Container) {
         top10Container = document.createElement('div');
         top10Container.className = 'card-list';
         top10Container.style.cssText = `
-            display: grid;
-            grid-template-columns: ${narrowTop10Grid ? 'repeat(2, minmax(0, 1fr))' : 'repeat(5, 175px)'};
-            grid-template-rows: ${narrowTop10Grid ? 'repeat(5, auto)' : 'repeat(2, auto)'};
-            gap: ${narrowTop10Grid ? '8px' : '1.5rem'};
-            margin: ${narrowTop10Grid ? '1rem auto 0 auto' : '1.5rem auto 0 auto'};
-            justify-content: center;
-            justify-items: center;
+            margin: ${top10LayoutRender.narrow ? '1rem auto 0 auto' : '1.5rem auto 0 auto'};
             min-height: 400px;
             align-content: flex-start;
-            width: ${narrowTop10Grid ? '100%' : 'fit-content'};
-            max-width: ${narrowTop10Grid ? '100%' : 'calc(100% - 3rem)'};
             overflow: visible;
-            padding: ${narrowTop10Grid ? '0' : '0 1.5rem'};
-            box-sizing: border-box;
         `;
-        if (!narrowTop10Grid && window.innerWidth < 1200) {
-            top10Container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
-            top10Container.style.maxWidth = '100%';
-        }
+        applyTop10ContainerGridStyles(top10Container);
         reviewsSection.appendChild(top10Container);
-    }
-    
-    // Vider le conteneur
-    top10Container.innerHTML = '';
-    
-    top10Container.style.margin = narrowTop10Grid ? '1rem auto 0 auto' : '1.5rem auto 0 auto';
-    top10Container.style.display = 'grid';
-    if (narrowTop10Grid) {
-        top10Container.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))';
-        top10Container.style.gridTemplateRows = 'repeat(5, auto)';
-        top10Container.style.gap = '8px';
-        top10Container.style.width = '100%';
-        top10Container.style.maxWidth = '100%';
-        top10Container.style.padding = '0';
     } else {
-        top10Container.style.gridTemplateColumns = 'repeat(5, 175px)';
-        top10Container.style.gridTemplateRows = 'repeat(2, auto)';
-        top10Container.style.gap = '1.5rem';
-        top10Container.style.width = 'fit-content';
-        top10Container.style.maxWidth = 'calc(100% - 3rem)';
-        top10Container.style.padding = '0 1.5rem';
+        top10Container.style.margin = top10LayoutRender.narrow ? '1rem auto 0 auto' : '1.5rem auto 0 auto';
+        applyTop10ContainerGridStyles(top10Container);
     }
-    top10Container.style.justifyContent = 'center';
-    top10Container.style.justifyItems = 'center';
-    top10Container.style.boxSizing = 'border-box';
-    if (!narrowTop10Grid && window.innerWidth < 1200) {
-        top10Container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(175px, 1fr))';
-        top10Container.style.maxWidth = '100%';
-    }
-    
     for (let i = 0; i < 10; i++) {
         const slotUiIndex = i + 1;
         // IDs alignés sur createStarBadges : catalogue-card-1 … catalogue-card-10
@@ -10862,6 +10804,7 @@ async function renderTop10Slots() {
             if (!slot.getAttribute('data-slot-index')) {
                 slot.setAttribute('data-slot-index', i);
             }
+            applyTop10SlotCardStyles(slot, { bordered: true });
         }
         if (!slot) {
             slot = document.createElement('div');
@@ -10869,27 +10812,15 @@ async function renderTop10Slots() {
             slot.className = 'catalogue-card';
             slot.setAttribute('data-slot-index', i);
             slot.setAttribute('data-top-index', String(i));
-                    slot.style.cssText = `
-            flex: 0 0 170px;
-            width: 170px;
-            max-width: 170px;
-            min-width: 170px;
-            box-sizing: border-box;
+            slot.style.cssText = `
             margin: 0;
-            position: relative;
             background: #2a2d36;
             border-radius: 12px;
             padding: 1rem;
-            border: 2px solid #00b894;
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            overflow: hidden;
         `;
+            applyTop10SlotCardStyles(slot, { bordered: true });
             top10Container.appendChild(slot);
             
             // Attendre que le slot soit dans le DOM avant de continuer
@@ -11034,7 +10965,7 @@ async function renderTop10Slots() {
                     
                     
                     // Sauvegarder le top 10 mis à jour
-                    setUserTop10(user, top10, genre, window.selectedType);
+                    await setUserTop10(user, top10, genre, window.selectedType);
                     
                     // Ne pas appeler renderTop10Slots directement - l'événement top10Updated sera déclenché par setUserTop10
                     setTimeout(() => {
@@ -11065,6 +10996,7 @@ async function renderTop10Slots() {
                 }
             });
         }
+        clearTop10SlotEditControls(slot);
         slot.innerHTML = '';
         const anime = top10[i];
         
@@ -11213,18 +11145,18 @@ async function renderTop10Slots() {
             badge.innerHTML = `<div style="font-size: 1.4rem; color: #00b894; font-weight: bold;">${i+1}/10</div>`;
         }
         slot.appendChild(badge);
-        if (completeAnimeData) {
-            
+        if (isTop10SlotFilled(completeAnimeData)) {
+            slot.setAttribute('data-anime-id', String(completeAnimeData.id));
             // Affiche l'anime dans le slot
             const img = document.createElement('img');
             img.src = completeAnimeData.image || completeAnimeData.img || completeAnimeData.cover || '';
             img.alt = completeAnimeData.titre || completeAnimeData.title || completeAnimeData.name || '';
-            img.style.cssText = 'width:110px;height:145px;object-fit:cover;display:block;object-position:center center;margin:0 auto 0.8rem auto;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);';
+            img.style.cssText = getTop10ImageStyleCss();
             slot.appendChild(img);
             
             const titre = document.createElement('span');
             titre.className = 'anime-title';
-            titre.style.cssText = 'color:#00b894;font-size:1.1rem;font-weight:800;text-align:center;margin-top:0.5rem;display:block;max-width:100%;word-wrap:break-word;line-height:1.2;';
+            titre.style.cssText = `color:#00b894;font-size:${top10LayoutRender.titleFontSize};font-weight:800;text-align:center;margin-top:0.5rem;display:block;max-width:100%;word-wrap:break-word;line-height:1.2;`;
             
             // S'assurer qu'on a un titre valide
             // Pour les animes, utiliser le titre de base (sans saison/partie) pour l'affichage
@@ -11488,18 +11420,6 @@ async function renderTop10Slots() {
                 moreBtn.style.display = 'flex';
             });
             
-            // Empêcher la suppression du bouton
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.type === 'childList' && !slot.contains(moreBtn)) {
-                        console.log('Bouton "..." supprimé, le recréer');
-                        slot.appendChild(moreBtn);
-                    }
-                });
-            });
-            
-            observer.observe(slot, { childList: true });
-            
             // Ne pas utiliser setInterval ici car cela crée des intervalles infinis
             // Le bouton devrait déjà être visible grâce aux styles CSS
             
@@ -11735,11 +11655,11 @@ async function renderTop10Slots() {
                         });
                     }
                     
-                    // Rafraîchir l'affichage du top 10
-                    await renderTop10Slots();
-                    
-                    // Attendre un peu pour s'assurer que la sauvegarde est complète et que Firebase a synchronisé
-                    await new Promise(resolve => setTimeout(resolve, 500));
+                    // renderTop10Slots + boutons "..." via top10Updated
+                    if (typeof refreshAllCardMoreButtons === 'function') {
+                        refreshAllCardMoreButtons(true);
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 200));
                     
                     // Mettre à jour tous les boutons "..." pour réafficher "Ajouter au top 10" si nécessaire
                     // Utiliser refreshAllCardMoreButtons qui gère correctement la vérification du Top 10
@@ -11841,28 +11761,16 @@ async function renderTop10Slots() {
                 };
             }
         } else {
-            // Placeholder
+            clearTop10SlotEditControls(slot);
             const image = document.createElement('div');
             image.className = 'catalogue-image-placeholder';
-            image.style.cssText = `
-                width: 110px;
-                height: 145px;
-                background: #2a2d36;
-                border-radius: 10px;
-                margin: 0 auto 0.8rem auto;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: #bdbdbd;
-                font-size: 2.2rem;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            `;
+            image.style.cssText = getTop10PlaceholderStyleCss();
             image.innerHTML = `${i+1}`;
             slot.appendChild(image);
             const titre = document.createElement('span');
             titre.className = 'anime-title';
-            titre.style.cssText = 'color:#00b894;font-size:1.1rem;font-weight:800;text-align:center;margin-top:0.5rem;display:block;max-width:100%;word-wrap:break-word;line-height:1.2;';
-            titre.textContent = `Anime ${i+1}`;
+            titre.style.cssText = `color:#00b894;font-size:${top10LayoutRender.titleFontSize};font-weight:800;text-align:center;margin-top:0.5rem;display:block;max-width:100%;word-wrap:break-word;line-height:1.2;`;
+            titre.textContent = '-';
             slot.appendChild(titre);
         }
     }
@@ -12223,6 +12131,10 @@ displayUserAnimeNotes = function() {
                         return false; // Types différents, ce n'est pas la même carte
                     }
                     
+                    if (top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentType, starContainerType)) {
+                        return false;
+                    }
+                    
                     // Pour les animes ET mangas, comparer aussi par titre de base et similarité
                     // MAIS seulement si les deux sont du même type (anime/anime, manga/manga, pas de mélange)
                     // IMPORTANT: Vérifier si cardContentType est 'anime' ou 'manga' et que top10ContentType correspond
@@ -12352,20 +12264,6 @@ displayUserAnimeNotes = function() {
                         console.log(`⚠️ [BUTTON DEBUG UPDATE] Comparaison SKIPPÉE pour animeId=${animeId}, cardContentType=${cardContentType}, top10ContentType=${top10ContentType}, starContainerType=${starContainerType}`);
                     }
                     
-                    // Pour les films UNIQUEMENT, comparer aussi par titre de base et similarité
-                    // MAIS seulement si les deux sont des films (pas d'anime)
-                    if (starContainerType === 'film' && top10ContentType === 'film' && cardContentType === 'film') {
-                        const top10Title = a.titre || a.title || a.name;
-                        const top10BaseTitle = extractBaseAnimeTitle(top10Title, 'film');
-                        const cardBaseTitle = extractBaseAnimeTitle(cardTitle, 'film');
-                        // Si les titres de base correspondent exactement, masquer le bouton
-                        if (top10BaseTitle === cardBaseTitle && top10BaseTitle) {
-                            return true;
-                        }
-                        // Pour les films, ne PAS utiliser la similarité, seulement la comparaison exacte par titre de base
-                        // (Les films ne doivent être comparés que par ID ou titre de base identique)
-                    }
-                    
                     return false;
                 });
                 shouldHideButton = isInGlobalTop10;
@@ -12377,10 +12275,12 @@ displayUserAnimeNotes = function() {
         const mainMoreMenu = card.querySelector('.card-more-menu, .dropdown-menu');
         if (mainMoreBtn) {
             // Ne pas masquer les boutons dans le top 10 (ils ont l'attribut data-in-top10 ou data-top10-button)
-            const isInTop10Slot = mainMoreBtn.hasAttribute('data-in-top10') || 
-                                  mainMoreBtn.hasAttribute('data-top10-button') ||
-                                  card.closest('[id^="catalogue-card-"]') !== null ||
-                                  card.closest('.top10-slot') !== null;
+            const isTop10GridSlot = /^catalogue-card-\d+$/.test(card.id || '') && !!card.closest('.card-list');
+            const top10Img = isTop10GridSlot ? card.querySelector('img') : null;
+            const top10ImgSrc = top10Img && top10Img.getAttribute('src');
+            const top10SlotHasCard = !!(top10ImgSrc && String(top10ImgSrc).trim());
+            const isInTop10Slot = isTop10GridSlot && top10SlotHasCard &&
+                (mainMoreBtn.hasAttribute('data-in-top10') || mainMoreBtn.hasAttribute('data-top10-button'));
             
             if (shouldHideButton && !isInTop10Slot) {
                 console.log(`🔘 [BUTTON HIDE UPDATE] Masquage du bouton pour la carte ${animeId}`);
@@ -12551,33 +12451,43 @@ function preventDropOnNonTop10Containers() {
 let isRefreshingButtons = false;
 let lastRefreshTime = 0;
 
-async function refreshAllCardMoreButtons() {
-    // Protection contre les appels multiples (debounce)
+async function refreshAllCardMoreButtons(force = false) {
+    if (isPublicUserProfilePage()) return;
+
+    document.querySelectorAll('.card-list .catalogue-card[id^="catalogue-card-"]').forEach(function(slot) {
+        const img = slot.querySelector('img');
+        const imgSrc = img && img.getAttribute('src');
+        const hasContent = !!(imgSrc && String(imgSrc).trim() && !String(imgSrc).endsWith('/'));
+        if (!hasContent) clearTop10SlotEditControls(slot);
+    });
+
+    // Protection contre les appels multiples (debounce) — contourné après ajout/retrait top 10
     const now = Date.now();
-    if (isRefreshingButtons) {
-        // Log désactivé pour éviter les logs infinis
-        return;
-    }
-    if (now - lastRefreshTime < 500) { // Minimum 500ms entre les appels
-        // Log désactivé pour éviter les logs infinis
-        return;
+    if (!force) {
+        if (isRefreshingButtons) return;
+        if (now - lastRefreshTime < 500) return;
     }
     
     isRefreshingButtons = true;
     lastRefreshTime = now;
-    // Récupérer le top 10 une seule fois pour toutes les cartes
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     let top10Data = [];
     if (user && user.email) {
         try {
-            top10Data = await getUserTop10(user.email);
-            // Log des IDs dans le top 10 pour déboguer
-            const top10Ids = top10Data.map(item => item.id);
-            console.log(`🔍 [REFRESH BUTTONS] IDs dans le top 10:`, top10Ids);
-            const top10Titles = top10Data.map(item => item.titre || item.title || item.name || 'N/A');
-            console.log(`🔍 [REFRESH BUTTONS] Titres dans le top 10:`, top10Titles);
+            const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
+            const genre = genres.length > 0 ? genres.slice().sort().join(',') : null;
+            let type = window.selectedType || null;
+            if (type === 'manga') {
+                const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
+                if (genres.some(g => typeGenres.includes(g))) {
+                    if (genres.includes('Doujin')) type = 'doujin';
+                    else if (genres.includes('Manhwa')) type = 'manhwa';
+                    else if (genres.includes('Manhua')) type = 'manhua';
+                }
+            }
+            top10Data = await getUserTop10(user, genre, type);
         } catch (err) {
-            console.error(`❌ [REFRESH BUTTONS] Erreur lors de la récupération du top 10:`, err);
+            console.error('❌ [REFRESH BUTTONS] Erreur lors de la récupération du top 10:', err);
         }
     }
     
@@ -12817,6 +12727,10 @@ async function refreshAllCardMoreButtons() {
                     // Si les types sont différents (ex: film vs anime), ne pas comparer par titre
                     if (top10ContentTypeCheck && cardContentType && top10ContentTypeCheck !== cardContentType) {
                         return false; // Types différents, ce n'est pas la même carte
+                    }
+                    
+                    if (top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentTypeCheck, type)) {
+                        return false;
                     }
                     
                     // Pour les animes ET mangas, comparer aussi par titre de base et similarité
@@ -13088,24 +13002,10 @@ async function refreshAllCardMoreButtons() {
                         console.log(`⚠️ [BUTTON DEBUG] Comparaison SKIPPÉE pour animeId=${animeId}, cardContentType=${cardContentType}, top10ContentTypeCheck=${top10ContentTypeCheck}, type=${type}`);
                     }
                     
-                    // Pour les films UNIQUEMENT, comparer aussi par titre de base et similarité
-                    // MAIS seulement si les deux sont des films (pas d'anime)
-                    if (type === 'film' && top10ContentTypeCheck === 'film' && cardContentType === 'film') {
+                    // Comparaison par titre exact (hors films : plusieurs films d'une même œuvre autorisés)
+                    if (top10Id !== cardId && cardTitle &&
+                        !top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentTypeCheck, type)) {
                         const top10Title = a.titre || a.title || a.name || '';
-                        const top10BaseTitle = extractBaseAnimeTitle(top10Title, 'film');
-                        const cardBaseTitle = extractBaseAnimeTitle(cardTitle, 'film');
-                        // Si les titres de base correspondent exactement, masquer le bouton
-                        if (top10BaseTitle && cardBaseTitle && top10BaseTitle === cardBaseTitle) {
-                            return true;
-                        }
-                        // Pour les films, ne PAS utiliser la similarité, seulement la comparaison exacte par titre de base
-                        // (Les films ne doivent être comparés que par ID ou titre de base identique)
-                    }
-                    
-                    // Pour les mangas et autres types, comparer aussi par titre exact si l'ID ne correspond pas
-                    if (top10Id !== cardId && cardTitle) {
-                        const top10Title = a.titre || a.title || a.name || '';
-                        // Comparaison exacte du titre (insensible à la casse)
                         if (top10Title && cardTitle && top10Title.toLowerCase().trim() === cardTitle.toLowerCase().trim()) {
                             return true;
                         }
@@ -13116,14 +13016,16 @@ async function refreshAllCardMoreButtons() {
                 shouldHideButton = isInGlobalTop10Check;
             }
         }
-        const mainMoreBtn = card.querySelector('.card-more-btn');
-        const mainMoreMenu = card.querySelector('.card-more-menu');
+        const mainMoreBtn = card.querySelector('.card-more-btn, .more-button, .card-more-button');
+        const mainMoreMenu = card.querySelector('.card-more-menu, .dropdown-menu');
         if (mainMoreBtn) {
             // Ne pas masquer les boutons dans le top 10 (ils ont l'attribut data-in-top10 ou data-top10-button)
-            const isInTop10Slot = mainMoreBtn.hasAttribute('data-in-top10') || 
-                                  mainMoreBtn.hasAttribute('data-top10-button') ||
-                                  card.closest('[id^="catalogue-card-"]') !== null ||
-                                  card.closest('.top10-slot') !== null;
+            const isTop10GridSlot = /^catalogue-card-\d+$/.test(card.id || '') && !!card.closest('.card-list');
+            const top10Img = isTop10GridSlot ? card.querySelector('img') : null;
+            const top10ImgSrc = top10Img && top10Img.getAttribute('src');
+            const top10SlotHasCard = !!(top10ImgSrc && String(top10ImgSrc).trim());
+            const isInTop10Slot = isTop10GridSlot && top10SlotHasCard &&
+                (mainMoreBtn.hasAttribute('data-in-top10') || mainMoreBtn.hasAttribute('data-top10-button'));
             
             if (shouldHideButton && !isInTop10Slot) {
                 console.log(`🔘 [BUTTON HIDE REFRESH] Masquage du bouton pour la carte ${animeId}`);
@@ -13165,17 +13067,24 @@ async function refreshAllCardMoreButtons() {
             }
         }
     }
-    // Mettre à jour toutes les cartes de manière asynchrone
+    // Mettre à jour toutes les cartes visibles (y compris pages étoiles > 1)
     const allCardsToUpdate = [
+        ...document.querySelectorAll('[id^="star-containers"] .catalogue-card[data-anime-id]'),
         ...document.querySelectorAll('.catalogue-card[data-anime-id]'),
         ...document.querySelectorAll('#genre-filtered-container .catalogue-card[data-anime-id]'),
         ...document.querySelectorAll('#genre-cards-container .catalogue-card[data-anime-id]')
     ];
+    const seenCardIds = new Set();
+    const uniqueCards = allCardsToUpdate.filter(card => {
+        const key = card.getAttribute('data-anime-id') + '|' + (card.closest('[id^="star-containers"]')?.id || card.parentElement?.id || '');
+        if (seenCardIds.has(key)) return false;
+        seenCardIds.add(key);
+        return true;
+    });
     
-    console.log(`🔄 [REFRESH BUTTONS] Mise à jour de ${allCardsToUpdate.length} cartes...`);
+    console.log(`🔄 [REFRESH BUTTONS] Mise à jour de ${uniqueCards.length} cartes...`);
     
-    // Log des IDs des cartes trouvées pour déboguer
-    const cardIds = allCardsToUpdate.map(card => card.getAttribute('data-anime-id'));
+    const cardIds = uniqueCards.map(card => card.getAttribute('data-anime-id'));
     console.log(`🔍 [REFRESH BUTTONS] IDs des cartes trouvées:`, cardIds);
     
     // Vérifier si les IDs High School DxD et Shokugeki sont présents
@@ -13196,15 +13105,19 @@ async function refreshAllCardMoreButtons() {
         console.log(`⚠️ [REFRESH BUTTONS] Aucun ID Shokugeki trouvé dans le DOM. IDs attendus:`, shokugekiIds);
     }
     
-    Promise.all(allCardsToUpdate.map(card => updateCardMoreButton(card))).then(() => {
-        console.log(`✅ [REFRESH BUTTONS] Toutes les cartes ont été mises à jour`);
-    }).catch(err => {
-        console.error(`❌ [REFRESH BUTTONS] Erreur lors de la mise à jour des cartes:`, err);
-    });
-    
-    // Réinitialiser le flag après le rafraîchissement
-    isRefreshingButtons = false;
+    Promise.all(uniqueCards.map(card => updateCardMoreButton(card)))
+        .then(() => {
+            console.log(`✅ [REFRESH BUTTONS] Toutes les cartes ont été mises à jour`);
+        })
+        .catch(err => {
+            console.error(`❌ [REFRESH BUTTONS] Erreur lors de la mise à jour des cartes:`, err);
+        })
+        .finally(() => {
+            isRefreshingButtons = false;
+        });
 }
+
+window.refreshAllCardMoreButtons = refreshAllCardMoreButtons;
 
 // Fonction pour réorganiser les cartes avec Masonry après chaque filtrage
 function relayoutMasonry() {
@@ -13709,6 +13622,8 @@ if (!localStorage.getItem('dragHelpCount')) {
 let top10UpdateInProgress = false;
 
 document.addEventListener('top10Updated', function(e) {
+    if (isPublicUserProfilePage()) return;
+
     // Rafraîchir l'affichage du top 10 avec protection contre les boucles infinies
     if (isRenderingTop10 || top10UpdateInProgress) {
         return; // Ignorer silencieusement pour éviter les logs infinis
@@ -13718,17 +13633,26 @@ document.addEventListener('top10Updated', function(e) {
     
     setTimeout(() => {
         if (!isRenderingTop10) {
-            renderTop10Slots();
+            const detail = e && e.detail ? e.detail : {};
+            const useCached = detail.top10 && Array.isArray(detail.top10) &&
+                top10MatchesCurrentView(detail.genre, detail.type);
+            renderTop10Slots(useCached ? detail.top10 : null);
         }
         top10UpdateInProgress = false;
         
-        // Réattacher tous les événements des boutons "..." après le rafraîchissement
+        if (typeof refreshAllCardMoreButtons === 'function') {
+            refreshAllCardMoreButtons(true);
+        }
+        
         setTimeout(() => {
             if (typeof attachCardEvents === 'function') {
                 attachCardEvents();
             }
-        }, 300);
-    }, 50); // Délai réduit à 50ms pour affichage plus rapide
+            if (typeof refreshAllCardMoreButtons === 'function') {
+                refreshAllCardMoreButtons(true);
+            }
+        }, 150);
+    }, 50);
     
     // Ne pas appeler displayUserAnimeNotes ici pour éviter les boucles infinies
     // L'affichage sera mis à jour automatiquement par renderTop10Slots
@@ -15199,73 +15123,12 @@ async function showTop10MiniInterface() {
             // Fermer l'interface
             miniInterface.remove();
             
-            // NE PAS masquer le bouton "..." immédiatement - laisser updateCardMoreButton le faire après vérification
-            // Attendre que la sauvegarde soit complète avant de mettre à jour les boutons
-            setTimeout(async () => {
-                // Attendre un peu plus pour s'assurer que Firebase/localStorage a bien synchronisé
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                // Vérifier que l'anime est bien dans le top 10 sauvegardé
-                const savedTop10 = await getUserTop10(user, finalGenre, itemFinalType);
-                console.log('🔍 Vérification top 10 sauvegardé, genre:', finalGenre, 'type:', itemFinalType, 'slotIndex:', slotIndex);
-                console.log('🔍 Top 10 récupéré:', savedTop10);
-                
-                if (savedTop10 && savedTop10[slotIndex] && String(savedTop10[slotIndex].id) === String(animeId)) {
-                    console.log('✅ Anime confirmé dans le top 10 sauvegardé');
-                    
-                    // Désactiver le rafraîchissement automatique des boutons dans renderTop10Slots
-                    window.skipRefreshButtons = true;
-                    
-                    // Rafraîchir l'affichage du top 10
-                    await renderTop10Slots();
-                    
-                    // Attendre encore un peu pour s'assurer que renderTop10Slots a terminé
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    
-                    // Maintenant mettre à jour tous les boutons "..." une seule fois, après confirmation
-                    // Utiliser refreshAllCardMoreButtons qui vérifie correctement le Top 10
-                    if (typeof refreshAllCardMoreButtons === 'function') {
-                        refreshAllCardMoreButtons();
-                        // Appel supplémentaire après un délai pour s'assurer que toutes les cartes sont mises à jour
-                        setTimeout(() => {
-                            refreshAllCardMoreButtons();
-                        }, 800);
-                    } else if (typeof updateCardMoreButton === 'function') {
-                        // Mettre à jour la carte spécifique d'abord
-                        if (cardToUpdate) {
-                            await updateCardMoreButton(cardToUpdate);
-                        }
-                        
-                        // Puis mettre à jour toutes les autres cartes
-                        const allCards = [
-                            ...document.querySelectorAll('.catalogue-card[data-anime-id]'),
-                            ...document.querySelectorAll('#genre-filtered-container .catalogue-card[data-anime-id]'),
-                            ...document.querySelectorAll('#genre-cards-container .catalogue-card[data-anime-id]')
-                        ];
-                        
-                        // Mettre à jour toutes les cartes de manière asynchrone
-                        await Promise.all(allCards.map(card => updateCardMoreButton(card)));
-                    }
-                    
-                    // S'assurer que le gestionnaire global est actif
-                    if (!window.top10ButtonGlobalHandlerAdded) {
-                        // Réinitialiser le gestionnaire global
-                        if (typeof initGlobalTop10Handler === 'function') {
-                            initGlobalTop10Handler();
-                        }
-                    }
-                } else {
-                    console.error('❌ ERREUR: L\'anime n\'a pas été trouvé dans le top 10 sauvegardé');
-                    console.error('❌ Anime ID recherché:', animeId);
-                    console.error('❌ Slot index:', slotIndex);
-                    console.error('❌ Top 10 récupéré:', savedTop10);
-                    
-                    // Si l'anime n'est pas dans le top 10, réafficher le bouton
-                    if (cardToUpdate && typeof updateCardMoreButton === 'function') {
-                        await updateCardMoreButton(cardToUpdate);
-                    }
-                }
-            }, 100); // Délai initial pour laisser le temps à la sauvegarde
+            window.skipRefreshButtons = true;
+            if (typeof refreshAllCardMoreButtons === 'function') {
+                refreshAllCardMoreButtons(true);
+            } else if (typeof updateCardMoreButton === 'function' && cardToUpdate) {
+                updateCardMoreButton(cardToUpdate);
+            }
             
             // Ne pas appeler displayUserAnimeNotes ici pour éviter les boucles infinies
             // L'affichage sera mis à jour par renderTop10Slots qui a déjà été appelé
@@ -15327,12 +15190,13 @@ function insertIntoTop10(top10, item, targetIndex) {
     
     // Vérifier si l'élément est déjà dans le top 10 (par ID)
     const existingIndex = top10.findIndex(existingItem => existingItem && String(existingItem.id) === String(item.id));
+    const isInternalMove = existingIndex !== -1;
     
     // Pour les animes et mangas, vérifier aussi par titre de base (sans saison/partie) et par similarité
-    // Si on ajoute un anime/manga de la même série, retirer les autres (un seul par série comme en affichage)
+    // Uniquement lors d'un AJOUT depuis l'extérieur — pas lors d'un déplacement dans le top 10
     let additionalIndicesToRemove = [];
     const itemContentType = (item.contentType || 'anime').toLowerCase();
-    if (itemContentType === 'anime' || itemContentType === 'manga') {
+    if (!isInternalMove && (itemContentType === 'anime' || itemContentType === 'manga')) {
         const itemTitle = item.titre || item.title || item.name;
         const itemBaseTitle = extractBaseAnimeTitle(itemTitle, itemContentType);
         top10.forEach((existingItem, index) => {

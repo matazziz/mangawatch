@@ -201,6 +201,157 @@ function attachCountrySearch(selectId, parentNode) {
 }
 window.attachCountrySearch = attachCountrySearch;
 
+function getHomeSkeletonHtml(message) {
+    const text = message || (typeof window.t === 'function' ? window.t('common.loading') : 'Chargement...');
+    return `<div class="home-section-skeleton" aria-busy="true"><div class="home-section-skeleton-bar"></div><p class="home-section-skeleton-text">${text}</p></div>`;
+}
+
+function ensureHomeSkeletonStyles() {
+    if (document.getElementById('home-section-skeleton-style')) return;
+    const style = document.createElement('style');
+    style.id = 'home-section-skeleton-style';
+    style.textContent = `
+        .home-section-skeleton { padding: 2rem 1rem; text-align: center; color: #a0a0a0; }
+        .home-section-skeleton-bar {
+            height: 14px; border-radius: 8px; margin: 0 auto 1rem; max-width: 320px;
+            background: linear-gradient(90deg, #2a2d36 25%, #3d4452 50%, #2a2d36 75%);
+            background-size: 200% 100%;
+            animation: homeSkeletonPulse 1.2s ease-in-out infinite;
+        }
+        .home-section-skeleton-text { margin: 0; font-size: 0.95rem; opacity: 0.9; }
+        @keyframes homeSkeletonPulse {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function showHomeSectionPlaceholders() {
+    ensureHomeSkeletonStyles();
+    const loadingText = (typeof window.t === 'function' ? window.t('common.loading') : null) || 'Chargement...';
+    const skeleton = getHomeSkeletonHtml(loadingText);
+    ['authorOfWeekContainer', 'quizContainer', 'newUsersContainer'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el && el.children.length === 0) {
+            el.innerHTML = skeleton;
+        }
+    });
+}
+
+let homeSectionsLoadStarted = false;
+
+async function loadAllDynamicSections() {
+    console.log('📚 Chargement de toutes les sections dynamiques...');
+    try {
+        if (typeof window.loadAuthorOfWeek === 'function') {
+            await window.loadAuthorOfWeek();
+        } else {
+            console.error('❌ loadAuthorOfWeek n\'est pas disponible');
+        }
+        if (typeof window.loadDailyQuiz === 'function') {
+            await window.loadDailyQuiz();
+        } else {
+            console.error('❌ loadDailyQuiz n\'est pas disponible');
+        }
+        if (typeof window.loadNewUsers === 'function') {
+            await window.loadNewUsers();
+        } else {
+            console.error('❌ loadNewUsers n\'est pas disponible');
+        }
+        console.log('✅ Toutes les sections dynamiques ont été chargées');
+    } catch (error) {
+        console.error('❌ Erreur lors du chargement des sections dynamiques:', error);
+    }
+}
+
+async function initHomeDynamicSections() {
+    if (homeSectionsLoadStarted) return;
+    homeSectionsLoadStarted = true;
+    showHomeSectionPlaceholders();
+    await loadAllDynamicSections();
+}
+
+window.loadAllDynamicSections = loadAllDynamicSections;
+window.initHomeDynamicSections = initHomeDynamicSections;
+window.showHomeSectionPlaceholders = showHomeSectionPlaceholders;
+
+function setupAuthPopupOnInteraction() {
+    if (window.__authIntentListenersAttached) return;
+    window.__authIntentListenersAttached = true;
+
+    let authOpened = false;
+
+    function teardownAuthIntentListeners() {
+        document.removeEventListener('click', onAuthIntent, true);
+        document.removeEventListener('submit', onAuthIntent, true);
+        document.removeEventListener('keydown', onAuthIntentKey, true);
+        window.__authIntentListenersAttached = false;
+    }
+
+    function openAuthFromIntent() {
+        if (authOpened || document.getElementById('auth-popup-overlay')) return;
+        authOpened = true;
+        teardownAuthIntentListeners();
+        if (typeof showAuthPopup === 'function') {
+            showAuthPopup();
+        }
+    }
+
+    function isAuthIntentExempt(el) {
+        if (!el || !el.closest) return true;
+        if (el.closest('#auth-popup-overlay, .auth-modal-overlay')) return true;
+        if (el.closest('#language-selector, .language-selector, .lang-switcher')) return true;
+        return false;
+    }
+
+    function isAuthInteractionTarget(el) {
+        if (!el || !el.closest) return false;
+        return !!el.closest([
+            'a[href]',
+            'button',
+            'input',
+            'select',
+            'textarea',
+            '.cta-button',
+            '.feature-card',
+            '.quiz-choice',
+            '.quiz-submit',
+            '.vote-option',
+            '.vote-btn',
+            '.work-title',
+            '.work-card',
+            '.hamburger-btn',
+            '.new-user-card',
+            '#searchForm',
+            '.nav-links a',
+            '.mobile-menu a',
+            '.avatar-link',
+            '.search-type-selector'
+        ].join(', '));
+    }
+
+    function onAuthIntent(e) {
+        if (authOpened || document.getElementById('auth-popup-overlay')) return;
+        if (isAuthIntentExempt(e.target)) return;
+        if (!isAuthInteractionTarget(e.target)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openAuthFromIntent();
+    }
+
+    function onAuthIntentKey(e) {
+        if (e.key !== 'Enter') return;
+        const active = document.activeElement;
+        if (!active || !active.closest('#searchForm, #searchInput')) return;
+        onAuthIntent(e);
+    }
+
+    document.addEventListener('click', onAuthIntent, true);
+    document.addEventListener('submit', onAuthIntent, true);
+    document.addEventListener('keydown', onAuthIntentKey, true);
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('✅ DOMContentLoaded - Bienvenue sur la page d\'accueil !');
 
@@ -261,42 +412,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('⚠️ Mode dev activé, popup désactivé');
     }
 
-    // === BLOQUER LE SCROLL IMMÉDIATEMENT SI POPUP REQUIS ===
-    // On bloque le scroll dès maintenant pour éviter que l'utilisateur puisse
-    // scroller la page pendant la seconde d'attente avant l'affichage du popup.
-    if (afficherPopup) {
-        try {
-            document.documentElement.style.overflow = 'hidden';
-            document.documentElement.style.overscrollBehavior = 'none';
-            if (document.body) {
-                document.body.style.overflow = 'hidden';
-                document.body.style.overscrollBehavior = 'none';
-                document.body.style.touchAction = 'none';
-            }
-            // Sur mobile, body.style.overflow ne suffit pas toujours.
-            // On ajoute aussi un blocage des événements wheel/touchmove en attendant le popup.
-            const blockScrollEarly = function(e) {
-                // Si le popup est déjà affiché, le popup gère lui-même son défilement interne
-                if (document.getElementById('auth-popup-overlay')) return;
-                e.preventDefault();
-            };
-            window.__authBlockScrollEarly = blockScrollEarly;
-            window.addEventListener('wheel', blockScrollEarly, { passive: false });
-            window.addEventListener('touchmove', blockScrollEarly, { passive: false });
-            // Empêcher aussi les flèches / Page Up / Page Down / Espace
-            const blockKeysEarly = function(e) {
-                if (document.getElementById('auth-popup-overlay')) return;
-                const keys = ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '];
-                if (keys.includes(e.key)) e.preventDefault();
-            };
-            window.__authBlockKeysEarly = blockKeysEarly;
-            window.addEventListener('keydown', blockKeysEarly, { passive: false });
-            console.log('🔒 Scroll bloqué en attendant le popup');
-        } catch (e) {
-            console.warn('Impossible de bloquer le scroll précocement:', e);
-        }
-    }
-    
+    // Placeholders + chargement des sections (sans attendre le popup auth)
+    showHomeSectionPlaceholders();
 
     // --- POP-UP CONNEXION/INSCRIPTION AU PREMIER ACCÈS ---
     let isPopupOpening = false; // Flag pour éviter les appels multiples
@@ -1457,75 +1574,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.error('❌ Div google-signin-inscription non trouvé !');
         }
 
-        // Fonction pour charger toutes les sections dynamiques
-        async function loadAllDynamicSections() {
-            console.log('📚 Chargement de toutes les sections dynamiques...');
-            try {
-                // Attendre un peu pour s'assurer que toutes les fonctions sont définies
-                await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Charger l'auteur du jour depuis la base de données
-                // Utiliser window. pour s'assurer qu'on utilise la bonne fonction
-                if (typeof window.loadAuthorOfWeek === 'function') {
-                    await window.loadAuthorOfWeek();
-                    console.log('✅ Auteur de la semaine chargé');
-                } else if (typeof loadAuthorOfWeek === 'function') {
-            await loadAuthorOfWeek();
-                    console.log('✅ Auteur de la semaine chargé');
-                } else {
-                    console.error('❌ loadAuthorOfWeek n\'est pas disponible');
-                }
-                
-                // Charger le quiz du jour
-                if (typeof window.loadDailyQuiz === 'function') {
-                    await window.loadDailyQuiz();
-                    console.log('✅ Quiz du jour chargé');
-                } else if (typeof loadDailyQuiz === 'function') {
-                    await loadDailyQuiz();
-                    console.log('✅ Quiz du jour chargé');
-                } else {
-                    console.error('❌ loadDailyQuiz n\'est pas disponible');
-                }
-                
-                // Charger les nouveaux utilisateurs
-                if (typeof window.loadNewUsers === 'function') {
-                    await window.loadNewUsers();
-                    console.log('✅ Nouveaux utilisateurs chargés');
-                } else if (typeof loadNewUsers === 'function') {
-                    await loadNewUsers();
-                    console.log('✅ Nouveaux utilisateurs chargés');
-                } else {
-                    console.error('❌ loadNewUsers n\'est pas disponible');
-                }
-                
-                console.log('✅ Toutes les sections dynamiques ont été chargées');
-            } catch (error) {
-                console.error('❌ Erreur lors du chargement des sections dynamiques:', error);
-                console.error('Stack:', error.stack);
-            }
-        }
-        
-        // Exposer la fonction globalement
-        window.loadAllDynamicSections = loadAllDynamicSections;
-        
-        // Charger toutes les sections après un délai plus long pour s'assurer que tout est prêt
-        console.log('⏰ Planification du chargement des sections dans 1 seconde...');
-        setTimeout(async () => {
-            console.log('🔄 Démarrage du chargement des sections dynamiques (premier appel)...');
-            try {
-                await loadAllDynamicSections();
-            } catch (error) {
-                console.error('❌ Erreur lors du premier chargement des sections:', error);
-                console.error('Stack:', error.stack);
-            }
-        }, 1000);
-        
-        // Écouter les changements de langue pour retraduire toutes les sections
-        document.addEventListener('languageChanged', async function() {
-            console.log('🔄 Langue changée, rechargement de toutes les sections...');
-            await loadAllDynamicSections();
-        });
-        
             // Validation du pseudo en temps réel pour l'inscription normale
             const inscriptionPseudoInput = document.getElementById('inscription-pseudo');
             if (inscriptionPseudoInput) {
@@ -2880,40 +2928,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Exposer la fonction globalement
     window.loadDailyQuiz = loadDailyQuiz;
     
-    // Maintenant que toutes les fonctions sont définies, charger les sections
-    // (si elles n'ont pas déjà été chargées)
-    console.log('🔍 Vérification de loadAllDynamicSections:', typeof window.loadAllDynamicSections);
-    if (typeof window.loadAllDynamicSections === 'function') {
-        console.log('✅ loadAllDynamicSections est disponible, appel dans 200ms...');
-        setTimeout(async () => {
-            console.log('🔄 Chargement initial des sections dynamiques (après définition des fonctions)...');
-            try {
-                await window.loadAllDynamicSections();
-            } catch (error) {
-                console.error('❌ Erreur lors du chargement initial:', error);
-            }
-        }, 200);
-    } else {
-        console.error('❌ loadAllDynamicSections n\'est pas disponible !');
-        // Appel direct des fonctions si loadAllDynamicSections n'est pas disponible
-        setTimeout(async () => {
-            console.log('🔄 Chargement direct des sections (fallback)...');
-            try {
-                if (typeof window.loadAuthorOfWeek === 'function') {
-                    await window.loadAuthorOfWeek();
-                }
-                if (typeof window.loadDailyQuiz === 'function') {
-                    await window.loadDailyQuiz();
-                }
-                if (typeof window.loadNewUsers === 'function') {
-                    await window.loadNewUsers();
-                }
-            } catch (error) {
-                console.error('❌ Erreur lors du chargement direct:', error);
-            }
-        }, 500);
-    }
-    
+    document.addEventListener('languageChanged', async function() {
+        console.log('🔄 Langue changée, rechargement de toutes les sections...');
+        homeSectionsLoadStarted = false;
+        await loadAllDynamicSections();
+        homeSectionsLoadStarted = true;
+    });
+
     // Fonction pour recharger toutes les sections dynamiques
     async function reloadDynamicSections() {
         console.log('🔄 Rechargement des sections dynamiques...');
@@ -2969,99 +2990,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Exposer la fonction globalement
     window.reloadDynamicSections = reloadDynamicSections;
 
-    // Afficher le pop-up si nécessaire
+    // Popup auth : uniquement quand l'utilisateur tente d'interagir (pas à l'arrivée)
     if (afficherPopup) {
-        console.log('🔄 Tentative d\'affichage du popup dans 1 seconde...');
-        console.log('🔍 Vérification finale avant affichage:', {
-            user: localStorage.getItem('user'),
-            isLoggedIn: localStorage.getItem('isLoggedIn'),
-            rememberMe: localStorage.getItem('rememberMe')
-        });
-        const ensureAuthPopupVisible = () => {
-            const hasOverlay = !!document.getElementById('auth-popup-overlay');
-            if (!hasOverlay && typeof showAuthPopup === 'function') {
-                showAuthPopup();
-            }
-        };
-
-        // Si l'utilisateur interagit avant le timeout, forcer l'affichage immédiat.
-        const eagerPopupEvents = ['scroll', 'wheel', 'touchmove', 'touchstart', 'click', 'keydown'];
-        const eagerPopupHandler = () => {
-            ensureAuthPopupVisible();
-            eagerPopupEvents.forEach(evt => window.removeEventListener(evt, eagerPopupHandler, true));
-        };
-        eagerPopupEvents.forEach(evt => window.addEventListener(evt, eagerPopupHandler, { passive: false, capture: true }));
-
-        // Empêcher la navigation tant que la popup d'auth n'est pas visible.
-        document.addEventListener('click', function authGuardClick(e) {
-            if (document.getElementById('auth-popup-overlay')) return;
-            const targetLink = e.target && e.target.closest ? e.target.closest('a[href]') : null;
-            if (!targetLink) return;
-            e.preventDefault();
-            e.stopPropagation();
-            ensureAuthPopupVisible();
-        }, true);
-
-        setTimeout(() => {
-            console.log('🎯 Affichage du popup maintenant !');
-            if (typeof showAuthPopup === 'function') {
-                showAuthPopup();
-                eagerPopupEvents.forEach(evt => window.removeEventListener(evt, eagerPopupHandler, true));
-            } else {
-                console.error('❌ showAuthPopup n\'est pas une fonction !');
-            }
-        }, 100);
+        console.log('ℹ️ Popup auth en attente d\'interaction utilisateur');
+        setupAuthPopupOnInteraction();
     } else {
-        console.log('❌ Popup désactivé - Raison:', {
-            user: localStorage.getItem('user') ? 'utilisateur présent' : 'pas d\'utilisateur',
-            isLoggedIn: localStorage.getItem('isLoggedIn'),
-            rememberMe: localStorage.getItem('rememberMe'),
-            modeDev: urlParams.get('dev') === '1' || localStorage.getItem('mangawatch_dev') === '1'
-        });
+        console.log('✅ Utilisateur connecté ou mode dev — pas de popup auth');
     }
-    
-    // Plus de forçage automatique du popup - il s'affiche seulement si nécessaire
-    
-    // Fonction pour forcer l'affichage du popup (pour les tests)
-    // Appelez window.forceShowAuthPopup() dans la console pour tester
+
     window.forceShowAuthPopup = function() {
-        console.log('🔓 Forçage de l\'affichage du popup pour les tests');
-        showAuthPopup();
+        if (typeof showAuthPopup === 'function') showAuthPopup();
     };
-    
-    // FORCER le chargement des sections à la fin du DOMContentLoaded
-    // (au cas où les autres appels ne fonctionnent pas)
-    console.log('🔚 Fin du DOMContentLoaded, chargement final des sections...');
-    setTimeout(async () => {
-        console.log('🔄 Chargement final des sections dynamiques (fin DOMContentLoaded)...');
-        try {
-            // Vérifier que les conteneurs existent
-            const authorContainer = document.getElementById('authorOfWeekContainer');
-            const quizContainer = document.getElementById('quizContainer');
-            const usersContainer = document.getElementById('newUsersContainer');
-            
-            console.log('🔍 Conteneurs trouvés:', {
-                author: !!authorContainer,
-                quiz: !!quizContainer,
-                users: !!usersContainer
-            });
-            
-            // Charger directement les fonctions si disponibles
-            if (typeof window.loadAuthorOfWeek === 'function' && authorContainer) {
-                console.log('📚 Chargement direct de l\'auteur...');
-                await window.loadAuthorOfWeek();
-            }
-            if (typeof window.loadDailyQuiz === 'function' && quizContainer) {
-                console.log('📚 Chargement direct du quiz...');
-                await window.loadDailyQuiz();
-            }
-            if (typeof window.loadNewUsers === 'function' && usersContainer) {
-                console.log('📚 Chargement direct des nouveaux utilisateurs...');
-                await window.loadNewUsers();
-            }
-        } catch (error) {
-            console.error('❌ Erreur lors du chargement final:', error);
-            console.error('Stack:', error.stack);
-        }
-    }, 1500);
+
+    // Charger les sections dès que les fonctions sont définies dans ce handler
+    setTimeout(function() {
+        initHomeDynamicSections().catch(function(err) {
+            console.error('❌ initHomeDynamicSections:', err);
+        });
+    }, 0);
 }); 

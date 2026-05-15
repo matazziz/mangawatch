@@ -216,16 +216,37 @@ export const firebaseNotesService = {
   }
 };
 
+function normalizeTop10GenreKey(genre) {
+  if (!genre || !String(genre).trim()) return '';
+  return String(genre).toLowerCase().replace(/\s+/g, '_').replace(/,/g, '_');
+}
+
+function top10ItemMatchesType(itemContentType, selectedType) {
+  if (!selectedType) return true;
+  const ct = String(itemContentType || '').toLowerCase().trim();
+  const st = String(selectedType || '').toLowerCase().trim();
+  if (st === 'manga') return ['manga', 'doujin', 'doujinshi', 'manhwa', 'manhua', 'one_shot', 'one shot'].includes(ct);
+  if (st === 'anime') return ['anime', 'tv', 'ova', 'ona', 'special', 'music'].includes(ct);
+  if (st === 'film') return ['film', 'movie'].includes(ct);
+  if (st === 'roman') return ['roman', 'novel', 'light novel', 'light_novel'].includes(ct);
+  return ct === st;
+}
+
 /**
  * Service pour gérer le top 10 utilisateur dans Firebase
  */
 export const firebaseTop10Service = {
+  normalizeGenreKey: normalizeTop10GenreKey,
+
   /**
    * Récupère le top 10 d'un utilisateur
    * @param {string} userEmail - Email de l'utilisateur
+   * @param {{ genreKey?: string|null, type?: string|null }} [options]
    * @returns {Promise<Array>} Liste du top 10 triée par rang
    */
-  async getTop10(userEmail) {
+  async getTop10(userEmail, options = {}) {
+    const genreScope = normalizeTop10GenreKey(options.genreKey || options.genre || '');
+    const typeFilter = options.type ? String(options.type).toLowerCase().trim() : null;
     try {
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
       const q = query(
@@ -241,6 +262,7 @@ export const firebaseTop10Service = {
           _docId: doc.id,
           id: data.content_id,
           contentType: data.content_type,
+          genreKey: normalizeTop10GenreKey(data.genre_key || ''),
           rang: data.rang,
           titre: data.titre,
           image: data.image,
@@ -248,12 +270,66 @@ export const firebaseTop10Service = {
           genres: data.genres || [],
           score: data.score || 0
         };
+      }).filter(item => {
+        if (normalizeTop10GenreKey(item.genreKey) !== genreScope) return false;
+        if (typeFilter && !top10ItemMatchesType(item.contentType, typeFilter)) return false;
+        return true;
       });
       items.sort((a, b) => Number(a.rang || 99) - Number(b.rang || 99));
       return items;
     } catch (error) {
       console.error('[Firebase Top10] Erreur lors de la récupération:', error);
       return [];
+    }
+  },
+
+  /**
+   * Retourne un tableau de 10 slots (null = vide) pour un scope genre/type.
+   */
+  async getTop10Slots(userEmail, options = {}) {
+    const items = await this.getTop10(userEmail, options);
+    const top10 = new Array(10).fill(null);
+    for (const item of items) {
+      const rang = item.rang || 1;
+      if (rang >= 1 && rang <= 10) {
+        top10[rang - 1] = {
+          id: item.id,
+          titre: item.titre,
+          title: item.titre,
+          name: item.titre,
+          contentType: item.contentType,
+          image: item.image,
+          synopsis: item.synopsis,
+          genres: item.genres || [],
+          score: item.score || 0
+        };
+      }
+    }
+    return top10;
+  },
+
+  /**
+   * Supprime tous les éléments d'un scope (global ou par genre + type optionnel).
+   */
+  async deleteTop10Scope(userEmail, { genreKey = '', type = null } = {}) {
+    try {
+      const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
+      const q = query(top10Ref, where('user_email', '==', userEmail));
+      const querySnapshot = await getDocs(q);
+      const scopeGenre = normalizeTop10GenreKey(genreKey);
+      const typeFilter = type ? String(type).toLowerCase().trim() : null;
+      const toDelete = querySnapshot.docs.filter(d => {
+        const data = d.data();
+        if (normalizeTop10GenreKey(data.genre_key || '') !== scopeGenre) return false;
+        if (typeFilter && !top10ItemMatchesType(data.content_type, typeFilter)) return false;
+        return true;
+      });
+      if (toDelete.length === 0) return true;
+      await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
+      return true;
+    } catch (error) {
+      console.error('[Firebase Top10] Erreur lors de la suppression du scope:', error);
+      return false;
     }
   },
 
@@ -266,15 +342,19 @@ export const firebaseTop10Service = {
   async saveTop10Item(userEmail, itemData) {
     try {
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
+      const scopeGenreKey = normalizeTop10GenreKey(itemData.genreKey || itemData.genre_key || '');
       const allItems = await this.getTop10(userEmail);
       const existingItem = allItems.find(
-        i => String(i.id) === String(itemData.id) && String(i.contentType) === String(itemData.contentType)
+        i => String(i.id) === String(itemData.id) &&
+          String(i.contentType) === String(itemData.contentType) &&
+          normalizeTop10GenreKey(i.genreKey) === scopeGenreKey
       );
       
       const itemRecord = {
         user_email: userEmail,
         content_id: String(itemData.id),
         content_type: itemData.contentType,
+        genre_key: scopeGenreKey || null,
         rang: itemData.rang,
         titre: itemData.titre || null,
         image: itemData.image || null,
