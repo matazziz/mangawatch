@@ -3,7 +3,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+import { getAuth, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getStorage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
 // 🔥 Configuration Firebase pour mangawatch-98ed0
@@ -33,6 +33,9 @@ const app = initializeApp(firebaseConfig);
 // Exporter les services
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(function(e) {
+  console.warn('[Firebase] Persistance auth locale:', e && e.message ? e.message : e);
+});
 // Utiliser le bucket par défaut de Firebase (créé automatiquement)
 // Le bucket par défaut est : mangawatch-98ed0.firebasestorage.app
 export const storage = getStorage(app);

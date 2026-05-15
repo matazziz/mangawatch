@@ -1017,7 +1017,7 @@ window.createStarBadges = function createStarBadges() {
                 const helpMsg = document.createElement('div');
                 helpMsg.id = 'drag-help-msg';
                 helpMsg.textContent = 'Veuillez d\'abord cliquer sur les trois points puis sur "Placer" avant de déplacer une carte.';
-                helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                 document.body.appendChild(helpMsg);
                 setTimeout(() => { helpMsg.remove(); }, 3000);
                 return;
@@ -1078,7 +1078,7 @@ window.createStarBadges = function createStarBadges() {
             const helpMsg = document.createElement('div');
             helpMsg.id = 'drag-help-msg';
             helpMsg.textContent = 'Carte ajoutée au top 10 avec succès !';
-            helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #00b89477;';
+            helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #00b89477;';
             document.body.appendChild(helpMsg);
             setTimeout(() => { helpMsg.remove(); }, 2500);
         });
@@ -4885,7 +4885,7 @@ function applyGenreFilter() {
                     const helpMsg = document.createElement('div');
                     helpMsg.id = 'drag-select-help-msg';
                     helpMsg.textContent = 'Veuillez d\'abord cliquer sur les trois points puis sur "Placer" pour déplacer cette carte.';
-                    helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                    helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                     document.body.appendChild(helpMsg);
                     setTimeout(() => { helpMsg.remove(); }, 3000);
                     return false;
@@ -4927,7 +4927,7 @@ function applyGenreFilter() {
                     const errorMsg = document.createElement('div');
                     errorMsg.id = 'drop-error-msg';
                     errorMsg.textContent = 'Les cartes ne peuvent être placées que dans le top 10 !';
-                    errorMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                    errorMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                     document.body.appendChild(errorMsg);
                     setTimeout(() => { errorMsg.remove(); }, 3000);
                     
@@ -7405,7 +7405,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                         const helpMsg = document.createElement('div');
                         helpMsg.id = 'drag-select-help-msg';
                         helpMsg.textContent = 'Veuillez d\'abord cliquer sur les trois points puis sur "Placer" pour déplacer cette carte.';
-                        helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                        helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                         document.body.appendChild(helpMsg);
                         setTimeout(() => { helpMsg.remove(); }, 3000);
                         return false;
@@ -9899,7 +9899,7 @@ function showAnimeModal(animes, title = "Animés", pageSize = 6) {
     const modal = document.createElement('div');
     modal.id = 'anime-modal';
     modal.style = `
-        position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;
+        position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10250;
         background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;
     `;
     const modalContent = document.createElement('div');
@@ -9934,7 +9934,7 @@ function showAnime10Modal(notes10) {
     const modal = document.createElement('div');
     modal.id = 'anime10-modal';
     modal.style = `
-        position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;
+        position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:10250;
         background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;
     `;
     const modalContent = document.createElement('div');
@@ -10852,7 +10852,7 @@ async function renderTop10Slots(forcedTop10 = null) {
                         const helpMsg = document.createElement('div');
                         helpMsg.id = 'drag-help-msg';
                         helpMsg.textContent = 'Veuillez d\'abord cliquer sur les trois points puis sur "Ajouter au top 10" avant de déplacer une carte.';
-                        helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                        helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                         document.body.appendChild(helpMsg);
                         setTimeout(() => { helpMsg.remove(); }, 3000);
                         return;
@@ -10989,7 +10989,7 @@ async function renderTop10Slots(forcedTop10 = null) {
                     const helpMsg = document.createElement('div');
                     helpMsg.id = 'drag-help-msg';
                     helpMsg.textContent = 'Carte ajoutée au top 10 avec succès !';
-                    helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #00b89477;';
+                    helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #00b89477;';
                     document.body.appendChild(helpMsg);
                     setTimeout(() => { helpMsg.remove(); }, 2500);
                     
@@ -11757,7 +11757,7 @@ async function renderTop10Slots(forcedTop10 = null) {
                     helpMsg.id = 'remove-help-msg';
                     const animeTitle = completeAnimeData.titre || completeAnimeData.title || completeAnimeData.name || 'cette œuvre';
                     helpMsg.textContent = `"${animeTitle}" retiré(e) du top 10 avec succès !`;
-                    helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #00b89477;';
+                    helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #00b89477;';
                     document.body.appendChild(helpMsg);
                     setTimeout(() => { helpMsg.remove(); }, 2500);
                 };
@@ -12387,7 +12387,7 @@ function preventDropOnNonTop10Containers() {
                     Les cartes ne peuvent être placées que dans le <strong>TOP 10</strong> en haut de la page.
                 </div>
             `;
-            errorMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:16px 32px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 4px 16px #ff6b6b77;max-width:400px;text-align:center;';
+            errorMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:16px 32px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 4px 16px #ff6b6b77;max-width:400px;text-align:center;';
             document.body.appendChild(errorMsg);
             setTimeout(() => { errorMsg.remove(); }, 4000);
             
@@ -12435,7 +12435,7 @@ function preventDropOnNonTop10Containers() {
                     Les cartes ne peuvent être placées que dans le <strong>TOP 10</strong> en haut de la page.
                 </div>
             `;
-            errorMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:16px 32px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 4px 16px #ff6b6b77;max-width:400px;text-align:center;';
+            errorMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:16px 32px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 4px 16px #ff6b6b77;max-width:400px;text-align:center;';
             document.body.appendChild(errorMsg);
             setTimeout(() => { errorMsg.remove(); }, 4000);
             
@@ -13672,7 +13672,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const helpMsg = document.createElement('div');
                     helpMsg.id = 'drag-select-help-msg';
                     helpMsg.textContent = 'Clique d\'abord sur "Ajouter au top 10" pour pouvoir déplacer cette carte !';
-                    helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.05rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                    helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.05rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                     document.body.appendChild(helpMsg);
                     setTimeout(() => { helpMsg.remove(); }, 2200);
                 }
@@ -13857,7 +13857,7 @@ function attachCardEvents() {
                     const helpMsg = document.createElement('div');
                     helpMsg.id = 'drag-select-help-msg';
                     helpMsg.textContent = 'Cliquez d\'abord sur la carte pour la sélectionner !';
-                    helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.05rem;z-index:9999;box-shadow:0 2px 12px #ff6b6b77;';
+                    helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#ff6b6b;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.05rem;z-index:10250;box-shadow:0 2px 12px #ff6b6b77;';
                     document.body.appendChild(helpMsg);
                     setTimeout(() => { helpMsg.remove(); }, 2200);
                 }
@@ -14138,7 +14138,7 @@ function secureDragStart(card) {
                             const helpMsg = document.createElement('div');
                             helpMsg.id = 'drag-help-msg';
                             helpMsg.textContent = 'Maintenant, faites glisser la carte vers un emplacement du top 10.';
-                            helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #00b89477;';
+                            helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #00b89477;';
                             document.body.appendChild(helpMsg);
                             setTimeout(() => { helpMsg.remove(); }, 2500);
                             
@@ -15095,7 +15095,7 @@ async function showTop10MiniInterface() {
                 // Afficher un message de succès
                 const successMsg = document.createElement('div');
                 successMsg.textContent = '✅ Carte ajoutée au top 10 avec succès !';
-                successMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.05rem;z-index:9999;box-shadow:0 2px 12px #00b89477;';
+                successMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.05rem;z-index:10250;box-shadow:0 2px 12px #00b89477;';
                 document.body.appendChild(successMsg);
                 setTimeout(() => { successMsg.remove(); }, 2000);
             } catch (err) {
@@ -15140,7 +15140,7 @@ async function showTop10MiniInterface() {
             helpMsg.id = 'drag-help-msg';
             const animeTitle = item.titre || item.title || item.name || 'cette œuvre';
             helpMsg.textContent = `"${animeTitle}" ajouté(e) au top 10 avec succès !`;
-            helpMsg.style.cssText = 'position:fixed;top:30px;left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:9999;box-shadow:0 2px 12px #00b89477;';
+            helpMsg.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 5.25rem);left:50%;transform:translateX(-50%);background:#00b894;color:#fff;padding:12px 28px;border-radius:12px;font-size:1.15rem;z-index:10250;box-shadow:0 2px 12px #00b89477;';
             document.body.appendChild(helpMsg);
             setTimeout(() => { helpMsg.remove(); }, 2500);
         };

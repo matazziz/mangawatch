@@ -64,6 +64,154 @@ function throwIfStorageUnknown(label, storageError) {
   throw wrapped;
 }
 
+function normalizeProfileEmail(userEmail) {
+  return String(userEmail || '').trim().toLowerCase();
+}
+
+function authEmailMatches(user, email) {
+  return !!(user && user.email && String(user.email).toLowerCase() === email);
+}
+
+function resolveStorageFileExtension(file) {
+  const name = String(file && file.name || '');
+  const fromName = name.includes('.') ? name.split('.').pop() : '';
+  if (fromName && fromName.length <= 5 && !/heic|heif/i.test(fromName)) {
+    return fromName.toLowerCase();
+  }
+  const mime = String(file && file.type || '').toLowerCase();
+  if (mime.includes('png')) return 'png';
+  if (mime.includes('webp')) return 'webp';
+  if (mime.includes('gif')) return 'gif';
+  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg';
+  return 'jpg';
+}
+
+/** Session Firebase Auth requise pour Storage — restaure ou reconnecte si besoin (mobile / onglet long). */
+export async function ensureAuthenticatedForStorage(userEmail, options) {
+  options = options || {};
+  const maxWaitMs = options.maxWaitMs || 10000;
+  const email = normalizeProfileEmail(userEmail);
+  if (!email) {
+    const err = new Error('SESSION_FIREBASE_REQUISE');
+    err.code = 'auth/not-authenticated';
+    throw err;
+  }
+
+  if (auth.currentUser && authEmailMatches(auth.currentUser, email)) {
+    try { await auth.currentUser.getIdToken(true); } catch (_) { /* ignore */ }
+    return auth.currentUser;
+  }
+
+  const restored = await new Promise(function(resolve) {
+    let settled = false;
+    function finish(user) {
+      if (settled) return;
+      settled = true;
+      try { unsub(); } catch (_) { /* ignore */ }
+      clearTimeout(timer);
+      resolve(user || null);
+    }
+    const timer = setTimeout(function() { finish(null); }, maxWaitMs);
+    const unsub = onAuthStateChanged(auth, function(u) {
+      if (authEmailMatches(u, email)) finish(u);
+    });
+    if (authEmailMatches(auth.currentUser, email)) finish(auth.currentUser);
+  });
+
+  if (restored) {
+    try { await restored.getIdToken(true); } catch (_) { /* ignore */ }
+    return restored;
+  }
+
+  if (options.allowCredentialRelogin !== false) {
+    try {
+      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const acc = accounts.find(function(a) {
+        return normalizeProfileEmail(a && a.email) === email;
+      });
+      if (acc && acc.password) {
+        const result = await signInWithEmailAndPassword(auth, email, acc.password);
+        return result.user;
+      }
+    } catch (reloginErr) {
+      console.warn('[Firebase Auth] Reconnexion silencieuse impossible:', reloginErr && reloginErr.code ? reloginErr.code : reloginErr);
+    }
+  }
+
+  const err = new Error('SESSION_FIREBASE_REQUISE');
+  err.code = 'auth/not-authenticated';
+  throw err;
+}
+
+/** Charge avatar + bannière depuis Firestore et met à jour le cache local (sync PC ↔ téléphone). */
+export async function syncRemoteProfileMedia(userEmail) {
+  const email = normalizeProfileEmail(userEmail);
+  if (!email) return { avatar: null, banner: null };
+
+  let avatar = null;
+  let banner = null;
+
+  try {
+    if (avatarService && typeof avatarService.getAvatar === 'function') {
+      avatar = await avatarService.getAvatar(email);
+    }
+  } catch (e) {
+    console.warn('[Profile Media] Avatar distant:', e && e.message ? e.message : e);
+  }
+
+  try {
+    if (bannerService && typeof bannerService.getBanner === 'function') {
+      banner = await bannerService.getBanner(email);
+    }
+  } catch (e) {
+    console.warn('[Profile Media] Bannière distante:', e && e.message ? e.message : e);
+  }
+
+  if (avatar && /^https?:\/\//i.test(avatar)) {
+    try { localStorage.setItem('avatar_' + email, avatar); } catch (_) { /* ignore */ }
+    try {
+      const userRaw = localStorage.getItem('user');
+      if (userRaw) {
+        const u = JSON.parse(userRaw);
+        if (u && normalizeProfileEmail(u.email) === email) {
+          u.avatar = avatar;
+          u.customAvatar = avatar;
+          localStorage.setItem('user', JSON.stringify(u));
+        }
+      }
+    } catch (_) { /* ignore */ }
+    try {
+      const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+      const idx = accounts.findIndex(function(a) { return normalizeProfileEmail(a && a.email) === email; });
+      if (idx >= 0) {
+        accounts[idx].avatar = avatar;
+        accounts[idx].customAvatar = avatar;
+        localStorage.setItem('accounts', JSON.stringify(accounts));
+      }
+    } catch (_) { /* ignore */ }
+    try {
+      const profileKey = 'profile_' + email;
+      const prof = JSON.parse(localStorage.getItem(profileKey) || '{}');
+      prof.avatar = avatar;
+      prof.customAvatar = avatar;
+      prof.email = email;
+      localStorage.setItem(profileKey, JSON.stringify(prof));
+    } catch (_) { /* ignore */ }
+  }
+
+  if (banner && banner.url) {
+    try {
+      localStorage.setItem('profile_banner_' + email, JSON.stringify({
+        type: banner.type || 'image',
+        url: banner.url,
+        volume: banner.volume !== undefined ? banner.volume : 35
+      }));
+    } catch (_) { /* ignore */ }
+  }
+
+  return { avatar: avatar || null, banner: banner || null };
+}
+
 // Collections Firestore
 export const COLLECTIONS = {
   FORUM_TOPICS: 'forum_topics',
@@ -453,13 +601,7 @@ export const bannerService = {
    */
   async saveBanner(userEmail, type, source, volume = 0) {
     try {
-      // Vérifier que l'utilisateur est authentifié avec Firebase Auth
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        console.error('[Firebase Banner] Utilisateur non authentifié avec Firebase Auth');
-        throw new Error('Utilisateur non authentifié. Veuillez vous reconnecter avec Firebase Auth.');
-      }
-      
+      const currentUser = await ensureAuthenticatedForStorage(userEmail);
       console.log('[Firebase Banner] Utilisateur authentifié:', currentUser.email);
       console.log('[Firebase Banner] UID:', currentUser.uid);
       
@@ -489,8 +631,8 @@ export const bannerService = {
       
       // Si c'est un File, l'uploader dans Firebase Storage
       if (source instanceof File) {
-        const fileExtension = source.name.split('.').pop();
-        const fileName = `banners/${userEmail}_${Date.now()}.${fileExtension}`;
+        const fileExtension = resolveStorageFileExtension(source);
+        const fileName = `banners/${normalizeProfileEmail(userEmail)}_${Date.now()}.${fileExtension}`;
         const storageRef = ref(storage, fileName);
         
         try {
@@ -783,13 +925,7 @@ export const avatarService = {
    */
   async saveAvatar(userEmail, file) {
     try {
-      // Vérifier que l'utilisateur est authentifié avec Firebase Auth
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        console.error('[Firebase Avatar] Utilisateur non authentifié avec Firebase Auth');
-        throw new Error('Utilisateur non authentifié. Veuillez vous reconnecter avec Firebase Auth.');
-      }
-      
+      const currentUser = await ensureAuthenticatedForStorage(userEmail);
       console.log('[Firebase Avatar] Utilisateur authentifié:', currentUser.email);
       
       // Récupérer les informations du profil existant pour supprimer l'ancien avatar plus tard
@@ -806,8 +942,8 @@ export const avatarService = {
       }
       
       // Uploader le fichier dans Firebase Storage
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `avatars/${userEmail}_${Date.now()}.${fileExtension}`;
+      const fileExtension = resolveStorageFileExtension(file);
+      const fileName = `avatars/${normalizeProfileEmail(userEmail)}_${Date.now()}.${fileExtension}`;
       const storageRef = ref(storage, fileName);
       
       try {
@@ -1727,6 +1863,8 @@ if (typeof window !== 'undefined') {
   window.authService = authService;
   window.bannerService = bannerService;
   window.avatarService = avatarService;
+  window.ensureAuthenticatedForStorage = ensureAuthenticatedForStorage;
+  window.syncRemoteProfileMedia = syncRemoteProfileMedia;
   window.verificationService = verificationService;
   window.profileAdminService = profileAdminService;
   window.collectionService = collectionService;

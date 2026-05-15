@@ -41,6 +41,12 @@
         <div id="help-ticket-panel-list" class="help-ticket-panel">
           <div id="help-ticket-list-content"><p class="help-ticket-loading">${t('help.loading')}</p></div>
         </div>
+        <div class="help-ticket-guide">
+          <a href="https://youtu.be/MyVx6498NBs" target="_blank" rel="noopener noreferrer" class="help-ticket-guide-link">
+            <i class="fab fa-youtube" aria-hidden="true"></i>
+            ${t('help.link_tutorial_video')}
+          </a>
+        </div>
         <div class="help-ticket-legal" role="navigation" aria-label="${t('help.legal_nav')}">
           <a href="/pages/politique-confidentialite.html" target="_blank" rel="noopener">${t('help.link_privacy')}</a>
           <span aria-hidden="true" class="help-ticket-legal-sep">&middot;</span>
@@ -51,6 +57,13 @@
   }
 
   function injectStyles() {
+    if (!document.getElementById('mw-toast-css')) {
+      const toastLink = document.createElement('link');
+      toastLink.id = 'mw-toast-css';
+      toastLink.rel = 'stylesheet';
+      toastLink.href = '/css/mw-toast.css?v=1';
+      document.head.appendChild(toastLink);
+    }
     if (document.getElementById('help-ticket-styles')) return;
     const style = document.createElement('style');
     style.id = 'help-ticket-styles';
@@ -227,9 +240,32 @@
       }
       .help-ticket-submit:hover { background: #00ffb0; }
       .help-ticket-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-      .help-ticket-legal {
-        padding: 0.75rem 1.25rem 1rem;
+      .help-ticket-guide {
+        padding: 0.85rem 1.25rem 0.35rem;
         border-top: 1px solid rgba(255,255,255,0.1);
+        text-align: center;
+      }
+      .help-ticket-guide-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        color: #ff6b6b;
+        text-decoration: none;
+        font-size: 0.92rem;
+        font-weight: 600;
+        line-height: 1.4;
+      }
+      .help-ticket-guide-link:hover {
+        color: #ff8787;
+        text-decoration: underline;
+      }
+      .help-ticket-guide-link i {
+        font-size: 1.15rem;
+      }
+      .help-ticket-legal {
+        padding: 0.5rem 1.25rem 1rem;
+        border-top: none;
         text-align: center;
         font-size: 0.85rem;
         line-height: 1.5;

@@ -437,6 +437,22 @@ async function loadUserProfile(userEmail) {
     
     // Afficher les informations du profil
     displayProfileInfo(user, normalizedEmail);
+
+    // Synchroniser avatar / bannière depuis Firebase (affichage à jour PC ↔ téléphone)
+    if (typeof window.syncRemoteProfileMedia === 'function') {
+        void window.syncRemoteProfileMedia(normalizedEmail).then(function(remote) {
+            if (remote && remote.avatar && /^https?:\/\//i.test(remote.avatar)) {
+                const profileAvatar = document.getElementById('profile-avatar');
+                const dispUrl = (typeof window.upgradeProfileAvatarUrl === 'function')
+                    ? window.upgradeProfileAvatarUrl(remote.avatar)
+                    : remote.avatar;
+                if (profileAvatar) profileAvatar.src = dispUrl;
+            }
+            if (remote && remote.banner && remote.banner.url) {
+                loadUserBanner(normalizedEmail);
+            }
+        }).catch(function() { /* ignore */ });
+    }
     
     // Charger la bannière de l'utilisateur
     loadUserBanner(normalizedEmail);

@@ -341,6 +341,7 @@ class Localization {
                 'help.load_error_permission': 'Accès refusé. Vérifiez que vous êtes connecté avec le compte associé à vos tickets.',
                 'help.tickets_not_enabled_confirm': 'Les tickets ne sont pas encore activés côté serveur. Voulez-vous ouvrir votre logiciel de messagerie pour nous envoyer un email ?',
                 'help.legal_nav': 'Informations légales',
+                'help.link_tutorial_video': 'Comment utiliser MangaWatch (vidéo YouTube)',
                 'help.link_privacy': 'Politique de confidentialité',
                 'help.link_terms': 'Conditions d\'utilisation',
                 
@@ -1179,6 +1180,7 @@ class Localization {
                 'help.load_error_permission': 'Access denied. Make sure you are logged in with the account linked to your tickets.',
                 'help.tickets_not_enabled_confirm': 'Tickets are not yet enabled on the server. Do you want to open your email client to contact us?',
                 'help.legal_nav': 'Legal information',
+                'help.link_tutorial_video': 'How to use MangaWatch (YouTube video)',
                 'help.link_privacy': 'Privacy policy',
                 'help.link_terms': 'Terms of use',
                 'messaging.title': 'Messages',

@@ -25,10 +25,11 @@
     <script src="/js/localization.js"></script>
     <!-- Import Firebase Service pour charger la bannière et les paramètres (confidentialité abonnements) -->
     <script type="module">
-        import { bannerService, profileSettingsService } from '/js/firebase-service.js';
+        import { bannerService, profileSettingsService, syncRemoteProfileMedia } from '/js/firebase-service.js';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
+        window.syncRemoteProfileMedia = syncRemoteProfileMedia;
         window.firebaseNotesService = firebaseNotesService;
         window.firebaseTop10Service = firebaseTop10Service;
         window.dispatchEvent(new CustomEvent('bannerServiceReady'));

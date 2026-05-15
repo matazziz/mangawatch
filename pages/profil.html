@@ -16,17 +16,20 @@
     <link rel="stylesheet" href="/css/profile.css?v=2.2">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
     <link rel="stylesheet" href="/css/messaging.css">
+    <link rel="stylesheet" href="/css/mw-toast.css?v=1">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières -->
     <script type="module">
-        import { bannerService, profileSettingsService, profileAccountService } from '/js/firebase-service.js';
+        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.profileAccountService = profileAccountService;
+        window.syncRemoteProfileMedia = syncRemoteProfileMedia;
         window.firebaseNotesService = firebaseNotesService;
         window.firebaseTop10Service = firebaseTop10Service;
         window.dispatchEvent(new CustomEvent('firebaseNotesServiceReady'));
+        window.dispatchEvent(new CustomEvent('bannerServiceReady'));
     </script>
     
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
@@ -2065,9 +2068,9 @@
         /* Système de notifications toast */
         .toast-container {
             position: fixed;
-            top: 2rem;
+            top: calc(env(safe-area-inset-top, 0px) + 5.25rem);
             right: 2rem;
-            z-index: 10000;
+            z-index: 10250;
             display: flex;
             flex-direction: column;
             gap: 1rem;
@@ -2175,7 +2178,7 @@
         
         @media (max-width: 768px) {
             .toast-container {
-                top: 1rem;
+                top: calc(env(safe-area-inset-top, 0px) + 4.75rem);
                 right: 1rem;
                 left: 1rem;
             }
@@ -3293,19 +3296,20 @@
                             // Rendre l'image avec la meilleure qualité possible
                             ctx.drawImage(img, 0, 0, width, height);
                             
-                            // Utiliser PNG pour qualité maximale (sans perte)
+                            const outMime = quality >= 1.0 ? 'image/png' : 'image/jpeg';
+                            const outExt = quality >= 1.0 ? '.png' : '.jpg';
+                            const baseName = (file.name || 'avatar').replace(/\.[^.]+$/, '');
                             canvas.toBlob((blob) => {
                                 if (blob) {
-                                    // Créer un nouveau File avec le nom original
-                                    const optimizedFile = new File([blob], file.name, {
-                                        type: 'image/png',
+                                    const optimizedFile = new File([blob], baseName + outExt, {
+                                        type: outMime,
                                         lastModified: Date.now()
                                     });
                                     resolve(optimizedFile);
                                 } else {
                                     reject(new Error('Erreur lors de la conversion en blob'));
                                 }
-                            }, 'image/png', quality);
+                            }, outMime, quality >= 1.0 ? undefined : quality);
                         };
                         img.onerror = reject;
                         img.src = e.target.result;
@@ -3329,9 +3333,11 @@
                     }
                     
                     try {
-                        // Optimiser l'avatar avec qualité maximale (2048x2048, qualité 100%)
-                        console.log('🎨 Optimisation de l\'avatar avec qualité maximale...');
-                        const optimizedFile = await optimizeAvatarQuality(file, 2048, 1.0);
+                        const isMobileUpload = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+                        const maxAvatarSize = isMobileUpload ? 1024 : 2048;
+                        const avatarQuality = isMobileUpload ? 0.88 : 1.0;
+                        console.log('🎨 Optimisation de l\'avatar...', { maxAvatarSize, avatarQuality });
+                        const optimizedFile = await optimizeAvatarQuality(file, maxAvatarSize, avatarQuality);
                         
                         // Afficher l'image optimisée immédiatement pour l'aperçu
                         const reader = new FileReader();
@@ -3410,7 +3416,9 @@
                                 console.error('❌ Erreur lors de la sauvegarde de l\'avatar:', error);
                                 const errorMessage = error.message || error.toString() || '';
                                 
-                                if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
+                                if (errorMessage.includes('SESSION_FIREBASE_REQUISE') || error.code === 'auth/not-authenticated') {
+                                    alert('❌ Session expirée.\n\nDéconnectez-vous puis reconnectez-vous (email ou Google), puis réessayez d\'ajouter votre photo.');
+                                } else if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
                                     alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
                                 } else {
                                     alert('❌ Erreur lors de l\'upload de l\'avatar.\n\nErreur : ' + errorMessage);
@@ -4504,6 +4512,20 @@
             } else {
                 console.log('✅ Avatar déjà défini dans user, conservation:', (user.customAvatar || user.avatar).substring(0, 50) + '...');
             }
+
+            // 3b. Synchroniser avatar + bannière depuis Firebase (PC ↔ téléphone)
+            if (typeof window.syncRemoteProfileMedia === 'function') {
+                try {
+                    const remoteMedia = await window.syncRemoteProfileMedia(user.email);
+                    if (remoteMedia && remoteMedia.avatar && /^https?:\/\//i.test(remoteMedia.avatar)) {
+                        user.avatar = remoteMedia.avatar;
+                        user.customAvatar = remoteMedia.avatar;
+                        console.log('✅ Avatar synchronisé depuis Firebase');
+                    }
+                } catch (syncErr) {
+                    console.warn('⚠️ Sync médias profil Firebase:', syncErr);
+                }
+            }
             
             // 4. Charger le statut de certification depuis Firestore
             let isVerified = false;
@@ -5538,19 +5560,20 @@
                             // Rendre l'image avec la meilleure qualité possible
                             ctx.drawImage(img, 0, 0, width, height);
                             
-                            // Utiliser PNG pour qualité maximale (sans perte)
+                            const outMime = quality >= 1.0 ? 'image/png' : 'image/jpeg';
+                            const outExt = quality >= 1.0 ? '.png' : '.jpg';
+                            const baseName = (file.name || 'avatar').replace(/\.[^.]+$/, '');
                             canvas.toBlob((blob) => {
                                 if (blob) {
-                                    // Créer un nouveau File avec le nom original
-                                    const optimizedFile = new File([blob], file.name, {
-                                        type: 'image/png',
+                                    const optimizedFile = new File([blob], baseName + outExt, {
+                                        type: outMime,
                                         lastModified: Date.now()
                                     });
                                     resolve(optimizedFile);
                                 } else {
                                     reject(new Error('Erreur lors de la conversion en blob'));
                                 }
-                            }, 'image/png', quality);
+                            }, outMime, quality >= 1.0 ? undefined : quality);
                         };
                         img.onerror = reject;
                         img.src = e.target.result;
@@ -5579,9 +5602,11 @@
                         }
                         
                         try {
-                            // Optimiser l'avatar avec qualité maximale (2048x2048, qualité 100%)
-                            console.log('🎨 Optimisation de l\'avatar avec qualité maximale...');
-                            const optimizedFile = await optimizeAvatarQualityForUpload(file, 2048, 1.0);
+                            const isMobileUpload = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+                            const maxAvatarSize = isMobileUpload ? 1024 : 2048;
+                            const avatarQuality = isMobileUpload ? 0.88 : 1.0;
+                            console.log('🎨 Optimisation de l\'avatar...', { maxAvatarSize, avatarQuality });
+                            const optimizedFile = await optimizeAvatarQualityForUpload(file, maxAvatarSize, avatarQuality);
                             
                             // Afficher l'image optimisée immédiatement pour l'aperçu
                             const reader = new FileReader();
@@ -5660,7 +5685,9 @@
                                     console.error('❌ Erreur lors de la sauvegarde de l\'avatar:', error);
                                     const errorMessage = error.message || error.toString() || '';
                                     
-                                    if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
+                                    if (errorMessage.includes('SESSION_FIREBASE_REQUISE') || error.code === 'auth/not-authenticated') {
+                                        alert('❌ Session expirée.\n\nDéconnectez-vous puis reconnectez-vous (email ou Google), puis réessayez d\'ajouter votre photo.');
+                                    } else if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
                                         alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
                                     } else {
                                         alert('❌ Erreur lors de l\'upload de l\'avatar.\n\nErreur : ' + errorMessage);
@@ -6671,7 +6698,8 @@
                           try {
                               // Ajouter un timeout (vidéos = 90s, images = 15s)
                               const uploadPromise = window.bannerService.saveBanner(user.email, type, url, finalVolume);
-                              const timeoutMs = type === 'video' ? 90000 : 15000;
+                              const isMobileBanner = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+                              const timeoutMs = type === 'video' ? 90000 : (isMobileBanner ? 45000 : 15000);
                               const timeoutPromise = new Promise((_, reject) => 
                                   setTimeout(() => reject(new Error('TIMEOUT: Upload trop long, vérifiez votre connexion')), timeoutMs)
                               );
@@ -6715,7 +6743,9 @@
                                                        errorMessage.includes('PERMISSION_DENIED') ||
                                                        errorMessage.includes('does not have permission');
                               
-                              if (isPermissionError) {
+                              if (errorMessage.includes('SESSION_FIREBASE_REQUISE') || error.code === 'auth/not-authenticated') {
+                                  alert('❌ Session expirée.\n\nDéconnectez-vous puis reconnectez-vous, puis réessayez d\'ajouter votre bannière.');
+                              } else if (isPermissionError) {
                                   alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth (pas seulement localStorage)\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
                               } else if (isCorsError) {
                                   alert('❌ Erreur CORS lors de l\'upload vers Firebase Storage.\n\nVérifiez que CORS est bien configuré avec la commande :\ngsutil cors set cors.json gs://mangawatch-98ed0.firebasestorage.app\n\nErreur : ' + errorMessage);
