@@ -389,7 +389,7 @@ html {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     grid-template-rows: repeat(5, auto) !important;
-    gap: 8px !important;
+    gap: 10px !important;
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
@@ -406,15 +406,15 @@ html {
     min-width: 0 !important;
     flex: none !important;
     height: auto !important;
-    min-height: 218px !important;
-    max-height: 288px !important;
+    min-height: 232px !important;
+    max-height: 306px !important;
     padding: 0.5rem 0.35rem 0.4rem !important;
     box-sizing: border-box !important;
   }
 
   #reviews-section .card-list .catalogue-image-placeholder {
-    width: 96px !important;
-    height: 126px !important;
+    width: 104px !important;
+    height: 138px !important;
     font-size: 1.45rem !important;
     margin-bottom: 0.35rem !important;
   }
@@ -453,8 +453,8 @@ html {
   }
 
   #reviews-section .card-list [id^="catalogue-card-"] > img {
-    width: 96px !important;
-    height: 126px !important;
+    width: 104px !important;
+    height: 138px !important;
     max-width: 100% !important;
     object-fit: cover !important;
     margin-bottom: 0.35rem !important;

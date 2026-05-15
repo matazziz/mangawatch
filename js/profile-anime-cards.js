@@ -65,13 +65,13 @@ function getTop10LayoutMetrics() {
             narrow: true,
             gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gridTemplateRows: 'repeat(5, auto)',
-            gap: '8px',
+            gap: '10px',
             cardWidth: '100%',
             cardMaxWidth: '100%',
             cardMinWidth: '0',
-            cardHeight: '320px',
-            imgWidth: '110px',
-            imgHeight: '145px',
+            cardHeight: '348px',
+            imgWidth: '118px',
+            imgHeight: '156px',
             placeholderFontSize: '2.2rem',
             titleFontSize: '1.1rem'
         };
@@ -422,10 +422,12 @@ async function loadUserNotes(userEmail) {
         return Math.max(base, fallback);
     };
 
-    // Essayer Firebase (avec un court retry), puis fusionner avec localStorage
+    // Essayer Firebase (retry si module pas encore chargé — critique sur profil public / mobile)
     let firebaseNotes = null;
-    if (typeof window.firebaseNotesService === 'undefined' || !window.firebaseNotesService) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+    const needsFirebaseOnly = localNotes.length === 0;
+    const maxFirebaseWaitAttempts = needsFirebaseOnly ? 24 : 8;
+    for (let attempt = 0; attempt < maxFirebaseWaitAttempts && !window.firebaseNotesService; attempt++) {
+        await new Promise(resolve => setTimeout(resolve, 250));
     }
 
     if (typeof window.firebaseNotesService !== 'undefined' && window.firebaseNotesService) {

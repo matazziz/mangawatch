@@ -1243,31 +1243,105 @@ function getStatusTextPublic(status) {
     return key || status;
 }
 
+function waitForFirebaseNotesServicePublic(timeoutMs) {
+    timeoutMs = timeoutMs || 10000;
+    return new Promise(function(resolve) {
+        if (window.firebaseNotesService) {
+            resolve(true);
+            return;
+        }
+        var settled = false;
+        function finish(ok) {
+            if (settled) return;
+            settled = true;
+            resolve(!!ok);
+        }
+        function onReady() {
+            window.removeEventListener('firebaseNotesServiceReady', onReady);
+            finish(!!window.firebaseNotesService);
+        }
+        window.addEventListener('firebaseNotesServiceReady', onReady);
+        var started = Date.now();
+        (function poll() {
+            if (window.firebaseNotesService) {
+                finish(true);
+                return;
+            }
+            if (Date.now() - started >= timeoutMs) {
+                finish(false);
+                return;
+            }
+            setTimeout(poll, 150);
+        })();
+    });
+}
+
+async function refreshPublicProfileReviewsDisplay() {
+    createStarBadgesPublic();
+    await displayUserAnimeNotesPublic();
+}
+
 // Fonction pour charger les notes d'animes avec les containers à étoiles
 function loadUserAnimeNotes() {
-    // Créer d'abord les containers à étoiles si ils n'existent pas
-    createStarBadgesPublic();
-    
-    // Attendre un peu que les containers soient créés
-    setTimeout(() => {
-        void displayUserAnimeNotesPublic().catch(function(err) {
-            console.error('[user-profile] displayUserAnimeNotesPublic:', err);
-        });
-    }, 100);
+    void (async function() {
+        try {
+            createStarBadgesPublic();
+            await waitForFirebaseNotesServicePublic(10000);
+            await refreshPublicProfileReviewsDisplay();
+
+            // Mobile / 1er chargement : le module Firebase peut arriver après le 1er paint
+            for (var attempt = 0; attempt < 4; attempt++) {
+                if (!viewedUserEmail) break;
+                var hasDom = document.getElementById('star-containers') && document.getElementById('catalogue-card-1');
+                if (!hasDom) {
+                    createStarBadgesPublic();
+                }
+                var notes = [];
+                if (typeof window.loadUserNotes === 'function') {
+                    notes = await window.loadUserNotes(viewedUserEmail);
+                }
+                if (!Array.isArray(notes)) notes = [];
+                var hasTop10 = false;
+                if (typeof getUserTop10 === 'function') {
+                    var userObj = { email: viewedUserEmail };
+                    var top10 = await getUserTop10(userObj, null, window.selectedType !== 'tous' ? window.selectedType : null);
+                    hasTop10 = Array.isArray(top10) && top10.some(function(item) { return item != null; });
+                }
+                if (notes.length > 0 || hasTop10) {
+                    await refreshPublicProfileReviewsDisplay();
+                    break;
+                }
+                if (!window.firebaseNotesService && attempt < 3) {
+                    await waitForFirebaseNotesServicePublic(2500);
+                }
+                await new Promise(function(r) { setTimeout(r, 500); });
+            }
+        } catch (err) {
+            console.error('[user-profile] loadUserAnimeNotes:', err);
+        }
+    })();
 
     // Correctif: certains styles se stabilisent après le premier paint
-    // (évite un Top 10 "tout petit" au tout premier chargement)
-    requestAnimationFrame(() => {
-        setTimeout(() => {
-            const activeTab = document.querySelector('.profile-tab.active')?.getAttribute('data-tab');
-            if (activeTab === 'reviews') {
-                createStarBadgesPublic();
-                void displayUserAnimeNotesPublic().catch(function(err) {
-                    console.error('[user-profile] displayUserAnimeNotesPublic:', err);
+    requestAnimationFrame(function() {
+        setTimeout(function() {
+            var activeTab = document.querySelector('.profile-tab.active');
+            if (activeTab && activeTab.getAttribute('data-tab') === 'reviews') {
+                void refreshPublicProfileReviewsDisplay().catch(function(err) {
+                    console.error('[user-profile] refreshPublicProfileReviewsDisplay:', err);
                 });
             }
         }, 450);
     });
+
+    if (!window._publicProfileFirebaseReadyListener) {
+        window._publicProfileFirebaseReadyListener = true;
+        window.addEventListener('firebaseNotesServiceReady', function() {
+            if (!viewedUserEmail) return;
+            void refreshPublicProfileReviewsDisplay().catch(function(err) {
+                console.error('[user-profile] refresh après firebaseNotesServiceReady:', err);
+            });
+        });
+    }
 }
 
 // Créer les containers à étoiles (version publique)
@@ -1275,9 +1349,9 @@ function createStarBadgesPublic() {
     const reviewsSection = document.getElementById('reviews-section');
     if (!reviewsSection) return;
     
-    // Vérifier si les containers existent déjà
-    if (reviewsSection.querySelector('.all-star-containers')) {
-        return; // Déjà créés
+    // Réutiliser le DOM seulement s'il est complet (évite un état vide au 2e passage)
+    if (document.getElementById('star-containers') && document.getElementById('catalogue-card-1')) {
+        return;
     }
     
     reviewsSection.style.maxWidth = '2000px';
