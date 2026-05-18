@@ -8,6 +8,7 @@
     const PREFETCH_TTL_MS = 30 * 60 * 1000;
     const SNAPSHOT_KEY = 'mw_catalogue_snapshot';
     const ANILIST_REL_TYPES = new Set(['SEQUEL', 'PREQUEL', 'PARENT', 'SIDE_STORY', 'SPIN_OFF', 'ALTERNATIVE']);
+    const ANILIST_STRICT_FILTER_TYPES = new Set(['SIDE_STORY', 'SPIN_OFF', 'ALTERNATIVE']);
 
     function stripHtml(html) {
         if (!html) return '';
@@ -259,7 +260,10 @@
             if (!node.idMal) continue;
             const malId = node.idMal;
             const title = node.title?.english || node.title?.romaji || '';
-            if (areSameSeriesFn && !areSameSeriesFn(title, referenceTitle, seriesCt)) continue;
+            if (ANILIST_STRICT_FILTER_TYPES.has(rel) && areSameSeriesFn
+                && !areSameSeriesFn(title, referenceTitle, seriesCt)) {
+                continue;
+            }
             const image = node.coverImage?.large || '';
             items.set(String(malId), {
                 mal_id: malId,

@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/footer-unified.css">
-    <link rel="stylesheet" href="/css/details-pages-clean.css?v=2.4&t=20250517">
+    <link rel="stylesheet" href="/css/details-pages-clean.css?v=2.5&t=20250518">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -57,7 +57,7 @@
         })();
     </script>
     <script src="/js/mw-api-config.js?v=3"></script>
-    <script src="/js/mw-detail-cache.js?v=2"></script>
+    <script src="/js/mw-detail-cache.js?v=3"></script>
     <script src="/js/localization.js"></script>
     <script src="/js/search.js"></script>
     <style>
@@ -361,12 +361,13 @@
                 const prefetch = window.MWDetailCache?.getDetailPrefetch?.(contentId, contentType);
                 let renderedFromCache = false;
 
-                const applyDetailData = (data, source) => {
+                const applyDetailData = (data, source, options = {}) => {
                     const content = normalizeContentDetailsPayload(data, contentType);
                     if (!content) {
                         throw new Error(`Détails du ${contentType} non trouvés`);
                     }
-                    if (!window.__mwDetailDisplayed) {
+                    const shouldRender = !window.__mwDetailDisplayed || options.refresh === true;
+                    if (shouldRender) {
                         renderContentDetails(content);
                         renderedFromCache = true;
                         window.__mwDetailDisplayed = true;
@@ -381,15 +382,6 @@
                     } catch (cacheErr) {
                         console.warn('Prefetch invalide:', cacheErr);
                     }
-                }
-
-                if (window.__mwDetailDisplayed && window.MW_API_CONFIG?.isMangaOnly?.()) {
-                    if (window.MWDetailCache?.fetchAniListByMalId && prefetch?.data?.title) {
-                        MWDetailCache.fetchAniListByMalId(contentId, prefetch.data.title, mediaType)
-                            .catch((err) => console.warn('[anime-details] AniList relations:', err));
-                    }
-                    resolve(normalizeContentDetailsPayload({ data: prefetch.data }, contentType));
-                    return;
                 }
 
                 const fetchDetailPayload = async () => {
@@ -443,7 +435,9 @@
                             genresCount: data?.data?.genres?.length || 0
                         });
                         
-                        const content = applyDetailData(data, 'jikan');
+                        const content = applyDetailData(data, 'jikan', {
+                            refresh: !!window.__mwDetailDisplayed
+                        });
                         console.log('✅ Données contenu reçues (Jikan):', content);
                         resolve(content);
                     })
@@ -452,7 +446,9 @@
                         try {
                             const fallback = await fetchFallbackDetail();
                             if (fallback) {
-                                const fbContent = applyDetailData(fallback, 'fallback');
+                                const fbContent = applyDetailData(fallback, 'fallback', {
+                                    refresh: !!window.__mwDetailDisplayed
+                                });
                                 window.__mwDetailDisplayed = true;
                                 resolve(fbContent);
                                 return;
@@ -557,7 +553,10 @@
             contentData = content;
             
             // Détecter le contentType réel à partir de content.type de l'API
-            let detectedContentType = urlParams.get('type') || 'anime'; // Utiliser le type de l'URL par défaut
+            let detectedContentType = urlParams.get('type')
+                || (urlParams.get('season') ? 'anime' : null)
+                || contentType
+                || 'anime';
             
             if (content && content.type) {
                 const apiType = content.type.toLowerCase();
@@ -2171,7 +2170,7 @@
     
     <script src="../js/hamburger-menu.js"></script>
     <!-- Charger profile-anime-cards.js pour le nettoyage du top 10 lors de la suppression de notes -->
-    <script src="/js/details-related-seasons.js?v=2.2"></script>
+    <script src="/js/details-related-seasons.js?v=2.3"></script>
     <script src="/js/profile-anime-cards.js?v=2.0"></script>
     <!-- Charger les modules Firebase à la fin pour ne pas bloquer le chargement -->
     <script type="module">

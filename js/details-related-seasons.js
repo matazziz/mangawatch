@@ -9,9 +9,20 @@
     const COLLECT_RELATION_TYPES = new Set([
         'sequel', 'prequel', 'parent story', 'side story', 'spin-off', 'spin off'
     ]);
-    const RELATED_LOAD_DELAY_MS = 400;
-    const LAZY_IMAGE_DELAY_MS = 900;
-    const MAX_LAZY_IMAGES = 3;
+    const RELATED_LOAD_DELAY_MS = 200;
+    const MAX_LAZY_IMAGES = 16;
+    const STRICT_SERIES_FILTER_TYPES = new Set(['side story', 'spin-off', 'spin off', 'alternative']);
+
+    const FRANCHISE_PART_ALIASES = [
+        { pattern: /phantom blood|phantom\s*blood/i, part: 1 },
+        { pattern: /battle tendency/i, part: 2 },
+        { pattern: /stardust crusaders/i, part: 3 },
+        { pattern: /diamond is unbreakable|diamond.*unbreakable/i, part: 4 },
+        { pattern: /vento aureo|golden wind|vento/i, part: 5 },
+        { pattern: /stone ocean/i, part: 6 },
+        { pattern: /steel ball run/i, part: 7 },
+        { pattern: /jojolion/i, part: 8 }
+    ];
     const CACHE_TTL_MS = 5 * 60 * 1000;
 
     function isMangaOnlyMode() {
@@ -110,32 +121,64 @@
             .trim();
     }
 
+    function detectFranchiseKey(title) {
+        const t = normalizeTitle(title);
+        if (/jojo|bizarre adventure|steel ball run|stoned ocean|stardust|phantom blood|battle tendency|diamond is unbreakable|golden wind|jojolion/i.test(t)) {
+            return 'jojo';
+        }
+        if (/attack on titan|shingeki no kyojin/i.test(t)) return 'aot';
+        if (/naruto|boruto/i.test(t)) return 'naruto';
+        if (/one piece/i.test(t)) return 'onepiece';
+        if (/dragon ball/i.test(t)) return 'dragonball';
+        if (/monogatari/i.test(t)) return 'monogatari';
+        if (/fate\/|fate stay|fate zero|fate\/zero/i.test(t)) return 'fate';
+        return null;
+    }
+
     function areSameSeries(titleA, titleB, contentType) {
         const baseA = normalizeTitle(extractBaseTitle(titleA, contentType));
         const baseB = normalizeTitle(extractBaseTitle(titleB, contentType));
         if (!baseA || !baseB) return false;
         if (baseA === baseB) return true;
+        const franchiseA = detectFranchiseKey(titleA);
+        const franchiseB = detectFranchiseKey(titleB);
+        if (franchiseA && franchiseA === franchiseB) return true;
         const minLen = 8;
         if (baseA.length >= minLen && baseB.length >= minLen &&
             (baseA.startsWith(baseB) || baseB.startsWith(baseA))) {
             return true;
         }
+        const wordsA = baseA.split(' ').filter((w) => w.length > 3);
+        const wordsB = baseB.split(' ').filter((w) => w.length > 3);
+        if (wordsA.length >= 2 && wordsB.length >= 2) {
+            const shared = wordsA.filter((w) => wordsB.includes(w));
+            if (shared.length >= 2) return true;
+        }
         return false;
+    }
+
+    function shouldIncludeRelatedEntry(relType, entryTitle, referenceTitle, contentType) {
+        const rel = normalizeRelationType(relType);
+        if (!STRICT_SERIES_FILTER_TYPES.has(rel)) return true;
+        return areSameSeries(entryTitle, referenceTitle, contentType);
     }
 
     function getSeasonSortKey(title) {
         if (!title) return 100;
         const t = title.toLowerCase();
+        for (const alias of FRANCHISE_PART_ALIASES) {
+            if (alias.pattern.test(title)) return alias.part;
+        }
         let m = t.match(/(\d+)(?:st|nd|rd|th)\s+season/);
         if (m) return parseInt(m[1], 10);
         m = t.match(/season\s+(\d+)/);
         if (m) return parseInt(m[1], 10);
         m = t.match(/saison\s+(\d+)/);
         if (m) return parseInt(m[1], 10);
-        m = t.match(/part\s+(\d+)/);
-        if (m) return 10 + parseInt(m[1], 10) * 0.1;
-        m = t.match(/partie\s+(\d+)/);
-        if (m) return 10 + parseInt(m[1], 10) * 0.1;
+        m = t.match(/\bpart\s*(\d+)\b/i);
+        if (m) return parseInt(m[1], 10);
+        m = t.match(/\bpartie\s*(\d+)\b/i);
+        if (m) return parseInt(m[1], 10);
         m = t.match(/(?:vol\.?|volume|tome)\s*(\d+)/);
         if (m) return parseInt(m[1], 10);
         if (/\b:re\b|\bre\b$/i.test(t)) return 2;
@@ -277,10 +320,16 @@
 
     function sortRelatedItems(items) {
         return items.slice().sort((a, b) => {
+            const skA = getSeasonSortKey(a.title);
+            const skB = getSeasonSortKey(b.title);
+            const mainA = skA < 50;
+            const mainB = skB < 50;
+            if (mainA && mainB && skA !== skB) return skA - skB;
+
             const tierDiff = getRelationSortTier(a) - getRelationSortTier(b);
             if (tierDiff !== 0) return tierDiff;
 
-            const seasonDiff = getSeasonSortKey(a.title) - getSeasonSortKey(b.title);
+            const seasonDiff = skA - skB;
             if (seasonDiff !== 0) return seasonDiff;
 
             const yearA = parseInt(a.year, 10) || 9999;
@@ -335,7 +384,7 @@
                 if (String(entry.type || '').toLowerCase() !== mediaType) continue;
                 const malId = String(entry.mal_id);
                 if (!malId || collected.has(malId)) continue;
-                if (!areSameSeries(entry.name, referenceTitle, seriesCt)) continue;
+                if (!shouldIncludeRelatedEntry(relType, entry.name, referenceTitle, seriesCt)) continue;
 
                 collected.set(malId, {
                     mal_id: entry.mal_id,
@@ -428,7 +477,7 @@
                 : '';
             const metaHtml = metaLine
                 ? `<span class="related-season-meta">${escapeHtml(metaLine)}</span>`
-                : (item.year ? `<span class="related-season-meta">${escapeHtml(item.year)}</span>` : '');
+                : '';
             const imgHtml = img
                 ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" data-mal-id="${item.mal_id}"
                     onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`
@@ -482,23 +531,45 @@
         initRelatedSeasonsCarousel(section);
 
         section.querySelectorAll('.related-season-card').forEach((card) => {
-            card.addEventListener('click', () => {
+            card.addEventListener('click', async (e) => {
                 const malId = card.dataset.malId;
                 const item = items.find((i) => String(i.mal_id) === String(malId));
-                if (!item?.mal_id || !global.MWDetailCache?.saveDetailPrefetch) return;
-                global.MWDetailCache.saveDetailPrefetch({
-                    mal_id: item.mal_id,
-                    title: item.title,
-                    images: item.image
-                        ? { jpg: { large_image_url: item.image, image_url: item.image } }
-                        : undefined,
-                    year: item.year || null,
-                    chapters: item.chapters || null,
-                    volumes: item.volumes || null,
-                    episodes: item.episodes || null,
-                    published: item.year ? { prop: { from: { year: item.year } } } : undefined,
-                    aired: item.year ? { prop: { from: { year: item.year } } } : undefined
-                }, contentType);
+                if (!item?.mal_id || card.classList.contains('is-current')) return;
+                if (!global.MWDetailCache?.saveDetailPrefetch) return;
+
+                e.preventDefault();
+                const targetUrl = card.getAttribute('href');
+                const mediaType = getApiMediaType(contentType);
+
+                try {
+                    const brief = await fetchDetailBrief(mediaType, item.mal_id);
+                    const payload = brief || item;
+                    global.MWDetailCache.saveDetailPrefetch({
+                        mal_id: payload.mal_id || item.mal_id,
+                        title: payload.title || item.title,
+                        synopsis: payload.synopsis || null,
+                        score: payload.score != null ? payload.score : null,
+                        genres: payload.genres || [],
+                        type: payload.type || (mediaType === 'manga' ? 'Manga' : 'TV'),
+                        images: (payload.image || item.image)
+                            ? { jpg: { large_image_url: payload.image || item.image, image_url: payload.image || item.image } }
+                            : undefined,
+                        year: payload.year || item.year || null,
+                        chapters: payload.chapters || item.chapters || null,
+                        volumes: payload.volumes || item.volumes || null,
+                        episodes: payload.episodes || item.episodes || null,
+                        published: (payload.year || item.year)
+                            ? { prop: { from: { year: payload.year || item.year } } }
+                            : undefined,
+                        aired: (payload.year || item.year)
+                            ? { prop: { from: { year: payload.year || item.year } } }
+                            : undefined
+                    }, contentType);
+                } catch (prefetchErr) {
+                    console.warn('[details-related-seasons] prefetch:', prefetchErr);
+                }
+
+                window.location.href = targetUrl;
             });
         });
 
@@ -535,6 +606,10 @@
             return {
                 mal_id: item.mal_id || item.id,
                 title: item.title || item.title_english || '',
+                synopsis: item.synopsis || null,
+                score: item.score != null ? item.score : null,
+                genres: item.genres || [],
+                type: item.type || null,
                 image: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
                 year: year || '',
                 airedFrom: item.aired?.from || item.published?.from || null,
@@ -551,11 +626,10 @@
 
     async function lazyLoadImages(items, mediaType) {
         const withoutImage = items.filter((item) => !item.image).slice(0, MAX_LAZY_IMAGES);
-        for (const item of withoutImage) {
-            await delay(LAZY_IMAGE_DELAY_MS);
+        const loadOne = async (item) => {
             try {
                 const brief = await fetchDetailBrief(mediaType, item.mal_id);
-                if (!brief?.image) continue;
+                if (!brief?.image) return;
                 item.image = brief.image;
                 const cardImg = document.querySelector(
                     `#related-seasons-section img[data-mal-id="${item.mal_id}"]`
@@ -569,6 +643,11 @@
             } catch (err) {
                 console.warn('[details-related-seasons] Image lazy:', item.mal_id, err);
             }
+        };
+        const batchSize = 3;
+        for (let i = 0; i < withoutImage.length; i += batchSize) {
+            await Promise.all(withoutImage.slice(i, i + batchSize).map(loadOne));
+            if (i + batchSize < withoutImage.length) await delay(350);
         }
     }
 
