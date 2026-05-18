@@ -150,7 +150,8 @@
 
     function getSeasonLabel(title, contentType) {
         const t = title || '';
-        const isManga = isMangaOnlyMode() || (contentType || '').toLowerCase() === 'manga';
+        const ctLabel = (contentType || '').toLowerCase();
+        const isManga = ctLabel === 'manga' || ctLabel === 'manhwa' || ctLabel === 'manhua';
         const volMatch = t.match(/(?:vol\.?|volume|tome)\s*(\d+)/i);
         if (volMatch) return `Tome ${volMatch[1]}`;
         if (/\b:re\b/i.test(t) || /\bre\b$/i.test(t)) return 'Partie 2 (:re)';
@@ -350,13 +351,13 @@
     }
 
     function buildDetailUrl(malId, contentType) {
-        const params = new URLSearchParams({ id: String(malId), type: 'manga' });
-        if (!isMangaOnlyMode()) {
-            const ct = (contentType || 'anime').toLowerCase();
-            if (ct !== 'manga') {
-                params.delete('type');
-                params.set('season', '1');
-            }
+        const params = new URLSearchParams({ id: String(malId) });
+        const ct = (contentType || 'anime').toLowerCase();
+        if (ct === 'manga' || ct === 'manhwa' || ct === 'manhua' || ct === 'roman' || ct === 'doujin') {
+            params.set('type', 'manga');
+        } else {
+            params.set('type', 'anime');
+            params.set('season', '1');
         }
         return `anime-details.html?${params.toString()}`;
     }
@@ -412,7 +413,7 @@
         document.getElementById('related-seasons-section')?.remove();
 
         const ctLower = (contentType || 'anime').toLowerCase();
-        const isManga = isMangaOnlyMode() || ctLower === 'manga' || ctLower === 'manhwa' || ctLower === 'manhua';
+        const isManga = ctLower === 'manga' || ctLower === 'manhwa' || ctLower === 'manhua';
         const heading = getSectionHeading(contentType);
         const cardIcon = isManga ? 'fa-book' : 'fa-tv';
 
@@ -605,11 +606,8 @@
     }
 
     async function loadAndRender(content, contentType, contentId) {
-        if (isMangaOnlyMode()) {
-            contentType = 'manga';
-        }
         const ct = (contentType || 'anime').toLowerCase();
-        if (!isMangaOnlyMode() && ct !== 'anime' && ct !== 'manga') return;
+        if (ct !== 'anime' && ct !== 'manga' && ct !== 'film') return;
 
         const mediaType = getApiMediaType(ct);
         const referenceTitle = content?.title || '';
@@ -662,9 +660,7 @@
         const items = sortRelatedItems(Array.from(relatedMap.values()));
 
         renderSection(items, currentId, ct);
-        if (!isMangaOnlyMode()) {
-            lazyLoadImages(items, mediaType).catch(() => {});
-        }
+        lazyLoadImages(items, mediaType).catch(() => {});
     }
 
     function scheduleLoadAndRender(content, contentType, contentId) {

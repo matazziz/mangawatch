@@ -56,7 +56,7 @@
             }
         })();
     </script>
-    <script src="/js/mw-api-config.js?v=2"></script>
+    <script src="/js/mw-api-config.js?v=3"></script>
     <script src="/js/mw-detail-cache.js?v=2"></script>
     <script src="/js/localization.js"></script>
     <script src="/js/search.js"></script>
@@ -182,10 +182,15 @@
         // Récupérer l'ID et le type depuis l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const contentId = urlParams.get('id');
-        let contentType = urlParams.get('type') ||
+        const urlType = (urlParams.get('type') || '').toLowerCase();
+        let contentType = urlType ||
             (window.MW_API_CONFIG?.getDefaultContentType?.() || 'anime');
         if (window.MW_API_CONFIG?.isMangaOnly?.()) {
-            contentType = 'manga';
+            if (urlType === 'anime' || urlParams.get('season')) {
+                contentType = 'anime';
+            } else if (!urlType) {
+                contentType = 'manga';
+            }
         }
         
         // Informations de l'URL
@@ -400,7 +405,7 @@
                         } catch (proxyError) {
                             console.warn('Proxy injoignable, repli Jikan direct:', proxyError);
                         }
-                        if (window.MW_API_CONFIG?.isMangaOnly?.() && mediaType !== 'manga') {
+                        if (window.MW_API_CONFIG?.isMangaOnly?.() && mediaType !== 'manga' && contentType !== 'anime' && contentType !== 'film') {
                             throw new Error('API anime indisponible (mode manga uniquement)');
                         }
                         const directResponse = await fetcher(directUrl, { headers: { Accept: 'application/json' } });
@@ -2166,7 +2171,7 @@
     
     <script src="../js/hamburger-menu.js"></script>
     <!-- Charger profile-anime-cards.js pour le nettoyage du top 10 lors de la suppression de notes -->
-    <script src="/js/details-related-seasons.js?v=2.1"></script>
+    <script src="/js/details-related-seasons.js?v=2.2"></script>
     <script src="/js/profile-anime-cards.js?v=2.0"></script>
     <!-- Charger les modules Firebase à la fin pour ne pas bloquer le chargement -->
     <script type="module">

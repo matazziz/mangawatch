@@ -19,9 +19,13 @@
         },
 
         getApiMediaType(contentType) {
+            const ct = (contentType || '').toLowerCase();
+            if (ct === 'anime' || ct === 'film') return 'anime';
+            if (ct === 'manga' || ct === 'manhwa' || ct === 'manhua' || ct === 'roman' || ct === 'doujin') {
+                return 'manga';
+            }
             if (this.mangaOnly) return 'manga';
-            const ct = (contentType || 'anime').toLowerCase();
-            return ct === 'manga' ? 'manga' : 'anime';
+            return 'anime';
         },
 
         /** Un seul appel Jikan à la fois (évite les 504 par surcharge) */
