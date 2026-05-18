@@ -273,7 +273,8 @@ body[data-page="anime-details"] .details-container {
     padding: 0;
 }
 
-.related-seasons-section.has-overflow .related-seasons-nav {
+.related-seasons-section.has-overflow .related-seasons-nav,
+.related-seasons-section.has-many-cards .related-seasons-nav {
     display: flex;
 }
 

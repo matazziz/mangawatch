@@ -7,9 +7,10 @@
 
     const JIKAN_BASE = 'https://api.jikan.moe/v4';
     const COLLECT_RELATION_TYPES = new Set([
-        'sequel', 'prequel', 'parent story', 'side story', 'spin-off', 'spin off'
+        'sequel', 'prequel', 'parent story', 'side story', 'spin-off', 'spin off',
+        'summary', 'full story', 'adaptation', 'alternative version', 'other'
     ]);
-    const RELATED_LOAD_DELAY_MS = 200;
+    const RELATED_LOAD_DELAY_MS = 0;
     const MAX_LAZY_IMAGES = 16;
     const STRICT_SERIES_FILTER_TYPES = new Set(['side story', 'spin-off', 'spin off', 'alternative']);
 
@@ -18,7 +19,7 @@
         { pattern: /battle tendency/i, part: 2 },
         { pattern: /stardust crusaders/i, part: 3 },
         { pattern: /diamond is unbreakable|diamond.*unbreakable/i, part: 4 },
-        { pattern: /vento aureo|golden wind|vento/i, part: 5 },
+        { pattern: /\bvento aureo\b|\bgolden wind\b/i, part: 5 },
         { pattern: /stone ocean/i, part: 6 },
         { pattern: /steel ball run/i, part: 7 },
         { pattern: /jojolion/i, part: 8 }
@@ -160,6 +161,10 @@
 
     function shouldIncludeRelatedEntry(relType, entryTitle, referenceTitle, contentType) {
         const rel = normalizeRelationType(relType);
+        if (rel === 'other' || rel === 'adaptation' || rel === 'summary' || rel === 'full story') {
+            return areSameSeries(entryTitle, referenceTitle, contentType)
+                || !!detectFranchiseKey(entryTitle) && detectFranchiseKey(entryTitle) === detectFranchiseKey(referenceTitle);
+        }
         if (!STRICT_SERIES_FILTER_TYPES.has(rel)) return true;
         return areSameSeries(entryTitle, referenceTitle, contentType);
     }
@@ -225,9 +230,60 @@
         return 100;
     }
 
-    function assignInferredSeasonNumbers(items, contentType) {
+    function extractExplicitLabelFromTitle(title, contentType) {
+        const t = title || '';
+        let m = t.match(/(?:season|saison)\s*(\d+)/i);
+        if (m) return `Saison ${m[1]}`;
+        m = t.match(/(\d+)(?:st|nd|rd|th)\s+season/i);
+        if (m) return `Saison ${m[1]}`;
+        m = t.match(/\bcour\s*(\d+)/i);
+        if (m) return `Saison ${m[1]}`;
+        if (/\bfinal\s+season\b/i.test(t)) return 'Saison finale';
+
+        const franchisePart = extractSeasonPartNumber(title, contentType);
+        const subPart = t.match(/\bpart\s*(\d+)\b/i);
+        if (franchisePart != null && subPart && parseInt(subPart[1], 10) !== franchisePart) {
+            return usesPartLabel(t, contentType)
+                ? `Partie ${franchisePart} (${subPart[1]})`
+                : `Saison ${franchisePart} (${subPart[1]})`;
+        }
+
+        m = t.match(/(?:part|partie)\s*(\d+)/i);
+        if (m) {
+            return usesPartLabel(t, contentType) ? `Partie ${m[1]}` : `Saison ${m[1]}`;
+        }
+        if (franchisePart != null) {
+            return usesPartLabel(t, contentType) ? `Partie ${franchisePart}` : `Saison ${franchisePart}`;
+        }
+        return null;
+    }
+
+    function dedupeRelatedItems(items) {
+        const map = new Map();
+        for (const item of items || []) {
+            if (!item?.mal_id) continue;
+            const id = String(item.mal_id);
+            const prev = map.get(id);
+            if (!prev) {
+                map.set(id, { ...item });
+                continue;
+            }
+            map.set(id, {
+                ...prev,
+                ...item,
+                title: (item.title || '').length > (prev.title || '').length ? item.title : prev.title,
+                image: item.image || prev.image,
+                year: item.year || prev.year,
+                relationType: item.relationType || prev.relationType
+            });
+        }
+        return Array.from(map.values());
+    }
+
+    function assignInferredSeasonNumbers(items, contentType, referenceTitle) {
         const ct = (contentType || '').toLowerCase();
         if (ct !== 'anime' && ct !== 'film') return;
+        if (detectFranchiseKey(referenceTitle)) return;
         const mainEntries = items.filter((item) => {
             if (extractSeasonPartNumber(item.title, contentType) != null) return false;
             if (inferExtraFromTitle(item.title)) return false;
@@ -246,19 +302,24 @@
     }
 
     function getSeasonLabel(title, contentType, item) {
+        const explicit = extractExplicitLabelFromTitle(title, contentType);
+        if (explicit) return explicit;
+
         const extra = inferExtraFromTitle(title);
         if (extra) return extra.badge;
 
         const rel = normalizeRelationType(item?.relationType || '');
         if (rel === 'side story') return 'Side story';
         if (rel === 'spin-off' || rel === 'spin off') return 'Spin-off';
-        if (rel === 'alternative') return 'Alternative';
+        if (rel === 'alternative' || rel === 'alternative version') return 'Alternative';
+        if (rel === 'adaptation') return 'Film / Adaptation';
+        if (rel === 'summary' || rel === 'full story') return 'Récap / Film';
 
         const ct = (contentType || '').toLowerCase();
         const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
         const num = item?._inferredSeason ?? extractSeasonPartNumber(title, contentType);
 
-        if (num === 99 || /\bfinal\s+season\b/i.test(title || '')) return 'Saison finale';
+        if (num === 99) return 'Saison finale';
         if (num != null) {
             if (usesPartLabel(title, contentType)) return `Partie ${num}`;
             return isManga ? `Tome ${num}` : `Saison ${num}`;
@@ -573,10 +634,13 @@
             return (cardWidth + gap) * cardsPerStep;
         };
 
+        const cardCount = track.querySelectorAll('.related-season-card').length;
+
         const updateNav = () => {
             const maxScroll = track.scrollWidth - track.clientWidth;
-            const hasOverflow = maxScroll > 8;
+            const hasOverflow = maxScroll > 8 || cardCount > 2;
             section.classList.toggle('has-overflow', hasOverflow);
+            section.classList.toggle('has-many-cards', cardCount > 2);
             prevBtn.disabled = track.scrollLeft <= 8;
             nextBtn.disabled = track.scrollLeft >= maxScroll - 8;
         };
@@ -670,6 +734,7 @@
         `;
 
         synopsisEl.insertAdjacentElement('afterend', section);
+        if (items.length > 2) section.classList.add('has-many-cards', 'has-overflow');
         initRelatedSeasonsCarousel(section);
 
         section.querySelectorAll('.related-season-card').forEach((card) => {
@@ -799,20 +864,31 @@
         }
     }
 
-    async function expandRelationsGraph(relatedMap, mediaType, referenceTitle, currentId) {
-        const ids = Array.from(relatedMap.keys())
-            .filter((id) => String(id) !== String(currentId))
-            .slice(0, 14);
-        for (const id of ids) {
-            try {
-                const payload = await fetchRelations(mediaType, id);
-                const fromJikan = collectRelatedFromRelationsPayload(
-                    payload, mediaType, referenceTitle
-                );
-                fromJikan.forEach((v, k) => relatedMap.set(k, v));
-            } catch (e) {
-                console.warn('[details-related-seasons] expand relations:', id, e?.message || e);
-            }
+    async function expandRelationsGraphBfs(relatedMap, mediaType, referenceTitle) {
+        const visited = new Set();
+        const maxNodes = 52;
+        const maxHops = 6;
+
+        for (let hop = 0; hop < maxHops && relatedMap.size < maxNodes; hop += 1) {
+            const pending = Array.from(relatedMap.keys()).filter((id) => !visited.has(String(id)));
+            if (!pending.length) break;
+
+            const batch = pending.slice(0, hop === 0 ? 6 : 10);
+            batch.forEach((id) => visited.add(String(id)));
+
+            await Promise.all(batch.map(async (id) => {
+                try {
+                    const payload = await fetchRelations(mediaType, id);
+                    const fromJikan = collectRelatedFromRelationsPayload(
+                        payload, mediaType, referenceTitle
+                    );
+                    fromJikan.forEach((v, k) => relatedMap.set(k, v));
+                } catch (e) {
+                    console.warn('[details-related-seasons] expand relations:', id, e?.message || e);
+                }
+            }));
+
+            if (hop > 0) await delay(180);
         }
     }
 
@@ -876,6 +952,13 @@
         return map;
     }
 
+    function prepareItemsList(relatedMap, currentEntry, currentId, ct, referenceTitle) {
+        relatedMap.set(String(currentId), currentEntry);
+        let items = dedupeRelatedItems(Array.from(relatedMap.values()));
+        assignInferredSeasonNumbers(items, ct, referenceTitle);
+        return sortRelatedItems(items);
+    }
+
     async function loadAndRender(content, contentType, contentId) {
         const ct = (contentType || 'anime').toLowerCase();
         if (ct !== 'anime' && ct !== 'manga' && ct !== 'film') return;
@@ -899,45 +982,58 @@
         let relatedMap = collectFromCatalogueSnapshot(referenceTitle, mediaType, currentId);
         mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
 
-        let aniEdges = global.MWDetailCache?.getAniListRelations?.(currentId);
-        if ((!aniEdges || aniEdges.length === 0) && global.MWDetailCache?.fetchAniListByMalId) {
-            try {
-                await global.MWDetailCache.fetchAniListByMalId(currentId, referenceTitle, mediaType);
-                aniEdges = global.MWDetailCache.getAniListRelations(currentId);
-            } catch (aniErr) {
-                console.warn('[details-related-seasons] AniList:', aniErr?.message || aniErr);
+        if (relatedMap.size >= 2) {
+            const quickItems = prepareItemsList(relatedMap, currentEntry, currentId, ct, referenceTitle);
+            renderSection(quickItems, currentId, ct, referenceTitle);
+        }
+
+        const aniPromise = (async () => {
+            let aniEdges = global.MWDetailCache?.getAniListRelations?.(currentId);
+            if ((!aniEdges || aniEdges.length === 0) && global.MWDetailCache?.fetchAniListByMalId) {
+                try {
+                    await global.MWDetailCache.fetchAniListByMalId(currentId, referenceTitle, mediaType);
+                    aniEdges = global.MWDetailCache.getAniListRelations(currentId);
+                } catch (aniErr) {
+                    console.warn('[details-related-seasons] AniList:', aniErr?.message || aniErr);
+                }
             }
-        }
-        if (aniEdges?.length && global.MWDetailCache?.anilistEdgesToRelatedItems) {
-            const fromAni = global.MWDetailCache.anilistEdgesToRelatedItems(
-                aniEdges, mediaType, referenceTitle, areSameSeries
-            );
-            fromAni.forEach((v, k) => relatedMap.set(k, v));
-        }
+            if (aniEdges?.length && global.MWDetailCache?.anilistEdgesToRelatedItems) {
+                const fromAni = global.MWDetailCache.anilistEdgesToRelatedItems(
+                    aniEdges, mediaType, referenceTitle, areSameSeries
+                );
+                fromAni.forEach((v, k) => relatedMap.set(k, v));
+            }
+        })();
 
-        try {
-            const relationsPayload = await fetchRelations(mediaType, currentId);
-            const fromJikan = collectRelatedFromRelationsPayload(
-                relationsPayload, mediaType, referenceTitle
-            );
-            fromJikan.forEach((v, k) => relatedMap.set(k, v));
-        } catch (err) {
-            console.warn('[details-related-seasons] Jikan relations:', err?.message || err);
-        }
+        const jikanPromise = (async () => {
+            try {
+                const relationsPayload = await fetchRelations(mediaType, currentId);
+                const fromJikan = collectRelatedFromRelationsPayload(
+                    relationsPayload, mediaType, referenceTitle
+                );
+                fromJikan.forEach((v, k) => relatedMap.set(k, v));
+            } catch (err) {
+                console.warn('[details-related-seasons] Jikan relations:', err?.message || err);
+            }
+        })();
 
-        relatedMap.set(currentId, currentEntry);
-        await expandRelationsGraph(relatedMap, mediaType, referenceTitle, currentId);
+        await Promise.all([aniPromise, jikanPromise]);
+        relatedMap.set(String(currentId), currentEntry);
+        await expandRelationsGraphBfs(relatedMap, mediaType, referenceTitle);
         mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
-        if (relatedMap.size < 2) return;
+        if (relatedMap.size < 2) {
+            document.getElementById('related-seasons-section')?.remove();
+            return;
+        }
 
-        let items = Array.from(relatedMap.values());
-        assignInferredSeasonNumbers(items, ct);
-        items = sortRelatedItems(items);
-        await enrichRelatedItems(items, mediaType, currentId);
-        saveSeriesRelationsCache(seriesCacheKey, items);
-
+        let items = prepareItemsList(relatedMap, currentEntry, currentId, ct, referenceTitle);
         renderSection(items, currentId, ct, referenceTitle);
-        lazyLoadImages(items, mediaType).catch(() => {});
+
+        enrichRelatedItems(items, mediaType, currentId).then(() => {
+            saveSeriesRelationsCache(seriesCacheKey, items);
+            renderSection(items, currentId, ct, referenceTitle);
+            lazyLoadImages(items, mediaType).catch(() => {});
+        }).catch(() => {});
     }
 
     function scheduleLoadAndRender(content, contentType, contentId) {
