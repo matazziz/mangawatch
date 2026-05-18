@@ -480,6 +480,27 @@
         synopsisEl.insertAdjacentElement('afterend', section);
         initRelatedSeasonsCarousel(section);
 
+        section.querySelectorAll('.related-season-card').forEach((card) => {
+            card.addEventListener('click', () => {
+                const malId = card.dataset.malId;
+                const item = items.find((i) => String(i.mal_id) === String(malId));
+                if (!item?.mal_id || !global.MWDetailCache?.saveDetailPrefetch) return;
+                global.MWDetailCache.saveDetailPrefetch({
+                    mal_id: item.mal_id,
+                    title: item.title,
+                    images: item.image
+                        ? { jpg: { large_image_url: item.image, image_url: item.image } }
+                        : undefined,
+                    year: item.year || null,
+                    chapters: item.chapters || null,
+                    volumes: item.volumes || null,
+                    episodes: item.episodes || null,
+                    published: item.year ? { prop: { from: { year: item.year } } } : undefined,
+                    aired: item.year ? { prop: { from: { year: item.year } } } : undefined
+                }, contentType);
+            });
+        });
+
         if (window.localization) {
             window.localization.applyLanguage();
         }
@@ -623,7 +644,7 @@
             fromAni.forEach((v, k) => relatedMap.set(k, v));
         }
 
-        if (relatedMap.size < 2 && !isMangaOnlyMode()) {
+        if (relatedMap.size < 2) {
             try {
                 const relationsPayload = await fetchRelations(mediaType, currentId);
                 const fromJikan = collectRelatedFromRelationsPayload(

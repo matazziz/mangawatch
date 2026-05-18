@@ -4,7 +4,7 @@
 (function (global) {
     'use strict';
 
-    const ANILIST_URL = 'https://graphql.anilist.co';
+    const ANILIST_PROXY = '/.netlify/functions/anilist-proxy';
     const PREFETCH_TTL_MS = 30 * 60 * 1000;
     const SNAPSHOT_KEY = 'mw_catalogue_snapshot';
     const ANILIST_REL_TYPES = new Set(['SEQUEL', 'PREQUEL', 'PARENT', 'SIDE_STORY', 'SPIN_OFF', 'ALTERNATIVE']);
@@ -87,7 +87,7 @@
     }
 
     async function anilistRequest(query, variables) {
-        const response = await fetch(ANILIST_URL, {
+        const response = await fetch(ANILIST_PROXY, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ query, variables })
@@ -113,11 +113,11 @@
     }
 
     function anilistToLegacy(media, mediaType) {
-        if (!media) return null;
+        if (!media || !media.idMal) return null;
         const year = media.startDate?.year || null;
         const image = media.coverImage?.extraLarge || media.coverImage?.large || '';
         return {
-            mal_id: media.idMal || media.id,
+            mal_id: media.idMal,
             anilist_id: media.id,
             title: media.title?.english || media.title?.romaji || media.title?.native || 'Sans titre',
             title_english: media.title?.english || null,
@@ -166,16 +166,22 @@
 
         let media = null;
         try {
-            const data = await anilistRequest(detailQuery, { idMal: parseInt(malId, 10), type: gqlType });
+            const wantedMal = parseInt(malId, 10);
+            const data = await anilistRequest(detailQuery, { idMal: wantedMal, type: gqlType });
             media = data?.Media;
-            if (media && titleHint && !titlesRoughlyMatch(media.title?.romaji || media.title?.english, titleHint)) {
+            if (media && media.idMal !== wantedMal) {
                 media = null;
+            } else if (media && titleHint && !titlesRoughlyMatch(
+                media.title?.romaji || media.title?.english, titleHint
+            )) {
+                console.warn('[mw-detail-cache] titre AniList différent, idMal conservé:', malId);
             }
         } catch (e) {
             console.warn('[mw-detail-cache] idMal AniList:', e);
         }
 
         if (!media && titleHint) {
+            try {
             const searchQuery = `
                 query ($search: String, $type: MediaType) {
                     Page(perPage: 12) {
@@ -204,9 +210,14 @@
                 }`;
             const searchData = await anilistRequest(searchQuery, { search: titleHint, type: gqlType });
             const list = searchData?.Page?.media || [];
-            media = list.find((m) => m.idMal === parseInt(malId, 10))
-                || list.find((m) => titlesRoughlyMatch(m.title?.romaji, titleHint))
-                || list[0];
+            const wantedMal = parseInt(malId, 10);
+            media = list.find((m) => m.idMal === wantedMal)
+                || list.find((m) => m.idMal && titlesRoughlyMatch(
+                    m.title?.romaji || m.title?.english, titleHint
+                ));
+            } catch (searchErr) {
+                console.warn('[mw-detail-cache] recherche AniList:', searchErr);
+            }
         }
 
         if (!media) return null;
@@ -245,8 +256,8 @@
             if (!ANILIST_REL_TYPES.has(rel)) continue;
             const node = edge.node;
             if (!node || node.type !== wantType) continue;
-            const malId = node.idMal || node.id;
-            if (!malId) continue;
+            if (!node.idMal) continue;
+            const malId = node.idMal;
             const title = node.title?.english || node.title?.romaji || '';
             if (areSameSeriesFn && !areSameSeriesFn(title, referenceTitle, seriesCt)) continue;
             const image = node.coverImage?.large || '';
