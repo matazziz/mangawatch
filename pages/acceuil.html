@@ -366,6 +366,10 @@
                 <i class="fas fa-tv"></i>
                 <span data-i18n="nav.manga_anime">Manga Anime</span>
             </a>
+            <a href="boutique.html">
+                <i class="fas fa-store"></i>
+                <span data-i18n="nav.shop">Boutique</span>
+            </a>
             <a href="list.html">
                 <i class="fas fa-bookmark"></i>
                 <span data-i18n="nav.collection">Collection</span>
@@ -1846,7 +1850,7 @@
                 });
                 
                 const avatarKey = 'avatar_' + user.email;
-                const storedAvatar = localStorage.getItem(avatarKey);
+                const storedAvatar = localStorage.g&etItem(avatarKey);
                 console.log('Avatar stocké:', storedAvatar);
             }
         };

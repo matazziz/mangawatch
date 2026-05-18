@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/footer-unified.css">
-    <link rel="stylesheet" href="/css/details-pages-clean.css?v=1.8&t=20241201">
+    <link rel="stylesheet" href="/css/details-pages-clean.css?v=2.4&t=20250517">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -56,6 +56,8 @@
             }
         })();
     </script>
+    <script src="/js/mw-api-config.js?v=2"></script>
+    <script src="/js/mw-detail-cache.js?v=1"></script>
     <script src="/js/localization.js"></script>
     <script src="/js/search.js"></script>
     <style>
@@ -177,7 +179,11 @@
         // Récupérer l'ID et le type depuis l'URL
         const urlParams = new URLSearchParams(window.location.search);
         const contentId = urlParams.get('id');
-        let contentType = urlParams.get('type') || 'anime'; // Par défaut anime
+        let contentType = urlParams.get('type') ||
+            (window.MW_API_CONFIG?.getDefaultContentType?.() || 'anime');
+        if (window.MW_API_CONFIG?.isMangaOnly?.()) {
+            contentType = 'manga';
+        }
         
         // Informations de l'URL
         console.log('URL complète:', window.location.href);
@@ -336,26 +342,92 @@
                     return;
                 }
                 
-                // Utiliser l'endpoint approprié selon le type
-                const apiUrl = `/.netlify/functions/jikan-proxy?action=detail&mediaType=${contentType === 'manga' ? 'manga' : 'anime'}&id=${encodeURIComponent(contentId)}`;
-                console.log('🌐 Appel API:', apiUrl);
+                const mediaType = window.MW_API_CONFIG?.getApiMediaType?.(contentType) ||
+                    (contentType === 'manga' ? 'manga' : 'anime');
+                const proxyUrl = `/.netlify/functions/jikan-proxy?action=detail&mediaType=${mediaType}&id=${encodeURIComponent(contentId)}`;
+                const directUrl = `https://api.jikan.moe/v4/${mediaType}/${encodeURIComponent(contentId)}`;
+                console.log('🌐 Appel API:', proxyUrl);
                 const startedAt = performance.now();
-                mwDebug('anime-details:request', { apiUrl });
-                
-                fetch(apiUrl)
-                    .then(response => {
-                        console.log('📡 Réponse API reçue:', response.status, response.statusText);
+                mwDebug('anime-details:request', { proxyUrl, directUrl });
+
+                const prefetch = window.MWDetailCache?.getDetailPrefetch?.(contentId, contentType);
+                let renderedFromCache = false;
+
+                const applyDetailData = (data, source) => {
+                    const content = normalizeContentDetailsPayload(data, contentType);
+                    if (!content) {
+                        throw new Error(`Détails du ${contentType} non trouvés`);
+                    }
+                    if (!window.__mwDetailDisplayed) {
+                        renderContentDetails(content);
+                        renderedFromCache = true;
+                        window.__mwDetailDisplayed = true;
+                    }
+                    return content;
+                };
+
+                if (prefetch?.data) {
+                    try {
+                        applyDetailData({ data: prefetch.data }, 'cache');
+                        window.__mwDetailDisplayed = true;
+                    } catch (cacheErr) {
+                        console.warn('Prefetch invalide:', cacheErr);
+                    }
+                }
+
+                if (window.__mwDetailDisplayed && window.MW_API_CONFIG?.isMangaOnly?.()) {
+                    if (window.MWDetailCache?.fetchAniListByMalId && prefetch?.data?.title) {
+                        MWDetailCache.fetchAniListByMalId(contentId, prefetch.data.title, mediaType)
+                            .catch((err) => console.warn('[anime-details] AniList relations:', err));
+                    }
+                    resolve(normalizeContentDetailsPayload({ data: prefetch.data }, contentType));
+                    return;
+                }
+
+                const fetchDetailPayload = async () => {
+                    const doFetch = async () => {
+                        const fetcher = window.MW_API_CONFIG?.fetchWithRetry?.bind(window.MW_API_CONFIG) || fetch;
+                        let proxyResponse;
+                        try {
+                            proxyResponse = await fetcher(proxyUrl, { headers: { Accept: 'application/json' } });
+                            if (proxyResponse.ok) {
+                                return proxyResponse.json();
+                            }
+                            console.warn('Proxy indisponible, repli Jikan direct:', proxyResponse.status);
+                        } catch (proxyError) {
+                            console.warn('Proxy injoignable, repli Jikan direct:', proxyError);
+                        }
+                        if (window.MW_API_CONFIG?.isMangaOnly?.() && mediaType !== 'manga') {
+                            throw new Error('API anime indisponible (mode manga uniquement)');
+                        }
+                        const directResponse = await fetcher(directUrl, { headers: { Accept: 'application/json' } });
+                        if (!directResponse.ok) {
+                            throw new Error(`Erreur HTTP: ${directResponse.status} ${directResponse.statusText}`);
+                        }
+                        return directResponse.json();
+                    };
+                    if (window.MW_API_CONFIG?.enqueueJikan) {
+                        return window.MW_API_CONFIG.enqueueJikan(doFetch);
+                    }
+                    return doFetch();
+                };
+
+                const fetchFallbackDetail = async () => {
+                    const titleHint = prefetch?.data?.title || '';
+                    if (window.MWDetailCache?.fetchAniListByMalId) {
+                        const fromAni = await MWDetailCache.fetchAniListByMalId(contentId, titleHint, mediaType);
+                        if (fromAni) return { data: fromAni };
+                    }
+                    if (prefetch?.data) return { data: prefetch.data };
+                    return null;
+                };
+
+                fetchDetailPayload()
+                    .then(data => {
+                        console.log('📡 Réponse API reçue en', Math.round(performance.now() - startedAt), 'ms');
                         mwDebug('anime-details:response-meta', {
-                            status: response.status,
-                            statusText: response.statusText,
                             elapsedMs: Math.round(performance.now() - startedAt)
                         });
-                        if (!response.ok) {
-                            throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
                         console.log('📦 Données API reçues:', data);
                         mwDebug('anime-details:payload', {
                             hasData: !!data?.data,
@@ -363,30 +435,33 @@
                             genresCount: data?.data?.genres?.length || 0
                         });
                         
-                        const content = normalizeContentDetailsPayload(data, contentType);
-                        if (content) {
-                            console.log('✅ Données contenu reçues:', content);
-                            console.log('🎭 Genres:', content.genres);
-                            console.log('📝 Synopsis original:', content.synopsis);
-                            renderContentDetails(content);
-                            resolve(content);
-                        } else {
-                            console.log('❌ Pas de données dans la réponse API');
-                            throw new Error(`Détails du ${contentType} non trouvés`);
-                        }
+                        const content = applyDetailData(data, 'jikan');
+                        console.log('✅ Données contenu reçues (Jikan):', content);
+                        resolve(content);
                     })
-                    .catch(error => {
-                        console.error('❌ Erreur lors du chargement des détails du contenu:', error);
-                        mwDebug('anime-details:error', {
-                            message: error?.message || String(error),
-                            stack: error?.stack || null,
-                            apiUrl
-                        });
+                    .catch(async (error) => {
+                        console.warn('Jikan indisponible, repli cache/AniList:', error?.message || error);
+                        try {
+                            const fallback = await fetchFallbackDetail();
+                            if (fallback) {
+                                const fbContent = applyDetailData(fallback, 'fallback');
+                                window.__mwDetailDisplayed = true;
+                                resolve(fbContent);
+                                return;
+                            }
+                        } catch (fallbackErr) {
+                            console.error('Repli échoué:', fallbackErr);
+                        }
+                        if (renderedFromCache || window.__mwDetailDisplayed) {
+                            resolve(prefetch?.data || null);
+                            return;
+                        }
                         document.getElementById('anime-details').innerHTML = `
                             <div class="error-message">
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <p data-i18n="load_error">Une erreur est survenue lors du chargement des détails du ${contentType}.</p>
                                 <p>${error.message}</p>
+                                <p style="font-size:0.9rem;opacity:0.85;">Ouvrez ce manga depuis le catalogue pendant que l'API Jikan est limitée.</p>
                                 <a href="manga-database.html" class="cta-button" onclick="returnToCatalogue(event)" data-i18n="back_to_catalogue">Retour au catalogue</a>
                             </div>
                         `;
@@ -397,6 +472,7 @@
 
         function normalizeContentDetailsPayload(data, mediaType) {
             if (data && data.data) return data.data; // compat Jikan historique
+            if (data && data.mal_id) return data; // cache catalogue / AniList
             if (!data || !data.id) return null;
 
             const year = data.start_date ? new Date(data.start_date).getFullYear() : null;
@@ -696,6 +772,12 @@
                 setTimeout(() => {
                     translateSynopsis(currentLanguage);
                 }, 1000); // Réduit de 2.5s à 1s
+            }
+
+            // Autres saisons / volumes de la même série
+            if (window.DetailsRelatedSeasons) {
+                DetailsRelatedSeasons.loadAndRender(content, contentType, content.mal_id || contentId)
+                    .catch((err) => console.warn('[anime-details] Saisons liées:', err));
             }
         }
         
@@ -2077,6 +2159,7 @@
     
     <script src="../js/hamburger-menu.js"></script>
     <!-- Charger profile-anime-cards.js pour le nettoyage du top 10 lors de la suppression de notes -->
+    <script src="/js/details-related-seasons.js?v=1.9"></script>
     <script src="/js/profile-anime-cards.js?v=2.0"></script>
     <!-- Charger les modules Firebase à la fin pour ne pas bloquer le chargement -->
     <script type="module">

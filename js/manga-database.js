@@ -1866,10 +1866,18 @@ function createContentCard(content) {
         
         // Sauvegarder l'état de la page avant de naviguer
         savePageState();
+        if (window.MWDetailCache) {
+            MWDetailCache.saveDetailPrefetch(content, currentContentType);
+            if (typeof currentMangaList !== 'undefined' && currentMangaList.length) {
+                MWDetailCache.saveCatalogueSnapshot(currentMangaList, currentContentType);
+            }
+        }
         
         // Rediriger vers la page de détails avec l'ID du contenu
         const detailsPage = 'anime-details.html';
-        window.location.href = `${detailsPage}?id=${content.mal_id}&type=${currentContentType}`;
+        const detailType = currentContentType === 'manga' || window.MW_API_CONFIG?.isMangaOnly?.()
+            ? 'manga' : currentContentType;
+        window.location.href = `${detailsPage}?id=${content.mal_id}&type=${detailType}`;
     });
     
     // Rendre la carte cliquable
@@ -1878,8 +1886,16 @@ function createContentCard(content) {
     card.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
+            if (window.MWDetailCache) {
+                MWDetailCache.saveDetailPrefetch(content, currentContentType);
+                if (typeof currentMangaList !== 'undefined' && currentMangaList.length) {
+                    MWDetailCache.saveCatalogueSnapshot(currentMangaList, currentContentType);
+                }
+            }
             const detailsPage = 'anime-details.html';
-            window.location.href = `${detailsPage}?id=${content.mal_id}&type=${currentContentType}`;
+            const detailType = currentContentType === 'manga' || window.MW_API_CONFIG?.isMangaOnly?.()
+                ? 'manga' : currentContentType;
+            window.location.href = `${detailsPage}?id=${content.mal_id}&type=${detailType}`;
         }
     });
     

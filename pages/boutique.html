@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/images/porte-torii.png" sizes="32x32">
+    <title>MangaWatch - Boutique partenaires</title>
+    <meta name="description" content="Découvrez les magasins manga et figurines partenaires MangaWatch : codes promo exclusifs, recherche par ville et région.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/messaging.css">
+    <link rel="stylesheet" href="/css/boutique.css?v=12">
+    <script>
+        (function() {
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (user && user.email) {
+                    const avatarKey = 'avatar_' + user.email;
+                    let avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || localStorage.getItem(avatarKey) || '';
+                    if (avatarUrl) {
+                        function updateAvatarSrc() {
+                            const el = document.getElementById('user-avatar');
+                            if (el) el.src = avatarUrl;
+                            else setTimeout(updateAvatarSrc, 10);
+                        }
+                        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', updateAvatarSrc);
+                        else updateAvatarSrc();
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
+</head>
+<body data-page="boutique">
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+                <select id="searchType" class="search-type-selector">
+                    <option value="manga" selected>Manga</option>
+                    <option value="anime">Anime</option>
+                    <option value="movie">Film</option>
+                    <option value="user">Utilisateur</option>
+                </select>
+                <input type="text" placeholder="Rechercher un manga..." id="searchInput" autocomplete="new-password" name="header-search" spellcheck="false">
+                <button type="submit" aria-label="Rechercher">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+
+        <nav class="nav-links">
+            <a href="acceuil.html">Accueil</a>
+            <a href="manga-database.html">Mangas &amp; Anime</a>
+            <a href="list.html">Collection</a>
+            <a href="profil.html">Profil</a>
+        </nav>
+
+        <div class="header-right">
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
+
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html"><i class="fas fa-home"></i><span>Accueil</span></a>
+            <a href="manga-database.html"><i class="fas fa-tv"></i><span>Mangas &amp; Anime</span></a>
+            <a href="boutique.html" class="active"><i class="fas fa-store"></i><span>Boutique</span></a>
+            <a href="list.html"><i class="fas fa-bookmark"></i><span>Collection</span></a>
+            <a href="profil.html"><i class="fas fa-user"></i><span>Profil</span></a>
+        </nav>
+    </div>
+
+    <main class="boutique-main">
+        <header class="boutique-hero">
+            <p class="boutique-hero-eyebrow">Espace partenaires</p>
+            <h1 class="boutique-hero-title">Boutique</h1>
+            <div class="boutique-hero-divider" aria-hidden="true"></div>
+            <p class="boutique-hero-lead">
+                Une sélection de librairies manga et boutiques de figurines partenaires,
+                avec des avantages réservés à la communauté MangaWatch.
+            </p>
+        </header>
+
+        <section class="boutique-panel" id="boutique-panel" aria-label="Recherche et filtres">
+            <div class="boutique-search-row">
+                <div class="boutique-search-box">
+                    <input type="search" id="boutique-search" placeholder="Rechercher par nom, ville, adresse…" autocomplete="off" aria-label="Rechercher un magasin">
+                    <button type="button" class="boutique-search-submit" aria-label="Rechercher">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="button" id="boutique-filters-toggle" class="boutique-filters-toggle" aria-expanded="false" aria-controls="boutique-filters-panel">
+                <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                <span>Filtres et tri</span>
+            </button>
+
+            <div class="boutique-filters" id="boutique-filters-panel">
+                    <div class="boutique-filter-group">
+                        <label for="boutique-region">Région</label>
+                        <select id="boutique-region">
+                            <option value="">Toutes les régions</option>
+                            <option value="ile-de-france">Île-de-France</option>
+                            <option value="auvergne-rhone-alpes">Auvergne-Rhône-Alpes</option>
+                            <option value="provence-alpes-cote-azur">Provence-Alpes-Côte d'Azur</option>
+                            <option value="nouvelle-aquitaine">Nouvelle-Aquitaine</option>
+                            <option value="hauts-de-france">Hauts-de-France</option>
+                            <option value="occitanie">Occitanie</option>
+                            <option value="pays-de-la-loire">Pays de la Loire</option>
+                        </select>
+                    </div>
+                    <div class="boutique-filter-group">
+                        <label for="boutique-category">Catégorie</label>
+                        <select id="boutique-category">
+                            <option value="">Toutes</option>
+                            <option value="manga">Manga</option>
+                            <option value="figurine">Figurines</option>
+                        </select>
+                    </div>
+                    <div class="boutique-filter-group">
+                        <label for="boutique-sort">Trier par</label>
+                        <select id="boutique-sort">
+                            <option value="name">Nom (A → Z)</option>
+                            <option value="city">Ville (A → Z)</option>
+                            <option value="distance" id="boutique-sort-distance" hidden>Distance</option>
+                        </select>
+                    </div>
+                </div>
+
+            <div class="boutique-actions-row">
+                <button type="button" id="boutique-near-me" class="boutique-action-btn">
+                    <i class="fas fa-location-crosshairs"></i> Près de moi
+                </button>
+                <div class="boutique-view-toggle" role="group" aria-label="Affichage">
+                    <button type="button" class="boutique-view-btn active" data-view="list" aria-pressed="true">
+                        <i class="fas fa-list"></i> Liste
+                    </button>
+                    <button type="button" class="boutique-view-btn" data-view="map" aria-pressed="false">
+                        <i class="fas fa-map"></i> Carte
+                    </button>
+                </div>
+            </div>
+            <p id="boutique-geo-status" class="boutique-geo-status" hidden></p>
+
+            <div id="boutique-map-wrap" class="boutique-map-wrap" hidden aria-label="Carte des magasins">
+                <div id="boutique-map" class="boutique-map"></div>
+            </div>
+        </section>
+
+        <p class="boutique-results-meta" id="boutique-count" aria-live="polite"></p>
+
+        <section class="boutique-grid" id="boutique-grid" aria-label="Liste des magasins partenaires"></section>
+    </main>
+
+    <button type="button" id="boutique-partner-fab" class="boutique-partner-fab" aria-label="Devenir partenaire" title="Devenir partenaire">
+        <i class="fas fa-handshake"></i>
+        <span>Partenaire</span>
+    </button>
+
+    <div id="boutique-partner-modal" class="boutique-partner-modal" hidden aria-hidden="true">
+        <div class="boutique-partner-modal-overlay" data-close-partner-modal></div>
+        <div class="boutique-partner-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="boutique-partner-modal-title">
+            <button type="button" class="boutique-partner-modal-close" data-close-partner-modal aria-label="Fermer">&times;</button>
+            <h2 id="boutique-partner-modal-title" class="boutique-partner-modal-title"><i class="fas fa-handshake"></i> Devenir partenaire</h2>
+            <p class="boutique-partner-modal-lead">Magasin manga ou figurines ? Proposez un partenariat MangaWatch.</p>
+            <form id="boutique-partner-form" class="boutique-partner-form" novalidate>
+                <div class="boutique-partner-grid">
+                    <div class="boutique-form-field">
+                        <label for="partner-shop-name">Nom du magasin *</label>
+                        <input type="text" id="partner-shop-name" name="shopName" required maxlength="120" autocomplete="organization">
+                    </div>
+                    <div class="boutique-form-field">
+                        <label for="partner-city">Ville *</label>
+                        <input type="text" id="partner-city" name="city" required maxlength="80" autocomplete="address-level2">
+                    </div>
+                    <div class="boutique-form-field">
+                        <label for="partner-contact-name">Nom du contact *</label>
+                        <input type="text" id="partner-contact-name" name="contactName" required maxlength="80" autocomplete="name">
+                    </div>
+                    <div class="boutique-form-field">
+                        <label for="partner-email">E-mail *</label>
+                        <input type="email" id="partner-email" name="email" required maxlength="120" autocomplete="email">
+                    </div>
+                    <div class="boutique-form-field boutique-form-field--full">
+                        <label for="partner-phone">Téléphone</label>
+                        <input type="tel" id="partner-phone" name="phone" maxlength="30" autocomplete="tel">
+                    </div>
+                </div>
+                <div class="boutique-form-field">
+                    <label for="partner-message">Informations complémentaires</label>
+                    <textarea id="partner-message" name="message" rows="4" maxlength="1500" placeholder="Types de produits, horaires, adresse, idée de code promo, présentation du magasin…"></textarea>
+                </div>
+                <p id="boutique-partner-feedback" class="boutique-partner-feedback" role="status" hidden></p>
+                <button type="submit" class="boutique-partner-submit" id="boutique-partner-submit">
+                    <i class="fas fa-paper-plane"></i> Envoyer ma candidature
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <div class="footer-copyright-text">
+                <span class="footer-copyright">&copy;</span>2025
+                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" aria-hidden="true">
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon"><i class="fab fa-discord"></i></a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon"><i class="fab fa-instagram"></i></a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon"><i class="fab fa-tiktok"></i></a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide"><i class="fas fa-circle-question"></i></a>
+            </div>
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=matazziz" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="/js/localization.js"></script>
+    <script src="/js/search.js"></script>
+    <script src="../js/hamburger-menu.js"></script>
+    <script src="/js/help-ticket.js"></script>
+    <script src="/js/messaging.js" type="module"></script>
+    <script src="/js/boutique.js?v=11"></script>
+</body>
+</html>

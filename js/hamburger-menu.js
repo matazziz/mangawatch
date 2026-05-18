@@ -12,6 +12,49 @@ document.addEventListener('DOMContentLoaded', function() {
         return window.innerWidth <= mobileBreakpoint;
     }
 
+    function resolveBoutiqueHref() {
+        const path = (window.location.pathname || '').replace(/\\/g, '/');
+        if (/\/pages\//.test(path)) {
+            return 'boutique.html';
+        }
+        if (/\/public\//.test(path)) {
+            return '../pages/boutique.html';
+        }
+        return 'pages/boutique.html';
+    }
+
+    /** Lien Boutique dans tous les menus hamburger (pages + public). */
+    function ensureBoutiqueInMobileMenu() {
+        document.querySelectorAll('.mobile-menu .nav-links').forEach(function (nav) {
+            if (nav.querySelector('a[href*="boutique.html"]')) {
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = resolveBoutiqueHref();
+            link.innerHTML = '<i class="fas fa-store"></i><span data-i18n="nav.shop">Boutique</span>';
+
+            const insertBefore = nav.querySelector('a[href*="list.html"]') ||
+                nav.querySelector('a[href*="profil.html"]') ||
+                nav.querySelector('a[href*="tierlist"]') ||
+                nav.querySelector('a[href*="forum"]');
+
+            if (insertBefore) {
+                nav.insertBefore(link, insertBefore);
+            } else {
+                const mangaLink = nav.querySelector('a[href*="manga-database"]');
+                if (mangaLink && mangaLink.nextSibling) {
+                    nav.insertBefore(link, mangaLink.nextSibling);
+                } else {
+                    nav.appendChild(link);
+                }
+            }
+        });
+
+        if (window.localization && typeof window.localization.apply === 'function') {
+            window.localization.apply();
+        }
+    }
+
     function openMenu() {
         hamburgerBtn.classList.add('active');
         mobileMenu.classList.add('active');
@@ -26,7 +69,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.classList.remove('mobile-menu-open');
     }
 
-    // Fonction pour basculer le menu
     function toggleMenu() {
         if (mobileMenu.classList.contains('active')) {
             closeMenu();
@@ -35,22 +77,26 @@ document.addEventListener('DOMContentLoaded', function() {
         openMenu();
     }
 
-    // Écouteur d'événement pour le bouton hamburger
+    ensureBoutiqueInMobileMenu();
+
     hamburgerBtn.addEventListener('click', toggleMenu);
     hamburgerBtn.setAttribute('aria-expanded', 'false');
     hamburgerBtn.setAttribute('aria-controls', 'mobileMenuPanel');
     mobileMenu.setAttribute('id', 'mobileMenuPanel');
 
-    // Fermer le menu quand on clique sur un lien
-    const menuLinks = document.querySelectorAll('.mobile-menu .nav-links a');
-    menuLinks.forEach(link => {
-        link.addEventListener('click', () => {
-            closeMenu();
+    function bindMenuLinkClose() {
+        document.querySelectorAll('.mobile-menu .nav-links a').forEach(function (link) {
+            if (link.dataset.menuBound === '1') return;
+            link.dataset.menuBound = '1';
+            link.addEventListener('click', function () {
+                closeMenu();
+            });
         });
-    });
+    }
 
-    // Fermer le menu quand on clique en dehors
-    document.addEventListener('click', (e) => {
+    bindMenuLinkClose();
+
+    document.addEventListener('click', function (e) {
         if (mobileMenu.classList.contains('active')) {
             if (!hamburgerBtn.contains(e.target) && !mobileMenu.contains(e.target)) {
                 closeMenu();
@@ -58,35 +104,30 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Fermer le menu avec la touche Escape
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && mobileMenu.classList.contains('active')) {
             closeMenu();
         }
     });
 
-    // Gestion du redimensionnement de la fenêtre
-    window.addEventListener('resize', () => {
+    window.addEventListener('resize', function () {
         if (mobileMenu.classList.contains('active') && !isMobileViewport()) {
-            // Quand on quitte la vue téléphone, on réinitialise pour éviter les états CSS incohérents.
             closeMenu();
         }
     });
 
-    // Marquer le lien actif selon la page courante
     function setActiveLink() {
         const currentPage = window.location.pathname.split('/').pop() || 'acceuil.html';
-        const menuLinks = document.querySelectorAll('.nav-links a');
-        
-        menuLinks.forEach(link => {
+        document.querySelectorAll('.mobile-menu .nav-links a').forEach(function (link) {
             link.classList.remove('active');
-            const href = link.getAttribute('href');
-            if (href === currentPage || (currentPage === 'acceuil.html' && href === 'acceuil.html')) {
+            const href = link.getAttribute('href') || '';
+            const hrefPage = href.split('/').pop();
+            if (hrefPage === currentPage || href === currentPage) {
                 link.classList.add('active');
             }
         });
     }
 
-    // Appeler la fonction au chargement
     setActiveLink();
-}); 
+    bindMenuLinkClose();
+});

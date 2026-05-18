@@ -95,6 +95,12 @@ service cloud.firestore {
          resource.data.user_email == request.auth.token.email); // Modification uniquement par le propriétaire
     }
     
+    // Boutique stats - compteurs codes promo / clics site partenaires
+    match /boutique_stats/{storeId} {
+      allow read: if true;
+      allow create, update: if true;
+    }
+
     // Support Tickets - Tickets d'aide (conversation user + admin, fermeture par l'un ou l'autre)
     match /support_tickets/{ticketId} {
       allow read: if isAuthenticated() && (

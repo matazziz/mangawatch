@@ -6,7 +6,8 @@
   "scripts": {
     "inject-firebase-key": "node scripts/inject-firebase-api-key.js",
     "start": "node js/server.js",
-    "dev": "nodemon js/server.js",
+    "dev": "cross-env NODE_ENV=development nodemon js/server.js",
+    "admin": "powershell -ExecutionPolicy Bypass -File scripts/ouvrir-admin.ps1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -28,6 +29,9 @@
     "multer": "^2.0.2"
   },
   "devDependencies": {
+    "connect-livereload": "^0.6.1",
+    "cross-env": "^7.0.3",
+    "livereload": "^0.9.3",
     "nodemon": "^3.0.1"
   },
   "engines": {

@@ -23,6 +23,16 @@ exports.handler = async (event) => {
       };
     }
     upstreamUrl = `${JIKAN_API_BASE}/${mediaType}/${encodeURIComponent(id)}`;
+  } else if (action === "relations") {
+    const id = qs.id;
+    if (!id) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ error: "Missing id for relations action" })
+      };
+    }
+    upstreamUrl = `${JIKAN_API_BASE}/${mediaType}/${encodeURIComponent(id)}/relations`;
   } else {
     const page = Math.max(1, toInt(qs.page, 1));
     const limit = Math.min(25, Math.max(1, toInt(qs.limit, 25)));
@@ -55,10 +65,25 @@ exports.handler = async (event) => {
     upstreamUrl = `${JIKAN_API_BASE}/${mediaType}?${params.toString()}`;
   }
 
+  const fetchWithTimeout = async (url, ms = 25000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    try {
+      return await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   try {
-    const upstream = await fetch(upstreamUrl, {
-      headers: { Accept: "application/json" }
-    });
+    let upstream = await fetchWithTimeout(upstreamUrl);
+    if ([502, 503, 504, 429].includes(upstream.status)) {
+      await new Promise((r) => setTimeout(r, 1500));
+      upstream = await fetchWithTimeout(upstreamUrl);
+    }
 
     const text = await upstream.text();
     return {

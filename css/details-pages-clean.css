@@ -197,6 +197,228 @@ body[data-page="anime-details"] .details-container {
     position: relative;
 }
 
+/* Autres saisons / volumes (défilement horizontal) */
+.related-seasons-section {
+    background: rgba(0, 0, 0, 0.52);
+    border-radius: var(--border-radius);
+    padding: 16px 18px 14px;
+    margin-bottom: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.related-seasons-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--light);
+}
+
+.related-seasons-carousel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.related-seasons-track-wrap {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.related-seasons-track {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) rgba(255, 255, 255, 0.1);
+}
+
+.related-seasons-section.has-overflow .related-seasons-track {
+    scrollbar-width: none;
+}
+
+.related-seasons-section.has-overflow .related-seasons-track::-webkit-scrollbar {
+    display: none;
+}
+
+.related-seasons-track::-webkit-scrollbar {
+    height: 5px;
+}
+
+.related-seasons-track::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+.related-seasons-nav {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.45);
+    color: var(--light);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    padding: 0;
+}
+
+.related-seasons-section.has-overflow .related-seasons-nav {
+    display: flex;
+}
+
+.related-seasons-nav:hover:not(:disabled) {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.related-seasons-nav:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.related-season-card {
+    flex: 0 0 200px;
+    scroll-snap-align: start;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.related-season-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 168, 77, 0.55);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 168, 77, 0.25);
+}
+
+.related-season-card.is-current {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary), 0 10px 28px rgba(0, 168, 77, 0.3);
+}
+
+.related-season-poster {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    max-height: 252px;
+    min-height: 220px;
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0.5) 0%, rgba(8, 8, 8, 0.9) 100%);
+    overflow: hidden;
+}
+
+.related-season-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 2;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: rgba(0, 0, 0, 0.72);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(6px);
+}
+
+.related-season-badge.is-main {
+    background: rgba(0, 168, 77, 0.85);
+    border-color: rgba(0, 168, 77, 0.5);
+}
+
+.related-season-badge.is-side {
+    background: rgba(52, 120, 200, 0.85);
+    border-color: rgba(100, 160, 230, 0.45);
+}
+
+.related-season-badge.is-spinoff,
+.related-season-badge.is-extra {
+    background: rgba(120, 80, 160, 0.88);
+    border-color: rgba(180, 140, 220, 0.4);
+}
+
+.related-season-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+}
+
+.related-season-poster img.is-hidden {
+    display: none;
+}
+
+.related-season-poster-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 1.5rem;
+}
+
+.related-season-poster-fallback.is-hidden {
+    display: none;
+}
+
+.related-season-info {
+    padding: 10px 10px 11px;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.related-season-label {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--light);
+    line-height: 1.2;
+}
+
+.related-season-subtitle {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--light-gray);
+    line-height: 1.3;
+    opacity: 0.92;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.related-season-meta,
+.related-season-year {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: rgba(223, 230, 233, 0.75);
+    letter-spacing: 0.02em;
+}
+
 /* Section genres */
 .genres-section {
     margin-top: 40px;
@@ -500,9 +722,78 @@ body[data-page="anime-details"] .details-container {
         font-size: 0.85rem;
         text-align: left;
     }
+
+    .related-seasons-section {
+        padding: 14px 10px 12px;
+        margin-bottom: 20px;
+    }
+
+    .related-seasons-title {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+
+    .related-seasons-carousel {
+        gap: 6px;
+    }
+
+    .related-seasons-nav {
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        font-size: 0.75rem;
+    }
+
+    .related-seasons-track {
+        gap: 12px;
+    }
+
+    .related-seasons-track-wrap {
+        --rs-visible-cards: 2;
+        --rs-card-gap: 12px;
+    }
+
+    .related-season-card {
+        flex: 0 0 calc((100% - var(--rs-card-gap)) / var(--rs-visible-cards));
+        max-width: calc((100% - var(--rs-card-gap)) / var(--rs-visible-cards));
+        scroll-snap-align: start;
+    }
+
+    .related-season-poster {
+        aspect-ratio: 2 / 3;
+        max-height: none;
+        min-height: 0;
+        height: auto;
+    }
+
+    .related-season-poster img {
+        object-position: center top;
+    }
+
+    .related-season-info {
+        padding: 8px 6px 9px;
+    }
+
+    .related-season-label {
+        font-size: 0.82rem;
+    }
+
+    .related-season-subtitle {
+        font-size: 0.66rem;
+        margin-top: 3px;
+    }
+
+    .related-season-meta {
+        margin-top: 4px;
+        font-size: 0.65rem;
+    }
 }
 
 @media (max-width: 480px) {
+    .related-season-poster {
+        aspect-ratio: 3 / 4;
+    }
+
     .details-container {
         padding-top: 80px;
     }

@@ -1,7 +1,16 @@
 {
   "hosting": {
+    "site": "mangawatch-98ed0",
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "scripts/**",
+      "agent-transcripts/**",
+      ".cursor/**"
+    ]
   },
   "firestore": {
     "rules": "firestore.rules",
@@ -11,4 +20,4 @@
     "source": "functions",
     "predeploy": []
   }
-} 
+}

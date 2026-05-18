@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/messaging.css">
+    <script src="/js/boutique-partner-data.js"></script>
     <style>
         body {
             font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
@@ -42,8 +43,10 @@
         }
         
         @media (max-width: 1024px) {
-            .admin-sidebar {
-                display: none;
+            .main-header .header-right {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
             }
         }
         
@@ -1662,6 +1665,7 @@
         
         body.admin-content-hidden .admin-container,
         body.admin-content-hidden .admin-sidebar,
+        body.admin-content-hidden .admin-drawer-overlay,
         body.admin-content-hidden .main-header,
         body.admin-content-hidden .footer-unified {
             display: none !important;
@@ -1669,6 +1673,221 @@
         
         body.admin-content-hidden {
             overflow: hidden;
+        }
+
+        /* —— Menu hamburger admin (mobile) —— */
+        .admin-hamburger-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            margin-right: 0.5rem;
+            border: 1px solid rgba(0, 184, 148, 0.35);
+            border-radius: 10px;
+            background: rgba(0, 184, 148, 0.12);
+            color: #00e06d;
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .admin-hamburger-btn:hover {
+            background: rgba(0, 184, 148, 0.22);
+        }
+
+        .admin-drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            top: 70px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(3px);
+        }
+
+        body.admin-menu-open {
+            overflow: hidden;
+        }
+
+        body.admin-menu-open .admin-drawer-overlay {
+            display: block;
+        }
+
+        /* —— Section boutique partenaires —— */
+        .boutique-admin-block {
+            margin-bottom: 2rem;
+        }
+
+        .boutique-admin-block h3 {
+            font-size: 1.05rem;
+            color: #00c45d;
+            margin: 0 0 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .boutique-stats-table-wrap {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .boutique-stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 320px;
+        }
+
+        .boutique-stats-table th,
+        .boutique-stats-table td {
+            padding: 0.85rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .boutique-stats-table th {
+            background: rgba(0, 184, 148, 0.12);
+            color: #00e06d;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .boutique-stats-table td {
+            color: #ddd;
+            font-size: 0.9rem;
+        }
+
+        .boutique-stats-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .boutique-stats-num {
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            color: #00ffb0;
+        }
+
+        .boutique-local-note {
+            font-size: 0.82rem;
+            color: #f39c12;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 1024px) {
+            .admin-hamburger-btn {
+                display: inline-flex;
+            }
+
+            .admin-sidebar {
+                display: block;
+                transform: translateX(-105%);
+                transition: transform 0.28s ease;
+                box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+                width: min(300px, 88vw);
+            }
+
+            body.admin-menu-open .admin-sidebar {
+                transform: translateX(0);
+            }
+
+            body {
+                margin-left: 0;
+                padding-top: 80px;
+            }
+
+            .admin-container {
+                padding: 1rem 0.75rem 2.5rem;
+            }
+
+            .admin-header {
+                margin-bottom: 1.25rem;
+            }
+
+            .admin-header h1 {
+                font-size: 1.45rem;
+            }
+
+            .admin-header p {
+                font-size: 0.95rem;
+            }
+
+            .admin-section {
+                padding: 1.15rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .admin-section h2 {
+                font-size: 1.15rem;
+            }
+
+            .stats {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+
+            .stat-card {
+                width: 100%;
+            }
+
+            .user-item {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 1rem;
+            }
+
+            .user-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .user-actions button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .ticket-card {
+                padding: 1rem 1.1rem;
+            }
+
+            .ticket-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .ticket-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .ticket-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .message-templates {
+                grid-template-columns: 1fr !important;
+            }
+
+            .form-actions .btn-primary {
+                width: 100%;
+            }
+
+            .custom-modal {
+                width: calc(100% - 2rem);
+                max-width: none;
+                margin: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .boutique-stats-table th,
+            .boutique-stats-table td {
+                padding: 0.65rem 0.5rem;
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -1730,11 +1949,16 @@
         </nav>
         
         <div class="header-right">
+            <button type="button" class="admin-hamburger-btn" id="admin-hamburger-btn" aria-label="Ouvrir le menu administration" aria-expanded="false" aria-controls="admin-sidebar">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+            </button>
             <a href="profil.html" class="avatar-link">
                 <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.src=''">
             </a>
         </div>
     </header>
+
+    <div class="admin-drawer-overlay" id="admin-drawer-overlay" aria-hidden="true"></div>
 
     <!-- Menu latéral -->
     <aside class="admin-sidebar" id="admin-sidebar">
@@ -1767,6 +1991,12 @@
                 <a href="#" class="admin-sidebar-menu-link" data-section="tickets">
                     <i class="fas fa-circle-question"></i>
                     <span>Tickets d'aide</span>
+                </a>
+            </li>
+            <li class="admin-sidebar-menu-item">
+                <a href="#" class="admin-sidebar-menu-link" data-section="boutique">
+                    <i class="fas fa-store"></i>
+                    <span>Boutique partenaires</span>
                 </a>
             </li>
         </ul>
@@ -1926,6 +2156,40 @@
                 <div class="empty-state">
                     <i class="fas fa-spinner fa-spin"></i>
                     <p>Chargement des utilisateurs...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Boutique partenaires (masquée par défaut) -->
+        <div class="admin-section" id="section-boutique" style="display: none;">
+            <h2><i class="fas fa-store"></i> Boutique partenaires</h2>
+            <p style="color: #888; margin-bottom: 1.5rem;">Candidatures magasins et statistiques codes promo / clics vers les sites partenaires.</p>
+
+            <div class="boutique-admin-block">
+                <h3><i class="fas fa-handshake"></i> Demandes de partenariat</h3>
+                <div class="tickets-grid" id="boutique-partners-list">
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Chargement des candidatures…</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="boutique-admin-block">
+                <h3><i class="fas fa-chart-simple"></i> Statistiques par magasin</h3>
+                <div class="boutique-stats-table-wrap">
+                    <table class="boutique-stats-table" aria-label="Statistiques boutique">
+                        <thead>
+                            <tr>
+                                <th scope="col">Magasin</th>
+                                <th scope="col">Copies code promo</th>
+                                <th scope="col">Clics site web</th>
+                            </tr>
+                        </thead>
+                        <tbody id="boutique-stats-tbody">
+                            <tr><td colspan="3">Chargement…</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -3724,6 +3988,40 @@
         // Gestion du menu latéral
         document.addEventListener('DOMContentLoaded', () => {
             const sidebarLinks = document.querySelectorAll('.admin-sidebar-menu-link');
+            const adminHamburger = document.getElementById('admin-hamburger-btn');
+            const adminDrawerOverlay = document.getElementById('admin-drawer-overlay');
+
+            function setAdminMenuOpen(open) {
+                document.body.classList.toggle('admin-menu-open', open);
+                if (adminHamburger) {
+                    adminHamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    adminHamburger.setAttribute('aria-label', open ? 'Fermer le menu administration' : 'Ouvrir le menu administration');
+                    const icon = adminHamburger.querySelector('i');
+                    if (icon) {
+                        icon.classList.toggle('fa-bars', !open);
+                        icon.classList.toggle('fa-xmark', open);
+                    }
+                }
+                if (adminDrawerOverlay) {
+                    adminDrawerOverlay.setAttribute('aria-hidden', open ? 'false' : 'true');
+                }
+            }
+
+            function closeAdminMenu() {
+                setAdminMenuOpen(false);
+            }
+
+            if (adminHamburger) {
+                adminHamburger.addEventListener('click', function () {
+                    setAdminMenuOpen(!document.body.classList.contains('admin-menu-open'));
+                });
+            }
+            if (adminDrawerOverlay) {
+                adminDrawerOverlay.addEventListener('click', closeAdminMenu);
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeAdminMenu();
+            });
             
             // Fonction pour afficher une section
             function showSection(sectionId) {
@@ -3739,6 +4037,10 @@
                 if (ticketsSection) {
                     ticketsSection.style.display = 'none';
                 }
+                const boutiqueSection = document.getElementById('section-boutique');
+                if (boutiqueSection) {
+                    boutiqueSection.style.display = 'none';
+                }
                 
                 // Afficher la section sélectionnée
                 const section = document.getElementById(sectionId);
@@ -3751,9 +4053,12 @@
                     if (sectionId === 'section-tickets') {
                         loadSupportTickets();
                     }
+                    if (sectionId === 'section-boutique') {
+                        loadBoutiqueAdmin();
+                    }
                 }
                 
-                // Mettre à jour les liens actifs
+                // Mettre à jour les liens actifs (sidebar + mobile)
                 sidebarLinks.forEach(link => {
                     link.classList.remove('active');
                     const section = link.getAttribute('data-section');
@@ -3769,8 +4074,8 @@
                     e.preventDefault();
                     const section = link.getAttribute('data-section');
                     if (section) {
-                        const sectionId = 'section-' + section;
-                        showSection(sectionId);
+                        showSection('section-' + section);
+                        closeAdminMenu();
                     }
                 });
             });
@@ -3841,7 +4146,10 @@
                 ticketsList.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement des tickets...</p></div>';
                 try {
                     const { supportTicketService } = await import('/js/firebase-service.js');
-                    const tickets = await supportTicketService.getAllTicketsForAdmin();
+                    const allTickets = await supportTicketService.getAllTicketsForAdmin();
+                    const tickets = (allTickets || []).filter(function (t) {
+                        return !(t.subject || '').includes('[Partenariat boutique]');
+                    });
                     if (!tickets || tickets.length === 0) {
                         ticketsList.innerHTML = `
                             <div class="empty-state">
@@ -3931,6 +4239,153 @@
                 }
             }
 
+            function renderPartnerTicketCard(t, options) {
+                const date = t.created_at ? new Date(t.created_at).toLocaleString('fr-FR') : (t.createdAt ? new Date(t.createdAt).toLocaleString('fr-FR') : '-');
+                const subject = (t.subject || 'Candidature partenaire').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const message = (t.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                const userEmail = (t.user_email || t.email || 'Anonyme').replace(/</g, '&lt;');
+                const userName = (t.user_name || t.contactName || '-').replace(/</g, '&lt;');
+                const page = (t.page || '-').replace(/</g, '&lt;');
+                const status = t.status || 'new';
+                const isClosed = status === 'closed';
+                const isLocal = options && options.local;
+                const badgeLabel = isLocal ? 'Local (navigateur)' : (isClosed ? 'Fermé' : 'Nouveau');
+                const badgeClass = isLocal ? 'ticket-badge replied' : (isClosed ? 'ticket-badge closed' : 'ticket-badge new');
+                const ticketId = t.id || '';
+                return `
+                    <div class="ticket-card ${isClosed ? 'closed' : ''}" ${ticketId ? 'data-ticket-id="' + ticketId + '"' : ''}>
+                        <div class="ticket-card-header">
+                            <h3 class="ticket-card-title">${subject}</h3>
+                            <div class="ticket-card-meta">
+                                <span class="${badgeClass}">${badgeLabel}</span>
+                                <span class="ticket-date">${date}</span>
+                            </div>
+                        </div>
+                        <div class="ticket-body">${message}</div>
+                        <div class="ticket-user">
+                            <i class="fas fa-user"></i> ${userName} &bull; <i class="fas fa-envelope"></i> ${userEmail}
+                        </div>
+                        ${page !== '-' ? '<p style="color:#666;font-size:0.8rem;margin:0;"><i class="fas fa-link"></i> ' + page + '</p>' : ''}
+                        ${ticketId && !isLocal ? '<div class="ticket-actions"><button type="button" class="ticket-btn reply" data-ticket-id="' + ticketId + '"><i class="fas fa-reply"></i> Répondre</button><button type="button" class="ticket-btn delete" data-ticket-id="' + ticketId + '"><i class="fas fa-trash-alt"></i> Supprimer</button></div>' : ''}
+                    </div>
+                `;
+            }
+
+            async function loadBoutiquePartners() {
+                const list = document.getElementById('boutique-partners-list');
+                if (!list) return;
+                list.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement…</p></div>';
+                const cards = [];
+                let firebaseTickets = [];
+                try {
+                    const { supportTicketService } = await import('/js/firebase-service.js');
+                    const all = await supportTicketService.getAllTicketsForAdmin();
+                    firebaseTickets = (all || []).filter(function (t) {
+                        return (t.subject || '').includes('[Partenariat boutique]');
+                    });
+                    firebaseTickets.forEach(function (t) {
+                        cards.push(renderPartnerTicketCard(t, { local: false }));
+                    });
+                } catch (err) {
+                    console.error('Candidatures partenaires:', err);
+                }
+                try {
+                    const local = JSON.parse(localStorage.getItem('boutique_partner_applications') || '[]');
+                    if (local.length > 0) {
+                        cards.unshift('<p class="boutique-local-note"><i class="fas fa-triangle-exclamation"></i> Candidatures enregistrées localement (Firebase indisponible au moment de l\'envoi).</p>');
+                        local.slice().reverse().forEach(function (app) {
+                            const body = [
+                                'Magasin : ' + (app.shopName || '—'),
+                                'Ville : ' + (app.city || '—'),
+                                'Contact : ' + (app.contactName || '—'),
+                                'E-mail : ' + (app.email || '—'),
+                                'Téléphone : ' + (app.phone || '—'),
+                                '',
+                                'Informations complémentaires :',
+                                app.message || '—'
+                            ].join('\n');
+                            cards.push(renderPartnerTicketCard({
+                                subject: '[Partenariat boutique] ' + (app.shopName || 'Magasin'),
+                                message: body,
+                                user_email: app.email,
+                                user_name: app.contactName,
+                                createdAt: app.createdAt
+                            }, { local: true }));
+                        });
+                    }
+                } catch (e) { /* ignore */ }
+                if (cards.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><i class="fas fa-store" style="font-size:3rem;color:#555;margin-bottom:1rem;"></i><p>Aucune demande de partenariat pour le moment</p></div>';
+                    return;
+                }
+                list.innerHTML = cards.join('');
+                list.querySelectorAll('.ticket-btn.reply').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        const ticketId = btn.getAttribute('data-ticket-id');
+                        const ticket = firebaseTickets.find(function (t) { return t.id === ticketId; });
+                        if (ticket) openTicketReplyModal(ticket);
+                    });
+                });
+                list.querySelectorAll('.ticket-btn.delete').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        const ticketId = btn.getAttribute('data-ticket-id');
+                        const ticket = firebaseTickets.find(function (t) { return t.id === ticketId; });
+                        if (ticket) showDeleteTicketModal(ticket);
+                    });
+                });
+            }
+
+            function mergeBoutiqueStats(remote) {
+                const out = Object.assign({}, remote || {});
+                try {
+                    const local = JSON.parse(localStorage.getItem('boutique_stats_local') || '{}');
+                    Object.keys(local).forEach(function (id) {
+                        const l = local[id] || {};
+                        const r = out[id] || { promo_copies: 0, site_clicks: 0 };
+                        out[id] = {
+                            promo_copies: Math.max(Number(r.promo_copies) || 0, Number(l.promo_copies) || 0),
+                            site_clicks: Math.max(Number(r.site_clicks) || 0, Number(l.site_clicks) || 0)
+                        };
+                    });
+                    const pending = JSON.parse(localStorage.getItem('boutique_stats_pending') || '[]');
+                    pending.forEach(function (item) {
+                        if (!item.storeId || !item.field) return;
+                        if (!out[item.storeId]) out[item.storeId] = { promo_copies: 0, site_clicks: 0 };
+                        out[item.storeId][item.field] = (Number(out[item.storeId][item.field]) || 0) + 1;
+                    });
+                } catch (e) { /* ignore */ }
+                return out;
+            }
+
+            async function loadBoutiqueStats() {
+                const tbody = document.getElementById('boutique-stats-tbody');
+                if (!tbody) return;
+                const stores = window.BOUTIQUE_PARTNER_STORES || [];
+                let stats = {};
+                try {
+                    const { boutiqueStatsService } = await import('/js/firebase-service.js');
+                    const remote = await boutiqueStatsService.getAll();
+                    stats = mergeBoutiqueStats(remote);
+                } catch (err) {
+                    console.warn('Stats boutique:', err);
+                    stats = mergeBoutiqueStats({});
+                }
+                if (stores.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3">Aucun magasin configuré</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = stores.map(function (s) {
+                    const st = stats[s.id] || {};
+                    const copies = Number(st.promo_copies) || 0;
+                    const clicks = Number(st.site_clicks) || 0;
+                    return '<tr><td>' + s.name.replace(/</g, '&lt;') + '</td><td class="boutique-stats-num">' + copies + '</td><td class="boutique-stats-num">' + clicks + '</td></tr>';
+                }).join('');
+            }
+
+            async function loadBoutiqueAdmin() {
+                await Promise.all([loadBoutiquePartners(), loadBoutiqueStats()]);
+            }
+
             function openTicketReplyModal(ticket) {
                 currentTicketForReply = ticket;
                 const overlay = document.getElementById('ticket-reply-modal-overlay');
@@ -3976,6 +4431,7 @@
                     }
                     closeTicketReplyModal();
                     loadSupportTickets();
+                    loadBoutiquePartners();
                     alert('Réponse enregistrée. L\'utilisateur la verra dans sa messagerie sur le site.');
                 } catch (err) {
                     console.error('Erreur envoi réponse ticket:', err);

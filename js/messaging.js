@@ -83,6 +83,25 @@ class MessagingUI {
             </div>
         `;
         document.body.appendChild(overlay);
+        this.clampButtonAboveFooter();
+    }
+
+    /** Empêche le bouton messagerie de passer sous le footer (toutes pages avec footer unifié). */
+    clampButtonAboveFooter() {
+        const btn = document.getElementById('message-button');
+        const footer = document.querySelector('.footer-unified');
+        if (!btn || !footer) return;
+        const gap = 16;
+        const defaultBottom = 20;
+        let bottom = defaultBottom;
+        const footerTop = footer.getBoundingClientRect().top;
+        const vh = window.innerHeight;
+        if (footerTop < vh) {
+            bottom = Math.max(defaultBottom, vh - footerTop + gap);
+        }
+        const bottomPx = bottom + 'px';
+        btn.style.bottom = bottomPx;
+        document.documentElement.style.setProperty('--message-btn-bottom', bottomPx);
     }
 
     attachEventListeners() {
@@ -94,6 +113,9 @@ class MessagingUI {
         document.getElementById('message-popup-close').addEventListener('click', () => {
             this.closePopup();
         });
+
+        window.addEventListener('scroll', () => this.clampButtonAboveFooter(), { passive: true });
+        window.addEventListener('resize', () => this.clampButtonAboveFooter());
 
         document.getElementById('message-overlay').addEventListener('click', (e) => {
             if (e.target.id === 'message-overlay') {

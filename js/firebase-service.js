@@ -19,6 +19,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  increment,
   query,
   where,
   orderBy,
@@ -221,7 +222,8 @@ export const COLLECTIONS = {
   USER_TOP10: 'user_top10',
   USER_PROFILES: 'user_profiles',
   USER_LIST: 'user_list',
-  SUPPORT_TICKETS: 'support_tickets'
+  SUPPORT_TICKETS: 'support_tickets',
+  BOUTIQUE_STATS: 'boutique_stats'
 };
 
 // ============================================
@@ -1857,6 +1859,40 @@ function normalizeTicketDoc(d) {
   return out;
 }
 
+// ============================================
+// STATISTIQUES BOUTIQUE (codes promo / clics site)
+// ============================================
+export const boutiqueStatsService = {
+  /**
+   * Incrémente un compteur pour un magasin partenaire.
+   * @param {string} storeId
+   * @param {'promo_copies'|'site_clicks'} field
+   */
+  async increment(storeId, field) {
+    if (!storeId || !field) return;
+    const statRef = doc(db, COLLECTIONS.BOUTIQUE_STATS, storeId);
+    await setDoc(statRef, {
+      [field]: increment(1),
+      updated_at: serverTimestamp()
+    }, { merge: true });
+  },
+
+  /** Tous les compteurs (admin / affichage boutique) */
+  async getAll() {
+    const ref = collection(db, COLLECTIONS.BOUTIQUE_STATS);
+    const snap = await getDocs(ref);
+    const out = {};
+    snap.docs.forEach(function (d) {
+      const data = d.data();
+      out[d.id] = {
+        promo_copies: Number(data.promo_copies) || 0,
+        site_clicks: Number(data.site_clicks) || 0
+      };
+    });
+    return out;
+  }
+};
+
 // Exposer globalement pour compatibilité
 if (typeof window !== 'undefined') {
   window.forumService = forumService;
@@ -1869,6 +1905,7 @@ if (typeof window !== 'undefined') {
   window.profileAdminService = profileAdminService;
   window.collectionService = collectionService;
   window.supportTicketService = supportTicketService;
+  window.boutiqueStatsService = boutiqueStatsService;
   window.FIREBASE_COLLECTIONS = COLLECTIONS;
   window.MANGAWATCH_ADMIN_EMAIL = ADMIN_EMAIL;
 }
