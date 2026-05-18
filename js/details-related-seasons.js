@@ -15,8 +15,8 @@
     const STRICT_SERIES_FILTER_TYPES = new Set(['side story', 'spin-off', 'spin off', 'alternative']);
 
     const FRANCHISE_PART_ALIASES = [
-        { pattern: /phantom blood|phantom\s*blood/i, part: 1 },
-        { pattern: /battle tendency/i, part: 2 },
+        { pattern: /\bphantom blood\b|phantom\s*blood|jonathan joestar|kimyou na bouken(?!\s*:)/i, part: 1 },
+        { pattern: /\bbattle tendency\b|battle\s*tendency|joseph joestar/i, part: 2 },
         { pattern: /stardust crusaders/i, part: 3 },
         { pattern: /diamond is unbreakable|diamond.*unbreakable/i, part: 4 },
         { pattern: /\bvento aureo\b|\bgolden wind\b/i, part: 5 },
@@ -177,11 +177,87 @@
         return ROMAN_NUMERALS[String(roman || '').toLowerCase()] || null;
     }
 
+    function isNonMainSeasonEntry(title, item) {
+        const t = String(title || '').toLowerCase();
+        if (/break\s*time|picture\s*drama|mini\s*anime|chibi|short\s*anime|petit\s*anime|soseiji|ign\s*x\s*hop|idol\s*days/i.test(t)) {
+            return true;
+        }
+        if (/^re:zero.*break\s*time|break\s*time.*re:zero/i.test(t)) return true;
+        if (/special\b|recap|summary|memory\s*snow|highlight/i.test(t) && /break|mini|short|chibi|drama/i.test(t)) {
+            return true;
+        }
+        const rel = normalizeRelationType(item?.relationType || '');
+        if (STRICT_SERIES_FILTER_TYPES.has(rel)) return true;
+        const eps = item?.episodes;
+        if (eps != null && eps > 0 && eps <= 26 &&
+            /(?:\d+)(?:st|nd|rd|th)\s+season|season\s*\d/i.test(t) &&
+            /break|special|extra|picture|drama|mini|chibi|short|time|pet|side/i.test(t)) {
+            return true;
+        }
+        return false;
+    }
+
+    function extractDisambiguatorSuffix(title, contentType, item) {
+        const t = title || '';
+        if (/break\s*time/i.test(t)) return 'Break Time';
+        if (/picture\s*drama/i.test(t)) return 'Picture Drama';
+        if (/mini\s*anime|chibi/i.test(t)) return 'Mini anime';
+        const colon = t.match(/:\s*([^:]+)$/);
+        if (colon) {
+            let sub = colon[1].trim()
+                .replace(/(\d+)(?:st|nd|rd|th)\s+season/gi, '')
+                .replace(/(?:season|saison)\s*\d+/gi, '')
+                .trim();
+            if (sub.length >= 3 && sub.length <= 42) return truncateSubtitle(sub, 30);
+        }
+        const partM = t.match(/\bpart\s*(\d+)\b/i);
+        if (partM && /season|saison|\d(?:st|nd|rd|th)\s+season/i.test(t)) {
+            return `Partie ${partM[1]}`;
+        }
+        const courM = t.match(/\bcour\s*(\d+)\b/i);
+        if (courM) return `Cour ${courM[1]}`;
+        if (isNonMainSeasonEntry(t, item)) return 'Extra';
+        return '';
+    }
+
+    function classifyNonMainSeasonContent(title, item) {
+        if (!isNonMainSeasonEntry(title, item)) return null;
+        const t = title || '';
+        let seasonNum = null;
+        let m = t.match(/(\d+)(?:st|nd|rd|th)\s+season/i);
+        if (m) seasonNum = m[1];
+        else {
+            m = t.match(/(?:season|saison)\s*(\d+)/i);
+            if (m) seasonNum = m[1];
+        }
+        const suffix = extractDisambiguatorSuffix(title, 'anime', item) || 'Extra';
+        if (seasonNum) return `S${seasonNum} · ${suffix}`;
+        return suffix;
+    }
+
+    function finalizeSeasonLabel(label, title, contentType, item, labelCounts) {
+        if (!label || !labelCounts) return label;
+        const suffix = extractDisambiguatorSuffix(title, contentType, item);
+        const count = (labelCounts.get(label) || 0) + 1;
+        labelCounts.set(label, count);
+        if (count > 1 && suffix) return `${label} · ${suffix}`;
+        if (isNonMainSeasonEntry(title, item) && suffix && !String(label).includes(suffix)) {
+            return `${label} · ${suffix}`;
+        }
+        return label;
+    }
+
     function extractSeasonPartNumber(title, contentType) {
         if (!title) return null;
+        if (isNonMainSeasonEntry(title, null)) return null;
         const t = title.toLowerCase();
         for (const alias of FRANCHISE_PART_ALIASES) {
             if (alias.pattern.test(title)) return alias.part;
+        }
+        if (detectFranchiseKey(title) === 'jojo') {
+            const base = (title || '').trim();
+            if (/^jojo'?s bizarre adventure\s*(\(?(?:tv|2012|2015)\)?)?\s*$/i.test(base)) return 1;
+            if (/:\s*the animation\s*$/i.test(base) && /jojo/i.test(base)) return 1;
         }
         let m = t.match(/(?:season|saison|cour)\s*(\d+)/i);
         if (m) return parseInt(m[1], 10);
@@ -230,12 +306,29 @@
         return 100;
     }
 
-    function extractExplicitLabelFromTitle(title, contentType) {
+    function extractExplicitLabelFromTitle(title, contentType, item) {
+        if (isNonMainSeasonEntry(title, item)) return null;
+
         const t = title || '';
-        let m = t.match(/(?:season|saison)\s*(\d+)/i);
-        if (m) return `Saison ${m[1]}`;
+        let m = t.match(/(\d+)(?:st|nd|rd|th)\s+season\s+part\s*(\d+)/i);
+        if (m) return `Saison ${m[1]} · Partie ${m[2]}`;
+        m = t.match(/(?:season|saison)\s*(\d+)\s*[-–:]\s*part\s*(\d+)/i);
+        if (m) return `Saison ${m[1]} · Partie ${m[2]}`;
+
         m = t.match(/(\d+)(?:st|nd|rd|th)\s+season/i);
-        if (m) return `Saison ${m[1]}`;
+        if (m) {
+            const partM = t.match(/\bpart\s*(\d+)\b/i);
+            if (partM) return `Saison ${m[1]} · Partie ${partM[1]}`;
+            return `Saison ${m[1]}`;
+        }
+
+        m = t.match(/(?:season|saison)\s*(\d+)/i);
+        if (m) {
+            const partM = t.match(/\bpart(?:ie)?\s*(\d+)\b/i);
+            if (partM) return `Saison ${m[1]} · Partie ${partM[1]}`;
+            return `Saison ${m[1]}`;
+        }
+
         m = t.match(/\bcour\s*(\d+)/i);
         if (m) return `Saison ${m[1]}`;
         if (/\bfinal\s+season\b/i.test(t)) return 'Saison finale';
@@ -244,8 +337,8 @@
         const subPart = t.match(/\bpart\s*(\d+)\b/i);
         if (franchisePart != null && subPart && parseInt(subPart[1], 10) !== franchisePart) {
             return usesPartLabel(t, contentType)
-                ? `Partie ${franchisePart} (${subPart[1]})`
-                : `Saison ${franchisePart} (${subPart[1]})`;
+                ? `Partie ${franchisePart} · ${subPart[1]}`
+                : `Saison ${franchisePart} · Partie ${subPart[1]}`;
         }
 
         m = t.match(/(?:part|partie)\s*(\d+)/i);
@@ -285,6 +378,7 @@
         if (ct !== 'anime' && ct !== 'film') return;
         if (detectFranchiseKey(referenceTitle)) return;
         const mainEntries = items.filter((item) => {
+            if (isNonMainSeasonEntry(item.title, item)) return false;
             if (extractSeasonPartNumber(item.title, contentType) != null) return false;
             if (inferExtraFromTitle(item.title)) return false;
             const rel = normalizeRelationType(item.relationType || '');
@@ -301,32 +395,44 @@
         });
     }
 
-    function getSeasonLabel(title, contentType, item) {
-        const explicit = extractExplicitLabelFromTitle(title, contentType);
-        if (explicit) return explicit;
+    function getSeasonLabel(title, contentType, item, labelCounts) {
+        const nonMain = classifyNonMainSeasonContent(title, item);
+        if (nonMain) return nonMain;
 
-        const extra = inferExtraFromTitle(title);
-        if (extra) return extra.badge;
+        let label = extractExplicitLabelFromTitle(title, contentType, item);
 
-        const rel = normalizeRelationType(item?.relationType || '');
-        if (rel === 'side story') return 'Side story';
-        if (rel === 'spin-off' || rel === 'spin off') return 'Spin-off';
-        if (rel === 'alternative' || rel === 'alternative version') return 'Alternative';
-        if (rel === 'adaptation') return 'Film / Adaptation';
-        if (rel === 'summary' || rel === 'full story') return 'Récap / Film';
-
-        const ct = (contentType || '').toLowerCase();
-        const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
-        const num = item?._inferredSeason ?? extractSeasonPartNumber(title, contentType);
-
-        if (num === 99) return 'Saison finale';
-        if (num != null) {
-            if (usesPartLabel(title, contentType)) return `Partie ${num}`;
-            return isManga ? `Tome ${num}` : `Saison ${num}`;
+        if (!label) {
+            const extra = inferExtraFromTitle(title);
+            if (extra) {
+                const t = title || '';
+                const sm = t.match(/(\d+)(?:st|nd|rd|th)\s+season|(?:season|saison)\s*(\d+)/i);
+                const sn = sm ? (sm[1] || sm[2]) : null;
+                label = sn ? `S${sn} · ${extra.badge}` : extra.badge;
+            }
         }
 
-        const short = truncateSubtitle(title, 34);
-        return short || 'Extra';
+        if (!label) {
+            const rel = normalizeRelationType(item?.relationType || '');
+            if (rel === 'side story') label = 'Side story';
+            else if (rel === 'spin-off' || rel === 'spin off') label = 'Spin-off';
+            else if (rel === 'alternative' || rel === 'alternative version') label = 'Alternative';
+            else if (rel === 'adaptation') label = 'Film / Adaptation';
+            else if (rel === 'summary' || rel === 'full story') label = 'Récap / Film';
+        }
+
+        if (!label) {
+            const ct = (contentType || '').toLowerCase();
+            const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
+            const num = item?._inferredSeason ?? extractSeasonPartNumber(title, contentType);
+            if (num === 99) label = 'Saison finale';
+            else if (num != null) {
+                label = usesPartLabel(title, contentType) ? `Partie ${num}` : (isManga ? `Tome ${num}` : `Saison ${num}`);
+            } else {
+                label = truncateSubtitle(title, 34) || 'Extra';
+            }
+        }
+
+        return finalizeSeasonLabel(label, title, contentType, item, labelCounts);
     }
 
     function normalizeRelationType(rel) {
@@ -335,6 +441,8 @@
 
     function inferExtraFromTitle(title) {
         const t = String(title || '').toLowerCase();
+        if (/break\s*time/i.test(t)) return { tier: 56, badge: 'Break Time', badgeClass: 'is-extra' };
+        if (/picture\s*drama/i.test(t)) return { tier: 55, badge: 'Picture Drama', badgeClass: 'is-extra' };
         if (/\bfiller\b/.test(t)) return { tier: 55, badge: 'Filler', badgeClass: 'is-extra' };
         if (/spin.?off|gaiden/.test(t)) return { tier: 52, badge: 'Spin-off', badgeClass: 'is-spinoff' };
         if (/\bova\b|\bona\b/.test(t)) return { tier: 50, badge: 'OVA', badgeClass: 'is-extra' };
@@ -668,9 +776,10 @@
         const heading = getSectionHeading(contentType);
         const cardIcon = isManga ? 'fa-book' : 'fa-tv';
 
+        const labelCounts = new Map();
         const cardsHtml = items.map((item) => {
             const isCurrent = String(item.mal_id) === String(currentId);
-            const label = getSeasonLabel(item.title, contentType, item);
+            const label = getSeasonLabel(item.title, contentType, item, labelCounts);
             const badge = getRelationBadge(item, contentType);
             const metaLine = buildMetaLine(item, contentType);
             const img = item.image || '';
