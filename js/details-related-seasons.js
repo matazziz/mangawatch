@@ -24,6 +24,7 @@
         { pattern: /jojolion/i, part: 8 }
     ];
     const CACHE_TTL_MS = 5 * 60 * 1000;
+    const SERIES_REL_CACHE_TTL_MS = 30 * 60 * 1000;
 
     function isMangaOnlyMode() {
         return !!(global.MW_API_CONFIG && global.MW_API_CONFIG.isMangaOnly());
@@ -296,6 +297,89 @@
         return map[ct] || map.anime;
     }
 
+    function formatDateFr(value) {
+        if (!value) return '';
+        try {
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function getSeriesCacheKey(referenceTitle, mediaType) {
+        const seriesCt = mediaType === 'manga' ? 'manga' : 'anime';
+        const franchise = detectFranchiseKey(referenceTitle);
+        const slug = franchise || normalizeTitle(extractBaseTitle(referenceTitle, seriesCt)).slice(0, 72);
+        return `mw_series_rel_${mediaType}_${slug || 'serie'}`;
+    }
+
+    function loadSeriesRelationsCache(key) {
+        try {
+            const raw = sessionStorage.getItem(key);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            if (!parsed?.items || Date.now() - parsed.ts > SERIES_REL_CACHE_TTL_MS) {
+                sessionStorage.removeItem(key);
+                return [];
+            }
+            return parsed.items;
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveSeriesRelationsCache(key, items) {
+        try {
+            const merged = new Map();
+            loadSeriesRelationsCache(key).forEach((item) => {
+                if (item?.mal_id) merged.set(String(item.mal_id), item);
+            });
+            (items || []).forEach((item) => {
+                if (!item?.mal_id) return;
+                const id = String(item.mal_id);
+                merged.set(id, { ...merged.get(id), ...item });
+            });
+            sessionStorage.setItem(key, JSON.stringify({
+                ts: Date.now(),
+                items: Array.from(merged.values())
+            }));
+        } catch (e) { /* quota */ }
+    }
+
+    function mergeSeriesCacheIntoMap(map, key) {
+        loadSeriesRelationsCache(key).forEach((item) => {
+            if (!item?.mal_id) return;
+            const id = String(item.mal_id);
+            const prev = map.get(id);
+            map.set(id, prev ? { ...prev, ...item, image: prev.image || item.image, title: prev.title || item.title } : item);
+        });
+    }
+
+    function buildPublicationLines(item, contentType) {
+        const lines = [];
+        const ct = (contentType || '').toLowerCase();
+        const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
+        const start = formatDateFr(item.airedFrom);
+        const end = formatDateFr(item.airedTo);
+
+        if (item.year) lines.push({ label: 'Année', value: String(item.year) });
+        if (start) lines.push({ label: isManga ? 'Début parution' : 'Début diffusion', value: start });
+        if (end) lines.push({ label: isManga ? 'Fin parution' : 'Fin diffusion', value: end });
+        if (item.volumes) lines.push({ label: 'Volumes', value: String(item.volumes) });
+        if (item.chapters) lines.push({ label: 'Chapitres', value: String(item.chapters) });
+        if (item.episodes) lines.push({ label: 'Épisodes', value: String(item.episodes) });
+        if (item.status) lines.push({ label: 'Statut', value: String(item.status) });
+        if (item.score != null && item.score !== '') {
+            lines.push({ label: 'Note', value: `${Number(item.score).toFixed(1)}/10` });
+        }
+        if (lines.length === 0 && item.title) {
+            lines.push({ label: 'Série', value: truncateSubtitle(item.title, 48) });
+        }
+        return lines;
+    }
+
     function buildMetaLine(item, contentType) {
         const parts = [];
         if (item.year) parts.push(String(item.year));
@@ -306,9 +390,9 @@
             parts.push(`${item.chapters} ch.`);
         } else if (item.volumes) {
             parts.push(`${item.volumes} vol.`);
-        } else if (ct === 'manga' && item.relationType) {
-            /* rien */
         }
+        const start = formatDateFr(item.airedFrom);
+        if (start && parts.length < 3) parts.push(start);
         return parts.join(' · ');
     }
 
@@ -455,7 +539,7 @@
         setTimeout(updateNav, 150);
     }
 
-    function renderSection(items, currentId, contentType) {
+    function renderSection(items, currentId, contentType, referenceTitle) {
         const synopsisEl = document.querySelector('.synopsis-section');
         if (!synopsisEl) return null;
 
@@ -472,18 +556,25 @@
             const badge = getRelationBadge(item, contentType);
             const metaLine = buildMetaLine(item, contentType);
             const img = item.image || '';
+            const pubLines = buildPublicationLines(item, contentType);
             const badgeHtml = badge
                 ? `<span class="related-season-badge ${badge.className}">${escapeHtml(badge.label)}</span>`
                 : '';
             const metaHtml = metaLine
                 ? `<span class="related-season-meta">${escapeHtml(metaLine)}</span>`
                 : '';
-            const imgHtml = img
-                ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" data-mal-id="${item.mal_id}"
-                    onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`
-                : `<img alt="" loading="lazy" data-mal-id="${item.mal_id}" class="is-hidden"
-                    onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`;
-            const fallbackClass = img ? 'related-season-poster-fallback is-hidden' : 'related-season-poster-fallback';
+            let posterInner;
+            let posterClass = 'related-season-poster';
+            if (!isCurrent && !img && pubLines.length > 0) {
+                posterClass = 'related-season-poster related-season-poster--publication';
+                posterInner = `<div class="related-season-pub-info">${pubLines.map((row) => `<span class="related-season-pub-row"><span class="related-season-pub-label">${escapeHtml(row.label)}</span><span class="related-season-pub-value">${escapeHtml(row.value)}</span></span>`).join('')}</div>`;
+            } else {
+                const imgHtml = img
+                    ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" data-mal-id="${item.mal_id}" onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`
+                    : `<img alt="" loading="lazy" data-mal-id="${item.mal_id}" class="is-hidden" onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`;
+                const fallbackClass = img ? 'related-season-poster-fallback is-hidden' : 'related-season-poster-fallback';
+                posterInner = `${imgHtml}<div class="${fallbackClass}" aria-hidden="true"><i class="fas ${cardIcon}"></i></div>`;
+            }
 
             return `
                 <a href="${buildDetailUrl(item.mal_id, contentType)}"
@@ -491,12 +582,9 @@
                    title="${escapeHtml(item.title)}"
                    data-mal-id="${item.mal_id}"
                    ${isCurrent ? 'aria-current="page"' : ''}>
-                    <div class="related-season-poster">
+                    <div class="${posterClass}">
                         ${badgeHtml}
-                        ${imgHtml}
-                        <div class="${fallbackClass}" aria-hidden="true">
-                            <i class="fas ${cardIcon}"></i>
-                        </div>
+                        ${posterInner}
                     </div>
                     <div class="related-season-info">
                         <span class="related-season-label">${escapeHtml(label)}</span>
@@ -565,6 +653,10 @@
                             ? { prop: { from: { year: payload.year || item.year } } }
                             : undefined
                     }, contentType);
+                    if (referenceTitle) {
+                        const seriesKey = getSeriesCacheKey(referenceTitle, getApiMediaType(contentType));
+                        saveSeriesRelationsCache(seriesKey, items);
+                    }
                 } catch (prefetchErr) {
                     console.warn('[details-related-seasons] prefetch:', prefetchErr);
                 }
@@ -610,9 +702,11 @@
                 score: item.score != null ? item.score : null,
                 genres: item.genres || [],
                 type: item.type || null,
+                status: item.status || null,
                 image: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
                 year: year || '',
                 airedFrom: item.aired?.from || item.published?.from || null,
+                airedTo: item.aired?.to || item.published?.to || null,
                 episodes: item.episodes || null,
                 chapters: item.chapters || null,
                 volumes: item.volumes || null
@@ -622,6 +716,36 @@
         const brief = await enqueue(load);
         if (brief) writeCache(cacheKey, brief);
         return brief;
+    }
+
+    async function enrichRelatedItems(items, mediaType, currentId) {
+        const need = items.filter((item) => {
+            if (String(item.mal_id) === String(currentId)) return false;
+            return !item.year || (!item.chapters && !item.volumes && !item.episodes && !item.airedFrom);
+        });
+        const batchSize = 4;
+        for (let i = 0; i < need.length; i += batchSize) {
+            await Promise.all(need.slice(i, i + batchSize).map(async (item) => {
+                try {
+                    const brief = await fetchDetailBrief(mediaType, item.mal_id);
+                    if (!brief) return;
+                    Object.assign(item, {
+                        title: item.title || brief.title,
+                        year: item.year || brief.year,
+                        image: item.image || brief.image,
+                        airedFrom: item.airedFrom || brief.airedFrom,
+                        airedTo: item.airedTo || brief.airedTo,
+                        status: item.status || brief.status,
+                        episodes: item.episodes ?? brief.episodes,
+                        chapters: item.chapters ?? brief.chapters,
+                        volumes: item.volumes ?? brief.volumes,
+                        score: item.score ?? brief.score,
+                        synopsis: item.synopsis || brief.synopsis
+                    });
+                } catch (e) { /* ignore */ }
+            }));
+            if (i + batchSize < need.length) await delay(280);
+        }
     }
 
     async function lazyLoadImages(items, mediaType) {
@@ -703,7 +827,9 @@
             volumes: content.volumes || null
         };
 
+        const seriesCacheKey = getSeriesCacheKey(referenceTitle, mediaType);
         let relatedMap = collectFromCatalogueSnapshot(referenceTitle, mediaType, currentId);
+        mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
 
         let aniEdges = global.MWDetailCache?.getAniListRelations?.(currentId);
         if ((!aniEdges || aniEdges.length === 0) && global.MWDetailCache?.fetchAniListByMalId) {
@@ -721,24 +847,25 @@
             fromAni.forEach((v, k) => relatedMap.set(k, v));
         }
 
-        if (relatedMap.size < 2) {
-            try {
-                const relationsPayload = await fetchRelations(mediaType, currentId);
-                const fromJikan = collectRelatedFromRelationsPayload(
-                    relationsPayload, mediaType, referenceTitle
-                );
-                fromJikan.forEach((v, k) => relatedMap.set(k, v));
-            } catch (err) {
-                console.warn('[details-related-seasons] Jikan relations:', err?.message || err);
-            }
+        try {
+            const relationsPayload = await fetchRelations(mediaType, currentId);
+            const fromJikan = collectRelatedFromRelationsPayload(
+                relationsPayload, mediaType, referenceTitle
+            );
+            fromJikan.forEach((v, k) => relatedMap.set(k, v));
+        } catch (err) {
+            console.warn('[details-related-seasons] Jikan relations:', err?.message || err);
         }
 
         relatedMap.set(currentId, currentEntry);
+        mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
         if (relatedMap.size < 2) return;
 
-        const items = sortRelatedItems(Array.from(relatedMap.values()));
+        let items = sortRelatedItems(Array.from(relatedMap.values()));
+        await enrichRelatedItems(items, mediaType, currentId);
+        saveSeriesRelationsCache(seriesCacheKey, items);
 
-        renderSection(items, currentId, ct);
+        renderSection(items, currentId, ct, referenceTitle);
         lazyLoadImages(items, mediaType).catch(() => {});
     }
 
