@@ -647,15 +647,21 @@
     }
 
     function scheduleLoadAndRender(content, contentType, contentId) {
-        setTimeout(() => {
-            loadAndRender(content, contentType, contentId).catch((err) => {
-                console.warn('[details-related-seasons]', err);
-            });
-        }, RELATED_LOAD_DELAY_MS);
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                loadAndRender(content, contentType, contentId)
+                    .then(resolve)
+                    .catch((err) => {
+                        console.warn('[details-related-seasons]', err);
+                        resolve();
+                    });
+            }, RELATED_LOAD_DELAY_MS);
+        });
     }
 
     global.DetailsRelatedSeasons = {
         loadAndRender: scheduleLoadAndRender,
+        loadAndRenderNow: loadAndRender,
         initRelatedSeasonsCarousel,
         renderSection,
         sortRelatedItems,

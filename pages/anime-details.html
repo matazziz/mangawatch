@@ -168,9 +168,12 @@
             // Charger les détails du contenu
             if (contentId) {
                 console.log('📡 Chargement des détails pour le contenu ID:', contentId, 'type:', contentType);
-                loadContentDetails().catch(error => {
-                    console.error('❌ Erreur lors du chargement:', error);
-                });
+                const loadPromise = loadContentDetails();
+                if (loadPromise && typeof loadPromise.then === 'function') {
+                    loadPromise.catch((error) => {
+                        console.error('❌ Erreur lors du chargement:', error);
+                    });
+                }
             } else {
                 console.log('⚠️ Aucun ID de contenu fourni');
             }
@@ -775,9 +778,13 @@
             }
 
             // Autres saisons / volumes de la même série
-            if (window.DetailsRelatedSeasons) {
-                DetailsRelatedSeasons.loadAndRender(content, contentType, content.mal_id || contentId)
-                    .catch((err) => console.warn('[anime-details] Saisons liées:', err));
+            if (window.DetailsRelatedSeasons?.loadAndRender) {
+                const relatedPromise = DetailsRelatedSeasons.loadAndRender(
+                    content, contentType, content.mal_id || contentId
+                );
+                if (relatedPromise && typeof relatedPromise.catch === 'function') {
+                    relatedPromise.catch((err) => console.warn('[anime-details] Saisons liées:', err));
+                }
             }
         }
         
@@ -2159,7 +2166,7 @@
     
     <script src="../js/hamburger-menu.js"></script>
     <!-- Charger profile-anime-cards.js pour le nettoyage du top 10 lors de la suppression de notes -->
-    <script src="/js/details-related-seasons.js?v=1.9"></script>
+    <script src="/js/details-related-seasons.js?v=2.0"></script>
     <script src="/js/profile-anime-cards.js?v=2.0"></script>
     <!-- Charger les modules Firebase à la fin pour ne pas bloquer le chargement -->
     <script type="module">
