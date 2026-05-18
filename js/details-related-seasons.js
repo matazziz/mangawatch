@@ -26,6 +26,7 @@
     ];
     const CACHE_TTL_MS = 5 * 60 * 1000;
     const SERIES_REL_CACHE_TTL_MS = 30 * 60 * 1000;
+    let activeCarouselCleanup = null;
 
     function isMangaOnlyMode() {
         return !!(global.MW_API_CONFIG && global.MW_API_CONFIG.isMangaOnly());
@@ -373,11 +374,12 @@
         return Array.from(map.values());
     }
 
-    function assignInferredSeasonNumbers(items, contentType, referenceTitle) {
+    function assignInferredSeasonNumbers(items, contentType, referenceTitle, currentId) {
         const ct = (contentType || '').toLowerCase();
         if (ct !== 'anime' && ct !== 'film') return;
         if (detectFranchiseKey(referenceTitle)) return;
         const mainEntries = items.filter((item) => {
+            if (currentId && String(item.mal_id) === String(currentId)) return false;
             if (isNonMainSeasonEntry(item.title, item)) return false;
             if (extractSeasonPartNumber(item.title, contentType) != null) return false;
             if (inferExtraFromTitle(item.title)) return false;
@@ -506,6 +508,10 @@
         if (rel === 'alternative') return { label: 'Alternative', className: 'is-extra' };
 
         if (rel === 'parent story' || rel === 'parent') {
+            const ct = (contentType || 'anime').toLowerCase();
+            if (ct === 'anime' || ct === 'film') {
+                return { label: 'Anime', className: 'is-main' };
+            }
             return { label: 'Série', className: 'is-main' };
         }
 
@@ -746,24 +752,21 @@
     }
 
     function initRelatedSeasonsCarousel(section) {
-        if (!section) return;
+        if (!section) return null;
         const track = section.querySelector('.related-seasons-track');
         const prevBtn = section.querySelector('.related-seasons-nav--prev');
         const nextBtn = section.querySelector('.related-seasons-nav--next');
-        if (!track || !prevBtn || !nextBtn) return;
+        if (!track || !prevBtn || !nextBtn) return null;
 
         const getScrollStep = () => {
             const card = track.querySelector('.related-season-card');
             const gap = parseFloat(getComputedStyle(track).columnGap || getComputedStyle(track).gap) || 14;
             const cardWidth = card ? card.offsetWidth : 200;
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            const cardsPerStep = isMobile ? 2 : 2;
-            return (cardWidth + gap) * cardsPerStep;
+            return (cardWidth + gap) * 2;
         };
 
-        const cardCount = track.querySelectorAll('.related-season-card').length;
-
         const updateNav = () => {
+            const cardCount = track.querySelectorAll('.related-season-card').length;
             const maxScroll = track.scrollWidth - track.clientWidth;
             const hasOverflow = maxScroll > 8 || cardCount > 2;
             section.classList.toggle('has-overflow', hasOverflow);
@@ -772,75 +775,67 @@
             nextBtn.disabled = track.scrollLeft >= maxScroll - 8;
         };
 
-        prevBtn.addEventListener('click', () => {
-            track.scrollBy({ left: -getScrollStep(), behavior: 'smooth' });
-        });
-        nextBtn.addEventListener('click', () => {
-            track.scrollBy({ left: getScrollStep(), behavior: 'smooth' });
-        });
-        track.addEventListener('scroll', updateNav, { passive: true });
+        let scrollRaf = 0;
+        const onScroll = () => {
+            if (scrollRaf) return;
+            scrollRaf = requestAnimationFrame(() => {
+                scrollRaf = 0;
+                updateNav();
+            });
+        };
+
+        const onPrev = () => track.scrollBy({ left: -getScrollStep(), behavior: 'smooth' });
+        const onNext = () => track.scrollBy({ left: getScrollStep(), behavior: 'smooth' });
+
+        prevBtn.addEventListener('click', onPrev);
+        nextBtn.addEventListener('click', onNext);
+        track.addEventListener('scroll', onScroll, { passive: true });
         window.addEventListener('resize', updateNav);
         requestAnimationFrame(updateNav);
-        setTimeout(updateNav, 150);
+        const layoutTimer = setTimeout(updateNav, 150);
+
+        return () => {
+            clearTimeout(layoutTimer);
+            if (scrollRaf) cancelAnimationFrame(scrollRaf);
+            prevBtn.removeEventListener('click', onPrev);
+            nextBtn.removeEventListener('click', onNext);
+            track.removeEventListener('scroll', onScroll);
+            window.removeEventListener('resize', updateNav);
+        };
+    }
+
+    function updateRelatedSectionCards(items, currentId, contentType, referenceTitle) {
+        const section = document.getElementById('related-seasons-section');
+        if (!section || section.classList.contains('is-loading')) return;
+        const track = section.querySelector('.related-seasons-track');
+        if (!track) return;
+
+        const scrollLeft = track.scrollLeft;
+        const { cardsHtml } = buildRelatedCardsHtml(items, currentId, contentType, referenceTitle);
+        track.innerHTML = cardsHtml;
+
+        if (activeCarouselCleanup) activeCarouselCleanup();
+        activeCarouselCleanup = initRelatedSeasonsCarousel(section);
+        attachRelatedCardClickHandlers(section, items, contentType, referenceTitle);
+
+        track.scrollLeft = scrollLeft;
+        requestAnimationFrame(() => {
+            track.scrollLeft = scrollLeft;
+        });
+
+        if (window.localization) {
+            window.localization.applyLanguage();
+        }
     }
 
     function renderSection(items, currentId, contentType, referenceTitle) {
         const synopsisEl = document.querySelector('.synopsis-section');
         if (!synopsisEl) return null;
 
-        document.getElementById('related-seasons-section')?.remove();
+        destroyRelatedSeasonsSection();
 
-        const ctLower = (contentType || 'anime').toLowerCase();
-        const isManga = ctLower === 'manga' || ctLower === 'manhwa' || ctLower === 'manhua';
         const heading = getSectionHeading(contentType);
-        const cardIcon = isManga ? 'fa-book' : 'fa-tv';
-
-        const labelCounts = new Map();
-        const cardsHtml = items.map((item) => {
-            const isCurrent = String(item.mal_id) === String(currentId);
-            const label = getSeasonLabel(item.title, contentType, item, labelCounts);
-            const badge = getRelationBadge(item, contentType);
-            const metaLine = buildMetaLine(item, contentType);
-            const img = item.image || '';
-            const pubLines = buildPublicationLines(item, contentType);
-            const badgeHtml = badge
-                ? `<span class="related-season-badge ${badge.className}">${escapeHtml(badge.label)}</span>`
-                : '';
-            const metaHtml = metaLine
-                ? `<span class="related-season-meta">${escapeHtml(metaLine)}</span>`
-                : '';
-            let posterInner;
-            let posterClass = 'related-season-poster';
-            if (!isCurrent && !img && pubLines.length > 0) {
-                posterClass = 'related-season-poster related-season-poster--publication';
-                posterInner = `<div class="related-season-pub-info">${pubLines.map((row) => `<span class="related-season-pub-row"><span class="related-season-pub-label">${escapeHtml(row.label)}</span><span class="related-season-pub-value">${escapeHtml(row.value)}</span></span>`).join('')}</div>`;
-            } else {
-                const imgHtml = img
-                    ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" data-mal-id="${item.mal_id}" onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`
-                    : `<img alt="" loading="lazy" data-mal-id="${item.mal_id}" class="is-hidden" onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`;
-                const fallbackClass = img ? 'related-season-poster-fallback is-hidden' : 'related-season-poster-fallback';
-                posterInner = `${imgHtml}<div class="${fallbackClass}" aria-hidden="true"><i class="fas ${cardIcon}"></i></div>`;
-            }
-
-            return `
-                <a href="${buildDetailUrl(item.mal_id, contentType)}"
-                   class="related-season-card${isCurrent ? ' is-current' : ''}"
-                   title="${escapeHtml(item.title)}"
-                   data-mal-id="${item.mal_id}"
-                   ${isCurrent ? 'aria-current="page"' : ''}>
-                    <div class="${posterClass}">
-                        ${badgeHtml}
-                        ${posterInner}
-                    </div>
-                    <div class="related-season-info">
-                        <span class="related-season-label">${escapeHtml(label)}</span>
-                        <span class="related-season-subtitle" title="${escapeHtml(item.title)}">${escapeHtml(truncateSubtitle(item.title, 36))}</span>
-                        ${metaHtml}
-                    </div>
-                </a>
-            `;
-        }).join('');
-
+        const { cardsHtml } = buildRelatedCardsHtml(items, currentId, contentType, referenceTitle);
         const section = document.createElement('section');
         section.id = 'related-seasons-section';
         section.className = 'related-seasons-section';
@@ -864,54 +859,8 @@
 
         synopsisEl.insertAdjacentElement('afterend', section);
         if (items.length > 2) section.classList.add('has-many-cards', 'has-overflow');
-        initRelatedSeasonsCarousel(section);
-
-        section.querySelectorAll('.related-season-card').forEach((card) => {
-            card.addEventListener('click', async (e) => {
-                const malId = card.dataset.malId;
-                const item = items.find((i) => String(i.mal_id) === String(malId));
-                if (!item?.mal_id || card.classList.contains('is-current')) return;
-                if (!global.MWDetailCache?.saveDetailPrefetch) return;
-
-                e.preventDefault();
-                const targetUrl = card.getAttribute('href');
-                const mediaType = getApiMediaType(contentType);
-
-                try {
-                    const brief = await fetchDetailBrief(mediaType, item.mal_id);
-                    const payload = brief || item;
-                    global.MWDetailCache.saveDetailPrefetch({
-                        mal_id: payload.mal_id || item.mal_id,
-                        title: payload.title || item.title,
-                        synopsis: payload.synopsis || null,
-                        score: payload.score != null ? payload.score : null,
-                        genres: payload.genres || [],
-                        type: payload.type || (mediaType === 'manga' ? 'Manga' : 'TV'),
-                        images: (payload.image || item.image)
-                            ? { jpg: { large_image_url: payload.image || item.image, image_url: payload.image || item.image } }
-                            : undefined,
-                        year: payload.year || item.year || null,
-                        chapters: payload.chapters || item.chapters || null,
-                        volumes: payload.volumes || item.volumes || null,
-                        episodes: payload.episodes || item.episodes || null,
-                        published: (payload.year || item.year)
-                            ? { prop: { from: { year: payload.year || item.year } } }
-                            : undefined,
-                        aired: (payload.year || item.year)
-                            ? { prop: { from: { year: payload.year || item.year } } }
-                            : undefined
-                    }, contentType);
-                    if (referenceTitle) {
-                        const seriesKey = getSeriesCacheKey(referenceTitle, getApiMediaType(contentType));
-                        saveSeriesRelationsCache(seriesKey, items);
-                    }
-                } catch (prefetchErr) {
-                    console.warn('[details-related-seasons] prefetch:', prefetchErr);
-                }
-
-                window.location.href = targetUrl;
-            });
-        });
+        activeCarouselCleanup = initRelatedSeasonsCarousel(section);
+        attachRelatedCardClickHandlers(section, items, contentType, referenceTitle);
 
         if (window.localization) {
             window.localization.applyLanguage();
@@ -1085,15 +1034,144 @@
         relatedMap.set(String(currentId), currentEntry);
         let items = dedupeRelatedItems(Array.from(relatedMap.values()));
         items.forEach((item) => {
-            if (detectFranchiseKey(item.title) === 'jojo') delete item._inferredSeason;
+            if (String(item.mal_id) === String(currentId)) {
+                delete item._inferredSeason;
+                if (currentEntry.title) item.title = currentEntry.title;
+            } else if (detectFranchiseKey(item.title) === 'jojo') {
+                delete item._inferredSeason;
+            }
         });
-        assignInferredSeasonNumbers(items, ct, referenceTitle);
+        assignInferredSeasonNumbers(items, ct, referenceTitle, currentId);
         return sortRelatedItems(items, ct);
+    }
+
+    function getLabelForItem(item, isCurrent, referenceTitle, contentType, labelCounts) {
+        if (isCurrent && referenceTitle) {
+            const currentItem = { ...item, title: referenceTitle };
+            delete currentItem._inferredSeason;
+            return getSeasonLabel(referenceTitle, contentType, currentItem, labelCounts);
+        }
+        return getSeasonLabel(item.title, contentType, item, labelCounts);
+    }
+
+    function destroyRelatedSeasonsSection() {
+        if (activeCarouselCleanup) {
+            activeCarouselCleanup();
+            activeCarouselCleanup = null;
+        }
+        document.getElementById('related-seasons-section')?.remove();
+    }
+
+    function buildRelatedCardsHtml(items, currentId, contentType, referenceTitle) {
+        const ctLower = (contentType || 'anime').toLowerCase();
+        const isManga = ctLower === 'manga' || ctLower === 'manhwa' || ctLower === 'manhua';
+        const cardIcon = isManga ? 'fa-book' : 'fa-tv';
+        const labelCounts = new Map();
+
+        const cardsHtml = items.map((item) => {
+            const isCurrent = String(item.mal_id) === String(currentId);
+            const label = getLabelForItem(item, isCurrent, referenceTitle, contentType, labelCounts);
+            const badge = getRelationBadge(item, contentType);
+            const metaLine = buildMetaLine(item, contentType);
+            const img = item.image || '';
+            const pubLines = buildPublicationLines(item, contentType);
+            const badgeHtml = badge
+                ? `<span class="related-season-badge ${badge.className}">${escapeHtml(badge.label)}</span>`
+                : '';
+            const metaHtml = metaLine
+                ? `<span class="related-season-meta">${escapeHtml(metaLine)}</span>`
+                : '';
+            let posterInner;
+            let posterClass = 'related-season-poster';
+            if (!isCurrent && !img && pubLines.length > 0) {
+                posterClass = 'related-season-poster related-season-poster--publication';
+                posterInner = `<div class="related-season-pub-info">${pubLines.map((row) => `<span class="related-season-pub-row"><span class="related-season-pub-label">${escapeHtml(row.label)}</span><span class="related-season-pub-value">${escapeHtml(row.value)}</span></span>`).join('')}</div>`;
+            } else {
+                const imgHtml = img
+                    ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" data-mal-id="${item.mal_id}" onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`
+                    : `<img alt="" loading="lazy" data-mal-id="${item.mal_id}" class="is-hidden" onerror="this.classList.add('is-hidden'); this.nextElementSibling?.classList.remove('is-hidden');">`;
+                const fallbackClass = img ? 'related-season-poster-fallback is-hidden' : 'related-season-poster-fallback';
+                posterInner = `${imgHtml}<div class="${fallbackClass}" aria-hidden="true"><i class="fas ${cardIcon}"></i></div>`;
+            }
+            return `
+                <a href="${buildDetailUrl(item.mal_id, contentType)}"
+                   class="related-season-card${isCurrent ? ' is-current' : ''}"
+                   title="${escapeHtml(item.title)}"
+                   data-mal-id="${item.mal_id}"
+                   ${isCurrent ? 'aria-current="page"' : ''}>
+                    <div class="${posterClass}">
+                        ${badgeHtml}
+                        ${posterInner}
+                    </div>
+                    <div class="related-season-info">
+                        <span class="related-season-label">${escapeHtml(label)}</span>
+                        <span class="related-season-subtitle" title="${escapeHtml(item.title)}">${escapeHtml(truncateSubtitle(item.title, 36))}</span>
+                        ${metaHtml}
+                    </div>
+                </a>
+            `;
+        }).join('');
+
+        return { cardsHtml, cardIcon };
+    }
+
+    function attachRelatedCardClickHandlers(section, items, contentType, referenceTitle) {
+        const mediaType = getApiMediaType(contentType);
+        section.querySelectorAll('.related-season-card').forEach((card) => {
+            card.addEventListener('click', async (e) => {
+                const malId = card.dataset.malId;
+                const item = items.find((i) => String(i.mal_id) === String(malId));
+                if (!item?.mal_id || card.classList.contains('is-current')) return;
+                if (!global.MWDetailCache?.saveDetailPrefetch) return;
+
+                e.preventDefault();
+                const targetUrl = card.getAttribute('href');
+
+                try {
+                    const brief = await fetchDetailBrief(mediaType, item.mal_id);
+                    const payload = brief || item;
+                    global.MWDetailCache.saveDetailPrefetch({
+                        mal_id: payload.mal_id || item.mal_id,
+                        title: payload.title || item.title,
+                        synopsis: payload.synopsis || null,
+                        score: payload.score != null ? payload.score : null,
+                        genres: payload.genres || [],
+                        type: payload.type || (mediaType === 'manga' ? 'Manga' : 'TV'),
+                        images: (payload.image || item.image)
+                            ? { jpg: { large_image_url: payload.image || item.image, image_url: payload.image || item.image } }
+                            : undefined,
+                        year: payload.year || item.year || null,
+                        chapters: payload.chapters || item.chapters || null,
+                        volumes: payload.volumes || item.volumes || null,
+                        episodes: payload.episodes || item.episodes || null,
+                        published: (payload.year || item.year)
+                            ? { prop: { from: { year: payload.year || item.year } } }
+                            : undefined,
+                        aired: (payload.year || item.year)
+                            ? { prop: { from: { year: payload.year || item.year } } }
+                            : undefined
+                    }, contentType);
+                    if (referenceTitle) {
+                        const seriesKey = getSeriesCacheKey(referenceTitle, mediaType);
+                        saveSeriesRelationsCache(seriesKey, items);
+                    }
+                } catch (prefetchErr) {
+                    console.warn('[details-related-seasons] prefetch:', prefetchErr);
+                }
+
+                window.location.href = targetUrl;
+            });
+        });
     }
 
     function showRelatedSeasonsLoading(contentType) {
         const synopsisEl = document.querySelector('.synopsis-section');
         if (!synopsisEl) return;
+
+        if (activeCarouselCleanup) {
+            activeCarouselCleanup();
+            activeCarouselCleanup = null;
+        }
 
         const heading = getSectionHeading(contentType);
         const skeletonCards = [0, 1, 2, 3].map(() => `
@@ -1149,11 +1227,6 @@
         let relatedMap = collectFromCatalogueSnapshot(referenceTitle, mediaType, currentId);
         mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
 
-        if (relatedMap.size >= 2) {
-            const quickItems = prepareItemsList(relatedMap, currentEntry, currentId, ct, referenceTitle);
-            renderSection(quickItems, currentId, ct, referenceTitle);
-        }
-
         const aniPromise = (async () => {
             let aniEdges = global.MWDetailCache?.getAniListRelations?.(currentId);
             if ((!aniEdges || aniEdges.length === 0) && global.MWDetailCache?.fetchAniListByMalId) {
@@ -1189,7 +1262,7 @@
         await expandRelationsGraphBfs(relatedMap, mediaType, referenceTitle);
         mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
         if (relatedMap.size < 2) {
-            document.getElementById('related-seasons-section')?.remove();
+            destroyRelatedSeasonsSection();
             return;
         }
 
@@ -1197,9 +1270,16 @@
         renderSection(items, currentId, ct, referenceTitle);
 
         enrichRelatedItems(items, mediaType, currentId).then(() => {
+            items.forEach((item) => {
+                if (String(item.mal_id) === String(currentId)) {
+                    delete item._inferredSeason;
+                    if (referenceTitle) item.title = referenceTitle;
+                }
+            });
+            assignInferredSeasonNumbers(items, ct, referenceTitle, currentId);
             items = sortRelatedItems(items, ct);
             saveSeriesRelationsCache(seriesCacheKey, items);
-            renderSection(items, currentId, ct, referenceTitle);
+            updateRelatedSectionCards(items, currentId, ct, referenceTitle);
             lazyLoadImages(items, mediaType).catch(() => {});
         }).catch(() => {});
     }
