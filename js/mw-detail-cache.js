@@ -264,11 +264,10 @@
                 && !areSameSeriesFn(title, referenceTitle, seriesCt)) {
                 continue;
             }
-            const image = node.coverImage?.large || '';
             items.set(String(malId), {
                 mal_id: malId,
                 title,
-                image,
+                image: '',
                 year: node.startDate?.year || '',
                 airedFrom: null,
                 relationType: rel.toLowerCase().replace(/_/g, '-')

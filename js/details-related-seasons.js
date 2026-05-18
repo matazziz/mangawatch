@@ -164,54 +164,108 @@
         return areSameSeries(entryTitle, referenceTitle, contentType);
     }
 
-    function getSeasonSortKey(title) {
-        if (!title) return 100;
+    const ROMAN_NUMERALS = {
+        i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12
+    };
+
+    function romanToInt(roman) {
+        return ROMAN_NUMERALS[String(roman || '').toLowerCase()] || null;
+    }
+
+    function extractSeasonPartNumber(title, contentType) {
+        if (!title) return null;
         const t = title.toLowerCase();
         for (const alias of FRANCHISE_PART_ALIASES) {
             if (alias.pattern.test(title)) return alias.part;
         }
-        let m = t.match(/(\d+)(?:st|nd|rd|th)\s+season/);
+        let m = t.match(/(?:season|saison|cour)\s*(\d+)/i);
         if (m) return parseInt(m[1], 10);
-        m = t.match(/season\s+(\d+)/);
-        if (m) return parseInt(m[1], 10);
-        m = t.match(/saison\s+(\d+)/);
+        m = t.match(/(\d+)(?:st|nd|rd|th)\s+season/i);
         if (m) return parseInt(m[1], 10);
         m = t.match(/\bpart\s*(\d+)\b/i);
         if (m) return parseInt(m[1], 10);
         m = t.match(/\bpartie\s*(\d+)\b/i);
         if (m) return parseInt(m[1], 10);
-        m = t.match(/(?:vol\.?|volume|tome)\s*(\d+)/);
+        m = t.match(/(?:vol\.?|volume|tome)\s*(\d+)/i);
         if (m) return parseInt(m[1], 10);
-        if (/\b:re\b|\bre\b$/i.test(t)) return 2;
-        m = t.match(/\bs(\d+)\b/);
-        if (m) return parseInt(m[1], 10);
-        if (/\bseason\s+one\b|\bsaison\s+un\b/.test(t)) return 1;
-        if (!/season|saison|part|partie|vol\.?|volume|tome|\d+(?:st|nd|rd|th)|\bs\d+\b|:re\b/i.test(t)) {
-            return 1;
+        if (/\b:re\b/i.test(t) || /\bre\b$/i.test(t)) return 2;
+        m = t.match(/(?:^|[\s:(-])([ivx]{1,4})(?:[\s):.\-]|$)/i);
+        if (m) {
+            const v = romanToInt(m[1]);
+            if (v) return v;
         }
-        return 50;
+        m = t.match(/\bs(\d{1,2})\b/);
+        if (m) return parseInt(m[1], 10);
+        if (/\bsecond\s+season\b|\b2nd\s+season\b|\bdeuxi[eè]me\s+saison\b/i.test(t)) return 2;
+        if (/\bthird\s+season\b|\b3rd\s+season\b|\btroisi[eè]me\s+saison\b/i.test(t)) return 3;
+        if (/\bfourth\s+season\b|\b4th\s+season\b|\bquatri[eè]me\s+saison\b/i.test(t)) return 4;
+        if (/\bfifth\s+season\b|\b5th\s+season\b|\bcinqui[eè]me\s+saison\b/i.test(t)) return 5;
+        if (/\bsixth\s+season\b|\b6th\s+season\b/i.test(t)) return 6;
+        if (/\bseventh\s+season\b|\b7th\s+season\b/i.test(t)) return 7;
+        if (/\bfinal\s+season\b/i.test(t)) return 99;
+        return null;
     }
 
-    function getSeasonLabel(title, contentType) {
-        const t = title || '';
-        const ctLabel = (contentType || '').toLowerCase();
-        const isManga = ctLabel === 'manga' || ctLabel === 'manhwa' || ctLabel === 'manhua';
-        const volMatch = t.match(/(?:vol\.?|volume|tome)\s*(\d+)/i);
-        if (volMatch) return `Tome ${volMatch[1]}`;
-        if (/\b:re\b/i.test(t) || /\bre\b$/i.test(t)) return 'Partie 2 (:re)';
-        const partMatch = t.match(/(?:part|partie)\s*(\d+)/i);
-        if (partMatch) return `Partie ${partMatch[1]}`;
-        const seasonMatch = t.match(/(?:season|saison)\s*(\d+)|(\d+)(?:st|nd|rd|th)\s+season/i);
-        if (seasonMatch) {
-            const num = seasonMatch[1] || seasonMatch[2];
-            return isManga ? `Volume ${num}` : `Saison ${num}`;
+    function usesPartLabel(title, contentType) {
+        const ct = (contentType || '').toLowerCase();
+        if (ct === 'manga' || ct === 'manhwa' || ct === 'manhua') return true;
+        if (/\bpart\s*\d|\bpartie\s*\d/i.test(title || '')) return true;
+        const fr = detectFranchiseKey(title);
+        return fr === 'jojo' || fr === 'monogatari' || fr === 'fate';
+    }
+
+    function getSeasonSortKey(title, item) {
+        if (!title) return 100;
+        const num = item?._inferredSeason ?? extractSeasonPartNumber(title, 'anime');
+        if (num != null) return num === 99 ? 98 : num;
+        const extra = inferExtraFromTitle(title);
+        if (extra) return extra.tier;
+        const rel = normalizeRelationType(item?.relationType || '');
+        if (STRICT_SERIES_FILTER_TYPES.has(rel)) return 60;
+        return 100;
+    }
+
+    function assignInferredSeasonNumbers(items, contentType) {
+        const ct = (contentType || '').toLowerCase();
+        if (ct !== 'anime' && ct !== 'film') return;
+        const mainEntries = items.filter((item) => {
+            if (extractSeasonPartNumber(item.title, contentType) != null) return false;
+            if (inferExtraFromTitle(item.title)) return false;
+            const rel = normalizeRelationType(item.relationType || '');
+            return !STRICT_SERIES_FILTER_TYPES.has(rel);
+        });
+        mainEntries.sort((a, b) => {
+            const ya = parseInt(a.year, 10) || 9999;
+            const yb = parseInt(b.year, 10) || 9999;
+            if (ya !== yb) return ya - yb;
+            return String(a.title || '').localeCompare(String(b.title || ''), 'fr');
+        });
+        mainEntries.forEach((item, index) => {
+            item._inferredSeason = index + 1;
+        });
+    }
+
+    function getSeasonLabel(title, contentType, item) {
+        const extra = inferExtraFromTitle(title);
+        if (extra) return extra.badge;
+
+        const rel = normalizeRelationType(item?.relationType || '');
+        if (rel === 'side story') return 'Side story';
+        if (rel === 'spin-off' || rel === 'spin off') return 'Spin-off';
+        if (rel === 'alternative') return 'Alternative';
+
+        const ct = (contentType || '').toLowerCase();
+        const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
+        const num = item?._inferredSeason ?? extractSeasonPartNumber(title, contentType);
+
+        if (num === 99 || /\bfinal\s+season\b/i.test(title || '')) return 'Saison finale';
+        if (num != null) {
+            if (usesPartLabel(title, contentType)) return `Partie ${num}`;
+            return isManga ? `Tome ${num}` : `Saison ${num}`;
         }
-        const key = getSeasonSortKey(t);
-        if (key === 1) return isManga ? 'Tome 1' : 'Saison 1';
-        if (key < 10 && Number.isInteger(key)) {
-            return isManga ? `Tome ${key}` : `Saison ${key}`;
-        }
-        return t.length > 42 ? `${t.slice(0, 40)}…` : t;
+
+        const short = truncateSubtitle(title, 34);
+        return short || 'Extra';
     }
 
     function normalizeRelationType(rel) {
@@ -404,8 +458,8 @@
 
     function sortRelatedItems(items) {
         return items.slice().sort((a, b) => {
-            const skA = getSeasonSortKey(a.title);
-            const skB = getSeasonSortKey(b.title);
+            const skA = getSeasonSortKey(a.title, a);
+            const skB = getSeasonSortKey(b.title, b);
             const mainA = skA < 50;
             const mainB = skB < 50;
             if (mainA && mainB && skA !== skB) return skA - skB;
@@ -552,7 +606,7 @@
 
         const cardsHtml = items.map((item) => {
             const isCurrent = String(item.mal_id) === String(currentId);
-            const label = getSeasonLabel(item.title, contentType);
+            const label = getSeasonLabel(item.title, contentType, item);
             const badge = getRelationBadge(item, contentType);
             const metaLine = buildMetaLine(item, contentType);
             const img = item.image || '';
@@ -719,32 +773,46 @@
     }
 
     async function enrichRelatedItems(items, mediaType, currentId) {
-        const need = items.filter((item) => {
-            if (String(item.mal_id) === String(currentId)) return false;
-            return !item.year || (!item.chapters && !item.volumes && !item.episodes && !item.airedFrom);
-        });
-        const batchSize = 4;
+        const need = items.filter((item) => String(item.mal_id) !== String(currentId));
+        const batchSize = 3;
         for (let i = 0; i < need.length; i += batchSize) {
             await Promise.all(need.slice(i, i + batchSize).map(async (item) => {
                 try {
                     const brief = await fetchDetailBrief(mediaType, item.mal_id);
                     if (!brief) return;
                     Object.assign(item, {
-                        title: item.title || brief.title,
-                        year: item.year || brief.year,
-                        image: item.image || brief.image,
-                        airedFrom: item.airedFrom || brief.airedFrom,
-                        airedTo: item.airedTo || brief.airedTo,
-                        status: item.status || brief.status,
-                        episodes: item.episodes ?? brief.episodes,
-                        chapters: item.chapters ?? brief.chapters,
-                        volumes: item.volumes ?? brief.volumes,
-                        score: item.score ?? brief.score,
-                        synopsis: item.synopsis || brief.synopsis
+                        title: brief.title || item.title,
+                        year: brief.year || item.year,
+                        image: brief.image || '',
+                        airedFrom: brief.airedFrom || item.airedFrom,
+                        airedTo: brief.airedTo || item.airedTo,
+                        status: brief.status || item.status,
+                        episodes: brief.episodes ?? item.episodes,
+                        chapters: brief.chapters ?? item.chapters,
+                        volumes: brief.volumes ?? item.volumes,
+                        score: brief.score ?? item.score,
+                        synopsis: brief.synopsis || item.synopsis
                     });
                 } catch (e) { /* ignore */ }
             }));
-            if (i + batchSize < need.length) await delay(280);
+            if (i + batchSize < need.length) await delay(320);
+        }
+    }
+
+    async function expandRelationsGraph(relatedMap, mediaType, referenceTitle, currentId) {
+        const ids = Array.from(relatedMap.keys())
+            .filter((id) => String(id) !== String(currentId))
+            .slice(0, 14);
+        for (const id of ids) {
+            try {
+                const payload = await fetchRelations(mediaType, id);
+                const fromJikan = collectRelatedFromRelationsPayload(
+                    payload, mediaType, referenceTitle
+                );
+                fromJikan.forEach((v, k) => relatedMap.set(k, v));
+            } catch (e) {
+                console.warn('[details-related-seasons] expand relations:', id, e?.message || e);
+            }
         }
     }
 
@@ -858,10 +926,13 @@
         }
 
         relatedMap.set(currentId, currentEntry);
+        await expandRelationsGraph(relatedMap, mediaType, referenceTitle, currentId);
         mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
         if (relatedMap.size < 2) return;
 
-        let items = sortRelatedItems(Array.from(relatedMap.values()));
+        let items = Array.from(relatedMap.values());
+        assignInferredSeasonNumbers(items, ct);
+        items = sortRelatedItems(items);
         await enrichRelatedItems(items, mediaType, currentId);
         saveSeriesRelationsCache(seriesCacheKey, items);
 
