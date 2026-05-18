@@ -206,6 +206,66 @@ body[data-page="anime-details"] .details-container {
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.related-seasons-section.is-loading {
+    border-color: rgba(0, 168, 77, 0.35);
+}
+
+.related-seasons-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.related-seasons-loading-track {
+    display: flex;
+    gap: 14px;
+    overflow: hidden;
+}
+
+.related-season-skeleton-card {
+    flex: 0 0 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.related-season-skeleton-poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.04) 100%);
+    background-size: 200% 100%;
+    animation: mw-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.related-season-skeleton-line {
+    height: 12px;
+    margin: 10px 10px 0;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    animation: mw-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.related-season-skeleton-line.short {
+    width: 55%;
+    margin-bottom: 10px;
+}
+
+.related-seasons-loading-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(223, 230, 233, 0.85);
+}
+
+@keyframes mw-skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
 .related-seasons-title {
     font-size: 1.25rem;
     font-weight: 600;

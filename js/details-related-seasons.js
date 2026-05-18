@@ -426,7 +426,13 @@
             const num = item?._inferredSeason ?? extractSeasonPartNumber(title, contentType);
             if (num === 99) label = 'Saison finale';
             else if (num != null) {
-                label = usesPartLabel(title, contentType) ? `Partie ${num}` : (isManga ? `Tome ${num}` : `Saison ${num}`);
+                if (detectFranchiseKey(title) === 'jojo') {
+                    label = `Partie ${num}`;
+                } else {
+                    label = usesPartLabel(title, contentType)
+                        ? `Partie ${num}`
+                        : (isManga ? `Tome ${num}` : `Saison ${num}`);
+                }
             } else {
                 label = truncateSubtitle(title, 34) || 'Extra';
             }
@@ -625,23 +631,36 @@
         return `${t.slice(0, max - 1)}…`;
     }
 
-    function sortRelatedItems(items) {
+    function getCanonicalSortIndex(item, contentType) {
+        if (isNonMainSeasonEntry(item.title, item)) {
+            return 900 + getRelationSortTier(item);
+        }
+        const num = extractSeasonPartNumber(item.title, contentType);
+        if (num != null) return num === 99 ? 98 : num;
+
+        const t = item.title || '';
+        const seasonM = t.match(/(\d+)(?:st|nd|rd|th)\s+season|(?:season|saison)\s*(\d+)/i);
+        const partM = t.match(/\bpart(?:ie)?\s*(\d+)/i);
+        if (seasonM && partM) {
+            const s = parseInt(seasonM[1] || seasonM[2], 10);
+            const p = parseInt(partM[1], 10);
+            return s * 10 + p * 0.1;
+        }
+
+        if (item._inferredSeason != null) return item._inferredSeason;
+        return 400 + getRelationSortTier(item);
+    }
+
+    function sortRelatedItems(items, contentType) {
+        const ct = contentType || 'anime';
         return items.slice().sort((a, b) => {
-            const skA = getSeasonSortKey(a.title, a);
-            const skB = getSeasonSortKey(b.title, b);
-            const mainA = skA < 50;
-            const mainB = skB < 50;
-            if (mainA && mainB && skA !== skB) return skA - skB;
+            const idxA = getCanonicalSortIndex(a, ct);
+            const idxB = getCanonicalSortIndex(b, ct);
+            if (idxA !== idxB) return idxA - idxB;
 
-            const tierDiff = getRelationSortTier(a) - getRelationSortTier(b);
-            if (tierDiff !== 0) return tierDiff;
-
-            const seasonDiff = skA - skB;
-            if (seasonDiff !== 0) return seasonDiff;
-
-            const yearA = parseInt(a.year, 10) || 9999;
-            const yearB = parseInt(b.year, 10) || 9999;
-            if (yearA !== yearB) return yearA - yearB;
+            const yearA = parseInt(a.year, 10) || 0;
+            const yearB = parseInt(b.year, 10) || 0;
+            if (yearA > 0 && yearB > 0 && yearA !== yearB) return yearA - yearB;
 
             const dateA = a.airedFrom ? new Date(a.airedFrom).getTime() : 0;
             const dateB = b.airedFrom ? new Date(b.airedFrom).getTime() : 0;
@@ -825,6 +844,7 @@
         const section = document.createElement('section');
         section.id = 'related-seasons-section';
         section.className = 'related-seasons-section';
+        section.removeAttribute('aria-busy');
         section.innerHTML = `
             <h2 class="related-seasons-title" data-i18n="${heading.key}">${heading.text}</h2>
             <div class="related-seasons-carousel">
@@ -1024,7 +1044,7 @@
         const batchSize = 3;
         for (let i = 0; i < withoutImage.length; i += batchSize) {
             await Promise.all(withoutImage.slice(i, i + batchSize).map(loadOne));
-            if (i + batchSize < withoutImage.length) await delay(350);
+            if (i + batchSize < withoutImage.length) await delay(120);
         }
     }
 
@@ -1064,13 +1084,51 @@
     function prepareItemsList(relatedMap, currentEntry, currentId, ct, referenceTitle) {
         relatedMap.set(String(currentId), currentEntry);
         let items = dedupeRelatedItems(Array.from(relatedMap.values()));
+        items.forEach((item) => {
+            if (detectFranchiseKey(item.title) === 'jojo') delete item._inferredSeason;
+        });
         assignInferredSeasonNumbers(items, ct, referenceTitle);
-        return sortRelatedItems(items);
+        return sortRelatedItems(items, ct);
+    }
+
+    function showRelatedSeasonsLoading(contentType) {
+        const synopsisEl = document.querySelector('.synopsis-section');
+        if (!synopsisEl) return;
+
+        const heading = getSectionHeading(contentType);
+        const skeletonCards = [0, 1, 2, 3].map(() => `
+            <div class="related-season-skeleton-card" aria-hidden="true">
+                <div class="related-season-skeleton-poster"></div>
+                <div class="related-season-skeleton-line"></div>
+                <div class="related-season-skeleton-line short"></div>
+            </div>
+        `).join('');
+
+        let section = document.getElementById('related-seasons-section');
+        if (!section) {
+            section = document.createElement('section');
+            section.id = 'related-seasons-section';
+            synopsisEl.insertAdjacentElement('afterend', section);
+        }
+        section.className = 'related-seasons-section is-loading';
+        section.setAttribute('aria-busy', 'true');
+        section.innerHTML = `
+            <h2 class="related-seasons-title" data-i18n="${heading.key}">${heading.text}</h2>
+            <div class="related-seasons-loading">
+                <div class="related-seasons-loading-track">${skeletonCards}</div>
+                <p class="related-seasons-loading-text">
+                    <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
+                    <span>Chargement des saisons et volumes liés…</span>
+                </p>
+            </div>
+        `;
     }
 
     async function loadAndRender(content, contentType, contentId) {
         const ct = (contentType || 'anime').toLowerCase();
         if (ct !== 'anime' && ct !== 'manga' && ct !== 'film') return;
+
+        showRelatedSeasonsLoading(ct);
 
         const mediaType = getApiMediaType(ct);
         const referenceTitle = content?.title || '';
@@ -1139,6 +1197,7 @@
         renderSection(items, currentId, ct, referenceTitle);
 
         enrichRelatedItems(items, mediaType, currentId).then(() => {
+            items = sortRelatedItems(items, ct);
             saveSeriesRelationsCache(seriesCacheKey, items);
             renderSection(items, currentId, ct, referenceTitle);
             lazyLoadImages(items, mediaType).catch(() => {});
