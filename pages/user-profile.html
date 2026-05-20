@@ -371,7 +371,9 @@
             line-height: 1.2;
             display: inline-flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 0.6rem;
+            overflow: visible;
         }
         
         .profile-info h1 #user-name-text {
@@ -1149,9 +1151,16 @@
             }
 
             .verified-badge {
-                width: 1.32rem;
-                height: 1.32rem;
-                font-size: 0.65rem;
+                width: 1.55rem;
+                height: 1.55rem;
+                min-width: 1.55rem;
+                min-height: 1.55rem;
+                font-size: 0.72rem;
+                flex-shrink: 0;
+            }
+
+            .verified-badge i {
+                font-size: 0.68rem;
             }
 
             .profile-info .profile-continent-badge,

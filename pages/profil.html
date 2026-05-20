@@ -553,7 +553,9 @@
             line-height: 1.2;
             display: inline-flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 0.6rem;
+            overflow: visible;
         }
         
         .profile-info h1 #user-name-text {
@@ -2544,9 +2546,16 @@
             }
 
             .verified-badge {
-                width: 1.32rem;
-                height: 1.32rem;
-                font-size: 0.65rem;
+                width: 1.55rem;
+                height: 1.55rem;
+                min-width: 1.55rem;
+                min-height: 1.55rem;
+                font-size: 0.72rem;
+                flex-shrink: 0;
+            }
+
+            .verified-badge i {
+                font-size: 0.68rem;
             }
 
             .profile-info .profile-continent-badge,
@@ -4465,35 +4474,8 @@
                 userNameText.textContent = displayName;
             }
             
-            // Afficher le badge certifié IMMÉDIATEMENT (utiliser le statut déjà chargé si disponible)
-            const verifiedBadge = document.getElementById('verified-badge');
-            if (verifiedBadge) {
-                // Utiliser le statut déjà chargé dans user.verified si disponible (le plus rapide)
-                if (user.verified !== undefined) {
-                    verifiedBadge.style.display = user.verified ? 'inline-flex' : 'none';
-                    console.log('✅ Badge affiché IMMÉDIATEMENT avec statut déjà chargé:', user.verified);
-                } else {
-                    // Sinon, utiliser localStorage immédiatement (sans attendre Firestore)
-                    const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
-                    const cachedVerified = verifiedUsers.includes(user.email);
-                    verifiedBadge.style.display = cachedVerified ? 'inline-flex' : 'none';
-                    console.log('✅ Badge affiché IMMÉDIATEMENT depuis cache localStorage:', cachedVerified);
-                    
-                    // Vérifier Firestore en arrière-plan (sans bloquer) pour mise à jour future
-                    if (window.verificationService && typeof window.verificationService.isUserVerified === 'function') {
-                        // Ne pas attendre, juste lancer la vérification
-                        window.verificationService.isUserVerified(user.email).then(isVerified => {
-                            if (isVerified !== cachedVerified) {
-                                verifiedBadge.style.display = isVerified ? 'inline-flex' : 'none';
-                                console.log('🔄 Badge mis à jour depuis Firestore (arrière-plan):', isVerified);
-                            }
-                        }).catch(() => {
-                            // Ignorer les erreurs, on garde le cache
-                        });
-                    }
-                }
-            } else {
-                console.warn('⚠️ Badge verified-badge non trouvé dans displayUserData');
+            if (typeof window.updateVerifiedBadgeForEmail === 'function') {
+                window.updateVerifiedBadgeForEmail(user.email, { initialVerified: user.verified === true });
             }
             
             // Afficher le pays (traduit selon la langue) — getCountryName si code pays, sinon ancien continent pour compat
@@ -5273,36 +5255,9 @@
               userNameText.textContent = name;
           }
           
-          if (verifiedBadge) {
-              // Utiliser d'abord le cache localStorage pour un affichage immédiat
-              const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
-              let isVerified = verifiedUsers.includes(userEmail);
-              
-              // Afficher immédiatement depuis le cache
-              verifiedBadge.style.display = isVerified ? 'inline-flex' : 'none';
-              console.log('✅ Badge affiché immédiatement depuis cache dans updateUserNameDisplay:', isVerified);
-              
-              // Vérifier dans Firestore en arrière-plan et mettre à jour si nécessaire (sans await pour ne pas bloquer)
-              if (window.verificationService && typeof window.verificationService.isUserVerified === 'function') {
-                  window.verificationService.isUserVerified(userEmail).then(firestoreVerified => {
-                      if (firestoreVerified !== isVerified) {
-                          verifiedBadge.style.display = firestoreVerified ? 'inline-flex' : 'none';
-                          console.log('✅ Badge mis à jour depuis Firestore dans updateUserNameDisplay:', firestoreVerified);
-                      }
-                  }).catch((error) => {
-                      console.warn('⚠️ Erreur verificationService, utilisation du cache:', error);
-                  });
-              } else if (window.isUserVerified && typeof window.isUserVerified === 'function') {
-                  window.isUserVerified(userEmail).then(firestoreVerified => {
-                      if (firestoreVerified !== isVerified) {
-                          verifiedBadge.style.display = firestoreVerified ? 'inline-flex' : 'none';
-                          console.log('✅ Badge mis à jour depuis isUserVerified:', firestoreVerified);
-                      }
-                  }).catch(() => {
-                      // Garder l'affichage depuis le cache
-                  });
-              }
-          } else {
+          if (verifiedBadge && userEmail && typeof window.updateVerifiedBadgeForEmail === 'function') {
+              window.updateVerifiedBadgeForEmail(userEmail);
+          } else if (verifiedBadge) {
               console.warn('⚠️ Badge certifié non trouvé dans le DOM après 5 secondes d\'attente');
               // Essayer une dernière fois après un délai plus long avec plusieurs tentatives
               const retryBadgeUpdate = async (attempt = 1, maxAttempts = 5) => {

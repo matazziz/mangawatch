@@ -23,14 +23,27 @@ document.addEventListener('DOMContentLoaded', function() {
         return 'pages/boutique.html';
     }
 
-    /** Lien Boutique dans tous les menus hamburger (pages + public). */
+    function isBoutiqueNavLink(anchor) {
+        const href = (anchor.getAttribute('href') || '').toLowerCase();
+        return href.includes('boutique');
+    }
+
+    /** Lien Boutique unique dans chaque menu hamburger (évite les doublons HTML + JS). */
     function ensureBoutiqueInMobileMenu() {
         document.querySelectorAll('.mobile-menu .nav-links').forEach(function (nav) {
-            if (nav.querySelector('a[href*="boutique.html"]')) {
+            const existing = Array.from(nav.querySelectorAll('a')).filter(isBoutiqueNavLink);
+            if (existing.length > 1) {
+                existing.slice(1).forEach(function (dup) {
+                    dup.remove();
+                });
+            }
+            if (existing.length >= 1) {
                 return;
             }
+
             const link = document.createElement('a');
             link.href = resolveBoutiqueHref();
+            link.setAttribute('data-nav-boutique', '1');
             link.innerHTML = '<i class="fas fa-store"></i><span data-i18n="nav.shop">Boutique</span>';
 
             const insertBefore = nav.querySelector('a[href*="list.html"]') ||

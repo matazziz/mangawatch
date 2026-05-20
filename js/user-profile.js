@@ -2,6 +2,27 @@
 // Variable globale pour stocker l'email de l'utilisateur consulté
 let viewedUserEmail = null;
 
+async function applyVerifiedBadgeOnProfile(userEmail, initialVerified) {
+    if (!userEmail) return false;
+    for (let attempt = 0; attempt < 25; attempt++) {
+        if (typeof window.updateVerifiedBadgeForEmail === 'function') {
+            return window.updateVerifiedBadgeForEmail(userEmail, { initialVerified: initialVerified === true });
+        }
+        await new Promise(function (r) { setTimeout(r, 80); });
+    }
+    const badge = document.getElementById('verified-badge');
+    if (!badge) return false;
+    let show = initialVerified === true;
+    try {
+        const list = JSON.parse(localStorage.getItem('verified_users') || '[]');
+        const norm = String(userEmail).toLowerCase().trim();
+        show = show || list.some(function (e) { return String(e).toLowerCase().trim() === norm; });
+    } catch (e) { /* ignore */ }
+    badge.style.display = show ? 'inline-flex' : 'none';
+    badge.hidden = !show;
+    return show;
+}
+
 // Réappliquer la traduction des synopsis quand des cartes sont ajoutées (page utilisateur)
 (function() {
     function scheduleTranslateSynopses() {
@@ -499,15 +520,8 @@ function displayProfileInfo(user, userEmail) {
         userNameText.removeAttribute('data-i18n');
     }
     
-    // Vérifier si l'utilisateur est certifié
-    if (verifiedBadge) {
-        const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
-        if (verifiedUsers.includes(userEmail)) {
-            verifiedBadge.style.display = 'inline-flex';
-        } else {
-            verifiedBadge.style.display = 'none';
-        }
-    }
+    // Badge certifié : Firestore + cache (PC et mobile)
+    void applyVerifiedBadgeOnProfile(userEmail, user.verified === true);
     
     // Afficher le badge de pays (code 2 lettres : fr, de, us…)
     const profileCountryText = document.getElementById('profile-country-text');

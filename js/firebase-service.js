@@ -1230,19 +1230,80 @@ export const verificationService = {
         console.log('[Firebase Verification] ⚠️ Profil n\'existe pas dans Firestore');
       }
       
-      // Fallback vers localStorage
-      const verified = JSON.parse(localStorage.getItem('verified_users') || '[]');
-      const isVerified = verified.includes(userEmail);
-      console.log('[Firebase Verification] Fallback localStorage:', isVerified);
-      return isVerified;
+      return isEmailInVerifiedList(userEmail);
     } catch (error) {
       console.error('[Firebase Verification] ❌ Erreur lors de la vérification:', error);
-      // Fallback vers localStorage
-      const verified = JSON.parse(localStorage.getItem('verified_users') || '[]');
-      return verified.includes(userEmail);
+      return isEmailInVerifiedList(userEmail);
     }
   }
 };
+
+function normalizeProfileEmail(email) {
+  return String(email || '').toLowerCase().trim();
+}
+
+function isEmailInVerifiedList(userEmail) {
+  const norm = normalizeProfileEmail(userEmail);
+  if (!norm) return false;
+  try {
+    const verified = JSON.parse(localStorage.getItem('verified_users') || '[]');
+    return verified.some(function (e) {
+      return normalizeProfileEmail(e) === norm;
+    });
+  } catch (e) {
+    return false;
+  }
+}
+
+function syncVerifiedToLocalList(userEmail, isVerified) {
+  const norm = normalizeProfileEmail(userEmail);
+  if (!norm) return;
+  try {
+    let verified = JSON.parse(localStorage.getItem('verified_users') || '[]');
+    const idx = verified.findIndex(function (e) {
+      return normalizeProfileEmail(e) === norm;
+    });
+    if (isVerified && idx === -1) {
+      verified.push(userEmail);
+      localStorage.setItem('verified_users', JSON.stringify(verified));
+    } else if (!isVerified && idx > -1) {
+      verified.splice(idx, 1);
+      localStorage.setItem('verified_users', JSON.stringify(verified));
+    }
+  } catch (e) { /* ignore */ }
+}
+
+/**
+ * Affiche ou masque le badge certifié (#verified-badge par défaut).
+ * Lit Firestore + met à jour le cache local verified_users.
+ */
+export async function updateVerifiedBadgeForEmail(userEmail, options) {
+  const opts = options || {};
+  const badgeId = opts.badgeId || 'verified-badge';
+  const badge = document.getElementById(badgeId);
+  if (!badge || !userEmail) return false;
+
+  let isVerified = opts.initialVerified === true || isEmailInVerifiedList(userEmail);
+
+  const apply = function (value) {
+    badge.style.display = value ? 'inline-flex' : 'none';
+    badge.hidden = !value;
+    badge.setAttribute('aria-hidden', value ? 'false' : 'true');
+  };
+
+  apply(isVerified);
+
+  try {
+    const fromFirestore = await verificationService.isUserVerified(userEmail);
+    isVerified = fromFirestore;
+    apply(isVerified);
+    syncVerifiedToLocalList(userEmail, isVerified);
+  } catch (err) {
+    console.warn('[VerifiedBadge] Firestore:', err);
+  }
+
+  return isVerified;
+}
 
 // ============================================
 // ADMIN — liste des profils Firestore (même source que la prod)
@@ -1361,7 +1422,8 @@ export const profileAccountService = {
           username: data.username || null,
           country: data.country || data.continent || null,
           langue: data.langue || data.language || null,
-          avatar: data.avatar || null
+          avatar: data.avatar || null,
+          verified: data.verified === true
         };
       }
       return null;
@@ -1902,6 +1964,8 @@ if (typeof window !== 'undefined') {
   window.ensureAuthenticatedForStorage = ensureAuthenticatedForStorage;
   window.syncRemoteProfileMedia = syncRemoteProfileMedia;
   window.verificationService = verificationService;
+  window.updateVerifiedBadgeForEmail = updateVerifiedBadgeForEmail;
+  window.isEmailInVerifiedList = isEmailInVerifiedList;
   window.profileAdminService = profileAdminService;
   window.collectionService = collectionService;
   window.supportTicketService = supportTicketService;

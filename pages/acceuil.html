@@ -474,6 +474,57 @@
             </div>
         </section>
 
+        <!-- Vote des nouveautés du site -->
+        <section class="section feature-poll-section" id="featurePollSection" aria-labelledby="featurePollTitle">
+            <h2 class="section-title" id="featurePollTitle" data-i18n="home.feature_poll_title">Quelle nouveauté pour MangaWatch ?</h2>
+            <p class="feature-poll-intro" data-i18n="home.feature_poll_intro">
+                Votez comme sur Reddit : une flèche haut ou bas par idée. Recliquez sur votre vote pour l'annuler. Le podium affiche le top 3 qui sera développé en priorité.
+            </p>
+            <p class="feature-poll-login-hint" id="featurePollLoginHint" hidden data-i18n="home.feature_poll_login">
+                Connectez-vous pour voter.
+            </p>
+            <p class="feature-poll-podium-label" data-i18n="home.feature_poll_podium_label">Top 3 — prochaines fonctionnalités à développer</p>
+            <div class="feature-poll-podium" id="featurePollPodium" aria-label="Podium top 3"></div>
+
+            <div class="feature-poll-toolbar">
+                <div class="feature-poll-search-wrap">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    <input type="search" id="featurePollSearch" class="feature-poll-search" autocomplete="off"
+                        data-i18n-placeholder="home.feature_poll_search_placeholder"
+                        placeholder="Rechercher une idée, un pseudo ou un thème…">
+                </div>
+                <select id="featurePollThemeFilter" class="feature-poll-theme-filter" aria-label="Filtrer par thème">
+                    <option value="" data-i18n="home.feature_poll_theme_all">Tous les thèmes</option>
+                </select>
+                <button type="button" class="feature-poll-add-toggle" id="featurePollAddToggle" data-i18n="home.feature_poll_add_btn">Proposer une idée</button>
+            </div>
+
+            <form class="feature-poll-add-form" id="featurePollAddForm" hidden>
+                <h3 class="feature-poll-add-title" data-i18n="home.feature_poll_add_title">Nouvelle proposition</h3>
+                <label>
+                    <span data-i18n="home.feature_poll_add_name">Titre de l'idée</span>
+                    <input type="text" id="featurePollAddTitle" required maxlength="80" minlength="3">
+                </label>
+                <label>
+                    <span data-i18n="home.feature_poll_add_desc">Description</span>
+                    <textarea id="featurePollAddDesc" required maxlength="400" rows="3" minlength="10"></textarea>
+                </label>
+                <label>
+                    <span data-i18n="home.feature_poll_add_theme">Thème</span>
+                    <select id="featurePollAddTheme" required></select>
+                </label>
+                <div class="feature-poll-add-actions">
+                    <button type="submit" class="feature-poll-add-submit" data-i18n="home.feature_poll_add_submit">Publier</button>
+                    <button type="button" class="feature-poll-add-cancel" id="featurePollAddCancel" data-i18n="profile.cancel">Annuler</button>
+                </div>
+            </form>
+
+            <h3 class="feature-poll-ranking-title" data-i18n="home.feature_poll_ranking">Toutes les propositions</h3>
+            <div class="feature-poll-list" id="featurePollList" role="list"></div>
+            <nav class="feature-poll-pagination" id="featurePollPagination" aria-label="Pagination" hidden></nav>
+            <p class="feature-poll-empty" id="featurePollEmpty" hidden data-i18n="home.feature_poll_no_results">Aucune proposition ne correspond à votre recherche.</p>
+        </section>
+
         <!-- Popup élégant pour les messages -->
         <div class="elegant-popup" id="elegantPopup">
             <div class="popup-content">
@@ -3190,6 +3241,7 @@
     <script src="../js/messaging.js" type="module"></script>
     <script src="../js/auth.js" type="module"></script>
     <script type="module" src="../js/firebase-service.js"></script>
+    <script type="module" src="../js/feature-poll.js"></script>
     <script src="../js/help-ticket.js"></script>
     <!-- TEST : Forcer l'affichage du popup après chargement -->
     <!-- Le popup s'affiche automatiquement via js/acceuil.js si nécessaire -->

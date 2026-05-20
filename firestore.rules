@@ -101,6 +101,26 @@ service cloud.firestore {
       allow create, update: if true;
     }
 
+    // Sondage nouveautés site (accueil) — compteurs agrégés
+    match /feature_poll/{docId} {
+      allow read: if true;
+      allow create, update: if true;
+    }
+
+    // Propositions du sondage (soumises par les utilisateurs)
+    match /feature_poll_proposals/{proposalId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false;
+    }
+
+    // Un document par email — votes up/down par proposition (mise à jour autorisée)
+    match /feature_poll_voters/{voterId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
     // Support Tickets - Tickets d'aide (conversation user + admin, fermeture par l'un ou l'autre)
     match /support_tickets/{ticketId} {
       allow read: if isAuthenticated() && (

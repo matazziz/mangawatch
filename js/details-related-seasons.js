@@ -592,6 +592,10 @@
         });
     }
 
+    function hasCount(value) {
+        return value != null && value !== '' && !Number.isNaN(Number(value));
+    }
+
     function buildPublicationLines(item, contentType) {
         const lines = [];
         const ct = (contentType || '').toLowerCase();
@@ -602,9 +606,9 @@
         if (item.year) lines.push({ label: 'Année', value: String(item.year) });
         if (start) lines.push({ label: isManga ? 'Début parution' : 'Début diffusion', value: start });
         if (end) lines.push({ label: isManga ? 'Fin parution' : 'Fin diffusion', value: end });
-        if (item.volumes) lines.push({ label: 'Volumes', value: String(item.volumes) });
-        if (item.chapters) lines.push({ label: 'Chapitres', value: String(item.chapters) });
-        if (item.episodes) lines.push({ label: 'Épisodes', value: String(item.episodes) });
+        if (hasCount(item.volumes)) lines.push({ label: 'Volumes', value: String(item.volumes) });
+        if (hasCount(item.chapters)) lines.push({ label: 'Chapitres', value: String(item.chapters) });
+        if (hasCount(item.episodes)) lines.push({ label: 'Épisodes', value: String(item.episodes) });
         if (item.status) lines.push({ label: 'Statut', value: String(item.status) });
         if (item.score != null && item.score !== '') {
             lines.push({ label: 'Note', value: `${Number(item.score).toFixed(1)}/10` });
@@ -615,20 +619,60 @@
         return lines;
     }
 
+    /** Garde volumes / chapitres / épisodes visibles même avec année + dates (max 4 lignes). */
+    function pickPublicationLines(lines, contentType, maxLines) {
+        const limit = maxLines || 4;
+        if (!lines?.length) return [];
+        const ct = (contentType || '').toLowerCase();
+        const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
+        const priority = isManga
+            ? ['Volumes', 'Chapitres', 'Année', 'Début parution', 'Fin parution', 'Épisodes', 'Statut', 'Note', 'Série']
+            : ['Épisodes', 'Volumes', 'Chapitres', 'Année', 'Début diffusion', 'Fin diffusion', 'Statut', 'Note', 'Série'];
+
+        const byLabel = new Map(lines.map((line) => [line.label, line]));
+        const picked = [];
+        for (const label of priority) {
+            if (byLabel.has(label) && picked.length < limit) {
+                picked.push(byLabel.get(label));
+            }
+        }
+        for (const line of lines) {
+            if (picked.length >= limit) break;
+            if (!picked.includes(line)) picked.push(line);
+        }
+        return picked;
+    }
+
     function buildMetaLine(item, contentType) {
         const parts = [];
         if (item.year) parts.push(String(item.year));
         const ct = (contentType || '').toLowerCase();
-        if (item.episodes) {
-            parts.push(`${item.episodes} ép.`);
-        } else if (item.chapters) {
-            parts.push(`${item.chapters} ch.`);
-        } else if (item.volumes) {
-            parts.push(`${item.volumes} vol.`);
+        const isManga = ct === 'manga' || ct === 'manhwa' || ct === 'manhua';
+        if (isManga) {
+            if (hasCount(item.volumes)) parts.push(`${item.volumes} vol.`);
+            if (hasCount(item.chapters)) parts.push(`${item.chapters} ch.`);
+        } else {
+            if (hasCount(item.episodes)) parts.push(`${item.episodes} ép.`);
+            if (hasCount(item.volumes)) parts.push(`${item.volumes} vol.`);
+            if (hasCount(item.chapters)) parts.push(`${item.chapters} ch.`);
         }
         const start = formatDateFr(item.airedFrom);
-        if (start && parts.length < 3) parts.push(start);
+        if (start && parts.length < 4) parts.push(start);
         return parts.join(' · ');
+    }
+
+    function mergeBriefStatsIntoItem(item, brief) {
+        if (!brief) return false;
+        let changed = false;
+        const fields = ['volumes', 'chapters', 'episodes', 'year', 'airedFrom', 'airedTo', 'status', 'score'];
+        for (const field of fields) {
+            const next = brief[field];
+            if ((item[field] == null || item[field] === '') && next != null && next !== '') {
+                item[field] = next;
+                changed = true;
+            }
+        }
+        return changed;
     }
 
     function truncateSubtitle(title, max) {
@@ -970,12 +1014,15 @@
         }
     }
 
-    async function lazyLoadImages(items, mediaType) {
+    async function lazyLoadImages(items, mediaType, onStatsUpdated) {
         const withoutImage = items.filter((item) => !item.image).slice(0, MAX_LAZY_IMAGES);
+        let statsChanged = false;
         const loadOne = async (item) => {
             try {
                 const brief = await fetchDetailBrief(mediaType, item.mal_id);
-                if (!brief?.image) return;
+                if (!brief) return;
+                if (mergeBriefStatsIntoItem(item, brief)) statsChanged = true;
+                if (!brief.image) return;
                 item.image = brief.image;
                 const cardImg = document.querySelector(
                     `#related-seasons-section img[data-mal-id="${item.mal_id}"]`
@@ -994,6 +1041,9 @@
         for (let i = 0; i < withoutImage.length; i += batchSize) {
             await Promise.all(withoutImage.slice(i, i + batchSize).map(loadOne));
             if (i + batchSize < withoutImage.length) await delay(120);
+        }
+        if (statsChanged && typeof onStatsUpdated === 'function') {
+            onStatsUpdated();
         }
     }
 
@@ -1062,6 +1112,14 @@
         document.getElementById('related-seasons-section')?.remove();
     }
 
+    function buildInfoDetailsHtml(pubLines, contentType) {
+        if (!pubLines || !pubLines.length) return '';
+        const rows = pickPublicationLines(pubLines, contentType, 4);
+        return `<div class="related-season-details">${rows.map((row) =>
+            `<span class="related-season-detail-row"><span class="related-season-detail-label">${escapeHtml(row.label)}</span><span class="related-season-detail-value">${escapeHtml(row.value)}</span></span>`
+        ).join('')}</div>`;
+    }
+
     function buildRelatedCardsHtml(items, currentId, contentType, referenceTitle) {
         const ctLower = (contentType || 'anime').toLowerCase();
         const isManga = ctLower === 'manga' || ctLower === 'manhwa' || ctLower === 'manhua';
@@ -1078,7 +1136,8 @@
             const badgeHtml = badge
                 ? `<span class="related-season-badge ${badge.className}">${escapeHtml(badge.label)}</span>`
                 : '';
-            const metaHtml = metaLine
+            const detailsHtml = pubLines.length ? buildInfoDetailsHtml(pubLines, contentType) : '';
+            const metaHtml = !detailsHtml && metaLine
                 ? `<span class="related-season-meta">${escapeHtml(metaLine)}</span>`
                 : '';
             let posterInner;
@@ -1106,6 +1165,7 @@
                     <div class="related-season-info">
                         <span class="related-season-label">${escapeHtml(label)}</span>
                         <span class="related-season-subtitle" title="${escapeHtml(item.title)}">${escapeHtml(truncateSubtitle(item.title, 36))}</span>
+                        ${detailsHtml}
                         ${metaHtml}
                     </div>
                 </a>
@@ -1280,7 +1340,9 @@
             items = sortRelatedItems(items, ct);
             saveSeriesRelationsCache(seriesCacheKey, items);
             updateRelatedSectionCards(items, currentId, ct, referenceTitle);
-            lazyLoadImages(items, mediaType).catch(() => {});
+            lazyLoadImages(items, mediaType, () => {
+                updateRelatedSectionCards(items, currentId, ct, referenceTitle);
+            }).catch(() => {});
         }).catch(() => {});
     }
 
