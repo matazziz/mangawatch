@@ -69,6 +69,77 @@ function normalizeProfileEmail(userEmail) {
   return String(userEmail || '').trim().toLowerCase();
 }
 
+/** Variantes d’id / email (casse) pour retrouver les anciens profils Firestore. */
+function userProfileEmailVariants(userEmail) {
+  const raw = String(userEmail || '').trim();
+  const norm = normalizeProfileEmail(raw);
+  const out = [];
+  if (norm) out.push(norm);
+  if (raw && raw !== norm) out.push(raw);
+  return out;
+}
+
+/**
+ * Trouve le document user_profiles (ids en casse mixte + champ email).
+ * @returns {Promise<{ snap: import('firebase/firestore').DocumentSnapshot|null, canonicalId: string|null }>}
+ */
+async function getUserProfileDocSnapshot(userEmail) {
+  const variants = userProfileEmailVariants(userEmail);
+  if (!variants.length) return { snap: null, canonicalId: null };
+
+  for (let i = 0; i < variants.length; i++) {
+    const id = variants[i];
+    const ref = doc(db, COLLECTIONS.USER_PROFILES, id);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return { snap: snap, canonicalId: snap.id };
+    }
+  }
+
+  for (let j = 0; j < variants.length; j++) {
+    const em = variants[j];
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.USER_PROFILES),
+        where('email', '==', em),
+        limit(1)
+      );
+      const res = await getDocs(q);
+      if (!res.empty) {
+        const d = res.docs[0];
+        return { snap: d, canonicalId: d.id };
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  const target = variants[0];
+  try {
+    const all = await getDocs(collection(db, COLLECTIONS.USER_PROFILES));
+    for (let k = 0; k < all.docs.length; k++) {
+      const d = all.docs[k];
+      const data = d.data() || {};
+      if (normalizeProfileEmail(d.id) === target || normalizeProfileEmail(data.email) === target) {
+        return { snap: d, canonicalId: d.id };
+      }
+    }
+  } catch (e) {
+    console.warn('[Firebase Profile] Recherche profil (fallback):', e);
+  }
+
+  return { snap: null, canonicalId: variants[0] };
+}
+
+/** Référence Firestore du profil (existant ou id normalisé pour création). */
+async function resolveUserProfileDocRef(userEmail) {
+  const resolved = await getUserProfileDocSnapshot(userEmail);
+  const id = (resolved.snap && resolved.snap.exists())
+    ? resolved.snap.id
+    : (resolved.canonicalId || normalizeProfileEmail(userEmail));
+  return doc(db, COLLECTIONS.USER_PROFILES, id);
+}
+
+export { normalizeProfileEmail, userProfileEmailVariants };
+
 function authEmailMatches(user, email) {
   return !!(user && user.email && String(user.email).toLowerCase() === email);
 }
@@ -617,7 +688,7 @@ export const bannerService = {
       }
       
       // Récupérer les informations du profil existant pour supprimer l'ancienne bannière plus tard
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
       
       // Stocker l'URL de l'ancienne bannière pour la supprimer après l'upload
@@ -725,8 +796,8 @@ export const bannerService = {
         } else {
           // Créer un nouveau profil avec setDoc
           await setDoc(profileRef, {
-            id: userEmail,
-            email: userEmail,
+            id: normalizeProfileEmail(userEmail),
+            email: normalizeProfileEmail(userEmail),
             banner: bannerDataForFirestore,
             created_at: serverTimestamp(),
             updated_at: serverTimestamp()
@@ -789,7 +860,10 @@ export const bannerService = {
   async getBanner(userEmail) {
     try {
       console.log('[Firebase Banner] getBanner appelé pour:', userEmail);
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const resolved = await getUserProfileDocSnapshot(userEmail);
+      const profileRef = resolved.snap && resolved.snap.exists()
+        ? doc(db, COLLECTIONS.USER_PROFILES, resolved.snap.id)
+        : doc(db, COLLECTIONS.USER_PROFILES, normalizeProfileEmail(userEmail));
       // Utiliser getDocFromServer pour forcer une lecture fraîche (éviter le cache Firestore qui renverrait l'ancienne bannière)
       let profileDoc;
       try {
@@ -798,6 +872,9 @@ export const bannerService = {
         // En cas d'erreur réseau, fallback vers getDoc (cache)
         console.warn('[Firebase Banner] Lecture serveur échouée, fallback cache:', serverErr?.message);
         profileDoc = await getDoc(profileRef);
+      }
+      if (!profileDoc.exists() && resolved.snap && resolved.snap.exists()) {
+        profileDoc = resolved.snap;
       }
       
       console.log('[Firebase Banner] Document existe:', profileDoc.exists());
@@ -865,7 +942,7 @@ export const bannerService = {
    */
   async deleteBanner(userEmail) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
       
       if (profileDoc.exists()) {
@@ -931,7 +1008,7 @@ export const avatarService = {
       console.log('[Firebase Avatar] Utilisateur authentifié:', currentUser.email);
       
       // Récupérer les informations du profil existant pour supprimer l'ancien avatar plus tard
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
       
       // Stocker l'URL de l'ancien avatar pour la supprimer après l'upload
@@ -970,8 +1047,8 @@ export const avatarService = {
           } else {
             // Créer un nouveau profil avec setDoc
             await setDoc(profileRef, {
-              id: userEmail,
-              email: userEmail,
+              id: normalizeProfileEmail(userEmail),
+              email: normalizeProfileEmail(userEmail),
               avatar: avatarUrl,
               created_at: serverTimestamp(),
               updated_at: serverTimestamp()
@@ -1042,8 +1119,10 @@ export const avatarService = {
   async getAvatar(userEmail) {
     try {
       console.log('[Firebase Avatar] getAvatar appelé pour:', userEmail);
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
-      const profileDoc = await getDoc(profileRef);
+      const resolved = await getUserProfileDocSnapshot(userEmail);
+      const profileDoc = resolved.snap && resolved.snap.exists()
+        ? resolved.snap
+        : await getDoc(doc(db, COLLECTIONS.USER_PROFILES, normalizeProfileEmail(userEmail)));
       
       if (profileDoc.exists()) {
         const data = profileDoc.data();
@@ -1068,7 +1147,7 @@ export const avatarService = {
    */
   async deleteAvatar(userEmail) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
       
       if (profileDoc.exists()) {
@@ -1128,8 +1207,9 @@ export const verificationService = {
       console.log('[Firebase Verification] Certification de l\'utilisateur:', userEmail);
       console.log('[Firebase Verification] Utilisateur authentifié:', currentUser.email);
       
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
+      const normEmail = normalizeProfileEmail(userEmail);
       
       if (profileDoc.exists()) {
         // Mettre à jour le profil existant
@@ -1143,8 +1223,8 @@ export const verificationService = {
         // Créer un nouveau profil avec setDoc
         console.log('[Firebase Verification] Création d\'un nouveau profil...');
         await setDoc(profileRef, {
-          id: userEmail,
-          email: userEmail,
+          id: normEmail,
+          email: normEmail,
           verified: true,
           created_at: serverTimestamp(),
           updated_at: serverTimestamp()
@@ -1179,7 +1259,7 @@ export const verificationService = {
    */
   async unverifyUser(userEmail) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
       
       if (profileDoc.exists()) {
@@ -1214,10 +1294,12 @@ export const verificationService = {
   async isUserVerified(userEmail) {
     try {
       console.log('[Firebase Verification] Vérification du statut pour:', userEmail);
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
-      const profileDoc = await getDoc(profileRef);
+      const resolved = await getUserProfileDocSnapshot(userEmail);
+      const profileDoc = resolved.snap && resolved.snap.exists()
+        ? resolved.snap
+        : null;
       
-      if (profileDoc.exists()) {
+      if (profileDoc && profileDoc.exists()) {
         const data = profileDoc.data();
         console.log('[Firebase Verification] Données du profil:', data);
         if (data.verified === true) {
@@ -1362,9 +1444,9 @@ export const profileSettingsService = {
    */
   async getHideFollows(userEmail) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
-      const profileDoc = await getDoc(profileRef);
-      if (profileDoc.exists()) {
+      const resolved = await getUserProfileDocSnapshot(userEmail);
+      const profileDoc = resolved.snap && resolved.snap.exists() ? resolved.snap : null;
+      if (profileDoc && profileDoc.exists()) {
         const data = profileDoc.data();
         return data.hideFollows === true;
       }
@@ -1383,7 +1465,7 @@ export const profileSettingsService = {
    */
   async setHideFollows(userEmail, hide) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
       if (profileDoc.exists()) {
         await updateDoc(profileRef, { hideFollows: !!hide, updated_at: serverTimestamp() });
@@ -1410,15 +1492,17 @@ export const profileAccountService = {
    */
   async getProfileAccountInfo(userEmail) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
-      const profileDoc = await getDoc(profileRef);
-      if (profileDoc.exists()) {
-        const data = profileDoc.data();
+      const resolved = await getUserProfileDocSnapshot(userEmail);
+      if (resolved.snap && resolved.snap.exists()) {
+        const data = resolved.snap.data();
         return {
+          email: normalizeProfileEmail(resolved.snap.id || data.email || userEmail),
           username: data.username || null,
+          name: data.name || data.displayName || null,
           country: data.country || data.continent || null,
           langue: data.langue || data.language || null,
-          avatar: data.avatar || null,
+          avatar: data.avatar || data.photoURL || data.picture || null,
+          picture: data.picture || data.avatar || null,
           verified: data.verified === true
         };
       }
@@ -1438,8 +1522,9 @@ export const profileAccountService = {
    */
   async setProfileAccountInfo(userEmail, fields) {
     try {
-      const profileRef = doc(db, COLLECTIONS.USER_PROFILES, userEmail);
+      const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
+      const normEmail = normalizeProfileEmail(userEmail);
       const updates = { updated_at: serverTimestamp() };
       if (fields.username !== undefined) updates.username = fields.username;
       if (fields.country !== undefined) updates.country = fields.country;
@@ -1448,8 +1533,8 @@ export const profileAccountService = {
         await updateDoc(profileRef, updates);
       } else {
         await setDoc(profileRef, {
-          id: userEmail,
-          email: userEmail,
+          id: normEmail,
+          email: normEmail,
           ...updates,
           created_at: serverTimestamp()
         });
@@ -1479,14 +1564,22 @@ export const collectionService = {
     try {
       console.log('[Firebase Collection] Récupération de la collection pour:', userEmail);
       const listRef = collection(db, COLLECTIONS.USER_LIST);
-      const q = query(
-        listRef,
-        where('user_email', '==', userEmail)
-      );
+      const emails = userProfileEmailVariants(userEmail);
+      const seenIds = new Set();
+      const docList = [];
+
+      for (let i = 0; i < emails.length; i++) {
+        const q = query(listRef, where('user_email', '==', emails[i]));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.docs.forEach(function(d) {
+          if (!seenIds.has(d.id)) {
+            seenIds.add(d.id);
+            docList.push(d);
+          }
+        });
+      }
       
-      const querySnapshot = await getDocs(q);
-      
-      const items = querySnapshot.docs.map(doc => {
+      const items = docList.map(doc => {
         const data = doc.data();
         return {
           id: data.content_id || data.id,

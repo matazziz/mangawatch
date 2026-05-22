@@ -1,6 +1,6 @@
 // Gestion de la page List
 // Import du service Firebase pour la collection
-import { collectionService } from './firebase-service.js?v=6febe20';
+import { collectionService } from './firebase-service.js?v=6febe21';
 
 document.addEventListener('DOMContentLoaded', function() {
     const listItems = document.getElementById('list-items');

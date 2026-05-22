@@ -1,7 +1,7 @@
 // Service Firebase pour gérer les notes et le top 10
 // Remplace supabaseNotesService.js
 
-import { db, COLLECTIONS } from './firebase-service.js?v=6febe20';
+import { db, COLLECTIONS, userProfileEmailVariants } from './firebase-service.js?v=6febe21';
 import {
   collection,
   doc,
@@ -15,6 +15,10 @@ import {
   serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
+function emailVariantsForQuery(userEmail) {
+  return userProfileEmailVariants(userEmail);
+}
+
 /**
  * Service pour gérer les notes utilisateur dans Firebase
  */
@@ -27,14 +31,21 @@ export const firebaseNotesService = {
   async getAllNotes(userEmail) {
     try {
       const notesRef = collection(db, COLLECTIONS.USER_NOTES);
-      const q = query(
-        notesRef,
-        where('user_email', '==', userEmail)
-      );
-      
-      const querySnapshot = await getDocs(q);
+      const emails = emailVariantsForQuery(userEmail);
+      const seenIds = new Set();
+      const docList = [];
+      for (let i = 0; i < emails.length; i++) {
+        const q = query(notesRef, where('user_email', '==', emails[i]));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.docs.forEach(function(d) {
+          if (!seenIds.has(d.id)) {
+            seenIds.add(d.id);
+            docList.push(d);
+          }
+        });
+      }
 
-      const notes = querySnapshot.docs.map(doc => {
+      const notes = docList.map(doc => {
         const data = doc.data();
         const tsMillis = (t) =>
           (t?.toMillis && t.toMillis()) || (typeof t?.seconds === 'number' ? t.seconds * 1000 : null);
@@ -249,14 +260,21 @@ export const firebaseTop10Service = {
     const typeFilter = options.type ? String(options.type).toLowerCase().trim() : null;
     try {
       const top10Ref = collection(db, COLLECTIONS.USER_TOP10);
-      const q = query(
-        top10Ref,
-        where('user_email', '==', userEmail)
-      );
-      
-      const querySnapshot = await getDocs(q);
+      const emails = emailVariantsForQuery(userEmail);
+      const seenIds = new Set();
+      const docList = [];
+      for (let i = 0; i < emails.length; i++) {
+        const q = query(top10Ref, where('user_email', '==', emails[i]));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.docs.forEach(function(d) {
+          if (!seenIds.has(d.id)) {
+            seenIds.add(d.id);
+            docList.push(d);
+          }
+        });
+      }
 
-      const items = querySnapshot.docs.map(doc => {
+      const items = docList.map(doc => {
         const data = doc.data();
         return {
           _docId: doc.id,

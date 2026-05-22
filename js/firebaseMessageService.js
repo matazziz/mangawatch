@@ -1,7 +1,7 @@
 // Service Firebase pour gérer les messages
 // Remplace les fonctions Supabase dans messageService.js
 
-import { db, COLLECTIONS } from './firebase-service.js?v=6febe20';
+import { db, COLLECTIONS } from './firebase-service.js?v=6febe21';
 import {
   collection,
   doc,

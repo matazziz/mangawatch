@@ -385,52 +385,66 @@ async function loadUserProfile(userEmail) {
         }
     }
     
-    // Charger le profil depuis localStorage
-    const profileData = localStorage.getItem('profile_' + normalizedEmail);
     let user = null;
-    
-    if (profileData) {
-        try {
-            user = JSON.parse(profileData);
-        } catch (e) {
-            console.error('Erreur lors du chargement du profil:', e);
+
+    // 1. Firestore (source de vérité — visible par tous les visiteurs)
+    try {
+        const mod = await import('./firebase-service.js?v=6febe21');
+        let remote = null;
+        if (mod && mod.profileAccountService && typeof mod.profileAccountService.getProfileAccountInfo === 'function') {
+            remote = await mod.profileAccountService.getProfileAccountInfo(normalizedEmail);
+        }
+        if (!remote && mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
+            const allProfiles = await mod.profileAdminService.listAllUserProfiles();
+            remote = Array.isArray(allProfiles)
+                ? allProfiles.find((p) => String(p?.email || '').toLowerCase() === normalizedEmail)
+                : null;
+        }
+        if (remote) {
+            user = {
+                email: normalizedEmail,
+                username: remote.username || remote.name || normalizedEmail.split('@')[0],
+                name: remote.name || remote.username || normalizedEmail.split('@')[0],
+                avatar: remote.avatar || remote.picture || null,
+                picture: remote.picture || remote.avatar || null,
+                country: remote.country || remote.continent || null,
+                continent: remote.continent || remote.country || null,
+                verified: remote.verified === true
+            };
+            try {
+                localStorage.setItem('profile_' + normalizedEmail, JSON.stringify(user));
+                if (user.avatar) localStorage.setItem('avatar_' + normalizedEmail, user.avatar);
+            } catch (e) { /* ignore */ }
+        }
+    } catch (e) {
+        console.warn('Chargement profil Firestore indisponible:', e);
+    }
+
+    // 2. Cache local (navigateur du visiteur)
+    if (!user) {
+        const profileData = localStorage.getItem('profile_' + normalizedEmail);
+        if (profileData) {
+            try {
+                user = JSON.parse(profileData);
+            } catch (e) {
+                console.error('Erreur lors du chargement du profil:', e);
+            }
         }
     }
-    
-    // Fallback Firestore si le profil local n'existe pas encore
-    if (!user) {
-        try {
-            const mod = await import('./firebase-service.js?v=6febe20');
-            let remote = null;
-            if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
-                const allProfiles = await mod.profileAdminService.listAllUserProfiles();
-                remote = Array.isArray(allProfiles)
-                    ? allProfiles.find((p) => String(p?.email || '').toLowerCase() === normalizedEmail)
-                    : null;
-            }
-            if (!remote && mod && mod.profileAccountService && typeof mod.profileAccountService.getProfileAccountInfo === 'function') {
-                const accountInfo = await mod.profileAccountService.getProfileAccountInfo(normalizedEmail);
-                if (accountInfo) remote = accountInfo;
-            }
-            if (remote) {
-                user = {
-                    email: normalizedEmail,
-                    username: remote.username || remote.name || normalizedEmail.split('@')[0],
-                    name: remote.name || remote.username || normalizedEmail.split('@')[0],
-                    avatar: remote.avatar || remote.picture || null,
-                    picture: remote.picture || remote.avatar || null,
-                    country: remote.country || remote.continent || null,
-                    continent: remote.continent || remote.country || null,
-                    verified: remote.verified === true
-                };
-                try {
-                    localStorage.setItem('profile_' + normalizedEmail, JSON.stringify(user));
-                    if (user.avatar) localStorage.setItem('avatar_' + normalizedEmail, user.avatar);
-                } catch (e) { /* ignore */ }
-            }
-        } catch (e) {
-            console.warn('Chargement profil Firestore indisponible:', e);
-        }
+
+    // 3. Liste accounts locale (comptes déjà vus sur cet appareil)
+    const accountsEarly = JSON.parse(localStorage.getItem('accounts') || '[]');
+    const accountEarly = accountsEarly.find(acc => String(acc.email || '').toLowerCase() === normalizedEmail);
+    if (!user && accountEarly) {
+        user = {
+            email: normalizedEmail,
+            username: accountEarly.username || normalizedEmail.split('@')[0],
+            name: accountEarly.username || normalizedEmail.split('@')[0],
+            avatar: accountEarly.avatar || accountEarly.customAvatar || accountEarly.picture || null,
+            picture: accountEarly.picture || accountEarly.avatar || null,
+            country: accountEarly.country || accountEarly.continent || null,
+            continent: accountEarly.continent || accountEarly.country || null
+        };
     }
 
     if (!user) {
