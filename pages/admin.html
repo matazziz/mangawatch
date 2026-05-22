@@ -4145,7 +4145,7 @@
                 if (!ticketsList) return;
                 ticketsList.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement des tickets...</p></div>';
                 try {
-                    const { supportTicketService } = await import('/js/firebase-service.js');
+                    const { supportTicketService } = await import('/js/firebase-service.js?v=6febe20');
                     const allTickets = await supportTicketService.getAllTicketsForAdmin();
                     const tickets = (allTickets || []).filter(function (t) {
                         return !(t.subject || '').includes('[Partenariat boutique]');
@@ -4278,7 +4278,7 @@
                 const cards = [];
                 let firebaseTickets = [];
                 try {
-                    const { supportTicketService } = await import('/js/firebase-service.js');
+                    const { supportTicketService } = await import('/js/firebase-service.js?v=6febe20');
                     const all = await supportTicketService.getAllTicketsForAdmin();
                     firebaseTickets = (all || []).filter(function (t) {
                         return (t.subject || '').includes('[Partenariat boutique]');
@@ -4363,7 +4363,7 @@
                 const stores = window.BOUTIQUE_PARTNER_STORES || [];
                 let stats = {};
                 try {
-                    const { boutiqueStatsService } = await import('/js/firebase-service.js');
+                    const { boutiqueStatsService } = await import('/js/firebase-service.js?v=6febe20');
                     const remote = await boutiqueStatsService.getAll();
                     stats = mergeBoutiqueStats(remote);
                 } catch (err) {
@@ -4409,7 +4409,7 @@
                     return;
                 }
                 try {
-                    const { supportTicketService } = await import('/js/firebase-service.js');
+                    const { supportTicketService } = await import('/js/firebase-service.js?v=6febe20');
                     const adminUser = JSON.parse(localStorage.getItem('user') || '{}');
                     const adminEmail = adminUser.email || null;
                     await supportTicketService.addReplyToTicket(currentTicketForReply.id, 'admin', reply, adminEmail);
@@ -4470,7 +4470,7 @@
             async function confirmCloseTicket() {
                 if (!currentTicketForClose) return;
                 try {
-                    const { supportTicketService } = await import('/js/firebase-service.js');
+                    const { supportTicketService } = await import('/js/firebase-service.js?v=6febe20');
                     await supportTicketService.closeTicket(currentTicketForClose.id, 'admin');
                     closeCloseTicketModal();
                     loadSupportTickets();
@@ -4484,7 +4484,7 @@
             async function confirmDeleteTicket() {
                 if (!currentTicketForDelete) return;
                 try {
-                    const { supportTicketService } = await import('/js/firebase-service.js');
+                    const { supportTicketService } = await import('/js/firebase-service.js?v=6febe20');
                     await supportTicketService.deleteTicketForAdmin(currentTicketForDelete.id);
                     closeDeleteTicketModal();
                     loadSupportTickets();
@@ -4620,7 +4620,7 @@
             
             (async function refreshAdminUsersFromFirestore() {
                 try {
-                    const { profileAdminService } = await import('/js/firebase-service.js');
+                    const { profileAdminService } = await import('/js/firebase-service.js?v=6febe20');
                     if (!profileAdminService || typeof profileAdminService.listAllUserProfiles !== 'function') return;
                     const remote = await profileAdminService.listAllUserProfiles();
                     window.__adminFirestoreUsers = remote;

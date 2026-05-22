@@ -20,7 +20,7 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières -->
     <script type="module">
-        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js';
+        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe20';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
@@ -3645,7 +3645,7 @@
                     const payload = parseJwt(response.credential);
                     if (!payload || !payload.email) return;
 
-                    const { authService } = await import('/js/firebase-service.js');
+                    const { authService } = await import('/js/firebase-service.js?v=6febe20');
                     if (!authService || typeof authService.signInWithGoogleIdToken !== 'function') {
                         throw new Error('authService.signInWithGoogleIdToken indisponible');
                     }
@@ -4679,7 +4679,7 @@
             if (!el) return;
             if (el.dataset.rawDate && String(el.dataset.rawDate).trim()) return;
             try {
-                var mod = await import('/js/firebase-service.js');
+                var mod = await import('/js/firebase-service.js?v=6febe20');
                 var fbAuth = mod.auth;
                 if (!fbAuth) return;
                 var cur = fbAuth.currentUser;
@@ -5094,7 +5094,7 @@
                                 } else {
                                     // Fallback : déconnexion manuelle
                                     try {
-                                        const { authService } = await import('/js/firebase-service.js');
+                                        const { authService } = await import('/js/firebase-service.js?v=6febe20');
                                         await authService.signOut();
                                     } catch (error) {
                                         // Ignorer les erreurs Firebase silencieusement
@@ -5138,7 +5138,7 @@
                             } else {
                                 // Fallback : déconnexion manuelle
                                 try {
-                                    const { authService } = await import('/js/firebase-service.js');
+                                    const { authService } = await import('/js/firebase-service.js?v=6febe20');
                                     await authService.signOut();
                                 } catch (error) {
                                     // Ignorer les erreurs Firebase silencieusement
@@ -7907,7 +7907,7 @@
     <script src="../js/hamburger-menu.js"></script>
     <!-- Système de messagerie -->
     <script src="/js/messaging.js" type="module"></script>
-    <script src="/js/auth.js" type="module"></script>
+    <script src="/js/auth.js?v=6febe20" type="module"></script>
     
     <!-- Appel direct pour tester le bouton de déconnexion -->
     <script>

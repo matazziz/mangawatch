@@ -368,7 +368,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         if (user && user.email) {
-            const { avatarService } = await import('./firebase-service.js');
+            const { avatarService } = await import('./firebase-service.js?v=6febe20');
             const avatarUrl = await avatarService.getAvatar(user.email);
             if (avatarUrl) {
                 user.customAvatar = avatarUrl;
@@ -1225,7 +1225,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     let firebaseAuthSuccess = false;
                     try {
                         console.log('🔐 Authentification Firebase Auth...');
-                        const { authService } = await import('./firebase-service.js');
+                        const { authService } = await import('./firebase-service.js?v=6febe20');
                         try {
                             const result = await authService.signInWithEmail(email, password);
                             firebaseUid = result.user?.uid || null;
@@ -1311,7 +1311,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         // Déconnecter Firebase si on s'était connecté
                         if (firebaseAuthSuccess) {
                             try {
-                                const { authService } = await import('./firebase-service.js');
+                                const { authService } = await import('./firebase-service.js?v=6febe20');
                                 await authService.signOut();
                             } catch (e) { /* ignore */ }
                         }
@@ -1705,7 +1705,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     let firebaseUid = null;
                     try {
                         console.log('🔐 Création du compte Firebase Auth...');
-                        const { authService } = await import('./firebase-service.js');
+                        const { authService } = await import('./firebase-service.js?v=6febe20');
                         const result = await authService.signUpWithEmail(email, password);
                         firebaseUid = result.user?.uid || null;
                         console.log('✅ Compte Firebase Auth créé, uid:', firebaseUid);
@@ -2435,7 +2435,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Source Firestore (meme source que la page admin)
         try {
-            const mod = await import('./firebase-service.js');
+            const mod = await import('./firebase-service.js?v=6febe20');
             if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
                 const remoteUsers = await mod.profileAdminService.listAllUserProfiles();
                 if (Array.isArray(remoteUsers)) {
@@ -2488,7 +2488,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             let collectionService = null;
             let avatarService = null;
             try {
-                const mod = await import('./firebase-service.js');
+                const mod = await import('./firebase-service.js?v=6febe20');
                 collectionService = mod.collectionService;
                 avatarService = mod.avatarService || null;
             } catch (e) { /* ignore */ }

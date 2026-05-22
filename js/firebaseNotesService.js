@@ -1,7 +1,7 @@
 // Service Firebase pour gérer les notes et le top 10
 // Remplace supabaseNotesService.js
 
-import { db, COLLECTIONS } from './firebase-service.js';
+import { db, COLLECTIONS } from './firebase-service.js?v=6febe20';
 import {
   collection,
   doc,

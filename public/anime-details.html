@@ -1841,7 +1841,7 @@
         // Charger les modules Firebase de manière asynchrone
         try {
             await import('/js/firebase-config.js');
-            await import('/js/firebase-service.js');
+            await import('/js/firebase-service.js?v=6febe20');
             await import('/js/firebaseNotesService.js');
             console.log('[Firebase] Modules chargés avec succès');
         } catch (err) {

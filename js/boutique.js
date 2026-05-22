@@ -341,7 +341,7 @@
         }
         if (!pending.length) return;
         try {
-            const { boutiqueStatsService } = await import('/js/firebase-service.js');
+            const { boutiqueStatsService } = await import('/js/firebase-service.js?v=6febe20');
             const remaining = [];
             for (let i = 0; i < pending.length; i++) {
                 const item = pending[i];
@@ -360,7 +360,7 @@
         if (!storeId || !field) return;
         writeLocalStat(storeId, field);
         try {
-            const { boutiqueStatsService } = await import('/js/firebase-service.js');
+            const { boutiqueStatsService } = await import('/js/firebase-service.js?v=6febe20');
             await boutiqueStatsService.increment(storeId, field);
             await syncPendingStats();
         } catch (e) {
@@ -785,7 +785,7 @@
         showPartnerFeedback('Envoi en cours…', false);
 
         try {
-            const { supportTicketService } = await import('/js/firebase-service.js');
+            const { supportTicketService } = await import('/js/firebase-service.js?v=6febe20');
             await supportTicketService.createTicket({
                 subject: '[Partenariat boutique] ' + shopName,
                 message: body,

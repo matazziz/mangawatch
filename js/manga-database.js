@@ -2487,7 +2487,7 @@ function updateItemStatusWithStoppedAt(status, stoppedAt) {
         
         // Synchroniser aussi Firebase pour que la page Collection reflète immédiatement les changements.
         const syncItem = existingIndex !== -1 ? userList[existingIndex] : window.currentEditingItem;
-        import('./firebase-service.js')
+        import('./firebase-service.js?v=6febe20')
             .then(({ collectionService }) => collectionService.addItem(user.email, {
                 id: syncItem.id,
                 title: syncItem.title,

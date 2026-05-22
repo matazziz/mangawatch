@@ -360,13 +360,13 @@
 
     async function getTicketService() {
       if (window.supportTicketService) return window.supportTicketService;
-      var firebasePath = (window.location && window.location.pathname && window.location.pathname.indexOf('/pages/') !== -1) ? '../js/firebase-service.js' : 'js/firebase-service.js';
+      var firebasePath = (window.location && window.location.pathname && window.location.pathname.indexOf('/pages/') !== -1) ? '../js/firebase-service.js?v=6febe20' : '/js/firebase-service.js?v=6febe20';
       try {
         var mod = await import(firebasePath);
         if (mod && mod.supportTicketService) return mod.supportTicketService;
       } catch (e) {
         try {
-          var m = await import('/js/firebase-service.js');
+          var m = await import('/js/firebase-service.js?v=6febe20');
           if (m && m.supportTicketService) return m.supportTicketService;
         } catch (_) {}
       }
@@ -507,12 +507,10 @@
 
         let ticketService = window.supportTicketService;
         if (!ticketService) {
-          var firebasePath = '/js/firebase-service.js';
+          var firebasePath = '/js/firebase-service.js?v=6febe20';
           if (typeof window !== 'undefined' && window.location && window.location.pathname) {
             if (window.location.pathname.indexOf('/pages/') !== -1) {
-              firebasePath = '../js/firebase-service.js';
-            } else if (!window.location.pathname.startsWith('/') || window.location.pathname === '/' || window.location.pathname.lastIndexOf('/') <= 0) {
-              firebasePath = 'js/firebase-service.js';
+              firebasePath = '../js/firebase-service.js?v=6febe20';
             }
           }
           try {
@@ -520,7 +518,7 @@
             if (mod && mod.supportTicketService) ticketService = mod.supportTicketService;
           } catch (e) {
             try {
-              mod = await import('/js/firebase-service.js');
+              mod = await import('/js/firebase-service.js?v=6febe20');
               if (mod && mod.supportTicketService) ticketService = mod.supportTicketService;
             } catch (_) {}
           }

@@ -400,7 +400,7 @@ async function loadUserProfile(userEmail) {
     // Fallback Firestore si le profil local n'existe pas encore
     if (!user) {
         try {
-            const mod = await import('./firebase-service.js');
+            const mod = await import('./firebase-service.js?v=6febe20');
             let remote = null;
             if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
                 const allProfiles = await mod.profileAdminService.listAllUserProfiles();
@@ -921,7 +921,7 @@ async function loadUserCollection(statusFilter = 'all', typeFilter = 'manga') {
     // Charger depuis Firebase (comme list.html) pour cohérence - fallback localStorage
     let userList = [];
     try {
-        const { collectionService } = await import('/js/firebase-service.js');
+        const { collectionService } = await import('/js/firebase-service.js?v=6febe20');
         userList = await collectionService.getAllItems(viewedUserEmail);
     } catch (e) {
         console.warn('[UserProfile] Firebase indisponible, fallback localStorage:', e);

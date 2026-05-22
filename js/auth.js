@@ -1,3 +1,5 @@
+import { importFirebaseService } from './firebase-import.js';
+
 // Configuration Google Sign-In
 const googleClientId = window.__GOOGLE_CLIENT_ID__ || 'GOOGLE_CLIENT_ID_NOT_SET';
 
@@ -114,7 +116,7 @@ async function handleFirebaseGoogleSignIn() {
     try {
         // Vérifier que Firebase est bien configuré
         console.log('📦 Import du service Firebase...');
-        const { authService } = await import('./firebase-service.js');
+        const { authService } = await importFirebaseService();
         console.log('✅ Service Firebase importé');
         
         // Vérifier que authService existe
@@ -323,7 +325,7 @@ async function handleLogout() {
     try {
         // Déconnecter de Firebase si connecté
         try {
-            const { authService } = await import('./firebase-service.js');
+            const { authService } = await importFirebaseService();
             await authService.signOut();
             console.log('✅ Déconnexion Firebase réussie');
         } catch (error) {
@@ -515,7 +517,7 @@ async function handleFirebaseGoogleSignUp() {
     try {
         // Vérifier que Firebase est bien configuré
         console.log('📦 Import du service Firebase...');
-        const { authService } = await import('./firebase-service.js');
+        const { authService } = await importFirebaseService();
         console.log('✅ Service Firebase importé');
         
         // Vérifier que authService existe
@@ -915,7 +917,7 @@ function closeGoogleSignUpCompletion() {
 async function goBackFromGoogleSignupCompletionForm() {
     closeGoogleSignUpCompletion();
     try {
-        const { authService } = await import('./firebase-service.js');
+        const { authService } = await importFirebaseService();
         if (authService && typeof authService.signOut === 'function') {
             await authService.signOut();
         }

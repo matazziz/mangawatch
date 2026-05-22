@@ -2053,7 +2053,7 @@
             
             (async function refreshAdminUsersFromFirestore() {
                 try {
-                    const { profileAdminService } = await import('/js/firebase-service.js');
+                    const { profileAdminService } = await import('/js/firebase-service.js?v=6febe20');
                     if (!profileAdminService || typeof profileAdminService.listAllUserProfiles !== 'function') return;
                     const remote = await profileAdminService.listAllUserProfiles();
                     window.__adminFirestoreUsers = remote;
