@@ -1238,10 +1238,6 @@ export const verificationService = {
   }
 };
 
-function normalizeProfileEmail(email) {
-  return String(email || '').toLowerCase().trim();
-}
-
 function isEmailInVerifiedList(userEmail) {
   const norm = normalizeProfileEmail(userEmail);
   if (!norm) return false;
