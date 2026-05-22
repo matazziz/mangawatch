@@ -389,7 +389,7 @@ async function loadUserProfile(userEmail) {
 
     // 1. Firestore (source de vérité — visible par tous les visiteurs)
     try {
-        const mod = await import('./firebase-service.js?v=6febe21');
+        const mod = await import('./firebase-service.js?v=6febe22');
         let remote = null;
         if (mod && mod.profileAccountService && typeof mod.profileAccountService.getProfileAccountInfo === 'function') {
             remote = await mod.profileAccountService.getProfileAccountInfo(normalizedEmail);

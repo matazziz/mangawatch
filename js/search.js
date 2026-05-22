@@ -481,7 +481,7 @@ class SearchManager {
             return this.remoteUsersCache;
         }
         try {
-            const mod = await import('./firebase-service.js?v=6febe20');
+            const mod = await import('./firebase-service.js?v=6febe22');
             if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
                 const remote = await mod.profileAdminService.listAllUserProfiles();
                 this.remoteUsersCache = Array.isArray(remote) ? remote : [];

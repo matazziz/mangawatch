@@ -1,5 +1,42 @@
 import { importFirebaseService } from './firebase-import.js';
 
+/** Publie le profil dans Firestore pour que les autres utilisateurs puissent le voir. */
+export async function syncProfileToFirestore(email, profileData) {
+    if (!email) return;
+    try {
+        const mod = await importFirebaseService();
+        const svc = mod && mod.profileAccountService;
+        if (!svc) return;
+        const payload = {
+            username: profileData.username || profileData.name,
+            name: profileData.name || profileData.username,
+            country: profileData.country,
+            langue: profileData.langue,
+            avatar: profileData.avatar || profileData.customAvatar || profileData.picture,
+            picture: profileData.picture || profileData.avatar,
+            provider: profileData.provider,
+            uid: profileData.uid
+        };
+        if (typeof svc.ensureProfileRegistered === 'function') {
+            await svc.ensureProfileRegistered(email, payload);
+        } else if (typeof svc.setProfileAccountInfo === 'function') {
+            await svc.setProfileAccountInfo(email, payload);
+        }
+    } catch (e) {
+        console.warn('[Auth] Sync profil Firestore:', e);
+    }
+}
+
+/** À appeler au chargement : republie le profil connecté si absent de Firestore. */
+export async function syncCurrentUserProfileToFirestore() {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    if (!user || !user.email) return;
+    const key = 'profile_fs_sync_' + String(user.email).trim().toLowerCase();
+    if (sessionStorage.getItem(key) === '1') return;
+    await syncProfileToFirestore(user.email, user);
+    sessionStorage.setItem(key, '1');
+}
+
 // Configuration Google Sign-In
 const googleClientId = window.__GOOGLE_CLIENT_ID__ || 'GOOGLE_CLIENT_ID_NOT_SET';
 
@@ -222,6 +259,8 @@ async function handleFirebaseGoogleSignIn() {
         localStorage.setItem('rememberMe', 'true');
         console.log('✅ Session sauvegardée dans localStorage avec pseudo:', userName);
         console.log('✅ Option "rester connecté" activée automatiquement pour Google');
+
+        await syncProfileToFirestore(user.email, userData);
         
         // Fermer le popup d'authentification si ouvert
         if (typeof closeAuthPopup === 'function') {
@@ -555,6 +594,8 @@ async function handleFirebaseGoogleSignUp() {
             // Activer automatiquement "rester connecté" pour les connexions Google (utilisateur existant)
             localStorage.setItem('rememberMe', 'true');
             console.log('✅ Option "rester connecté" activée automatiquement pour la connexion Google');
+
+            await syncProfileToFirestore(user.email, userData);
             
             if (typeof closeAuthPopup === 'function') {
                 closeAuthPopup();
@@ -854,13 +895,6 @@ function showGoogleSignUpCompletionForm(googleUser) {
         accounts.push(newAccount);
         localStorage.setItem('accounts', JSON.stringify(accounts));
         
-        // Synchroniser pseudo/pays/langue vers Firestore (disponibles sur tous les domaines)
-        if (typeof window.profileAccountService !== 'undefined') {
-            try {
-                await window.profileAccountService.setProfileAccountInfo(googleUser.email, { username: pseudo, country: country, langue: langue });
-            } catch (e) { console.warn('Firestore signup sync:', e); }
-        }
-        
         // Sauvegarder les informations utilisateur (username + name = pseudo affiché partout, évite écrasement par Google JWT)
         const userData = {
             name: pseudo,
@@ -880,6 +914,8 @@ function showGoogleSignUpCompletionForm(googleUser) {
         // Activer automatiquement "rester connecté" pour les inscriptions Google
         localStorage.setItem('rememberMe', 'true');
         console.log('✅ Option "rester connecté" activée automatiquement pour l\'inscription Google');
+
+        await syncProfileToFirestore(googleUser.email, userData);
         
         // Fermer le popup
         closeGoogleSignUpCompletion();

@@ -215,6 +215,30 @@ export async function ensureAuthenticatedForStorage(userEmail, options) {
   throw err;
 }
 
+/** Attend la restauration Firebase Auth (connexion Google / persistance locale). */
+async function waitForAuthUser(userEmail, maxWaitMs) {
+  const email = normalizeProfileEmail(userEmail);
+  if (!email) return null;
+  if (authEmailMatches(auth.currentUser, email)) {
+    return auth.currentUser;
+  }
+  return new Promise(function(resolve) {
+    let settled = false;
+    function finish(user) {
+      if (settled) return;
+      settled = true;
+      try { unsub(); } catch (_) { /* ignore */ }
+      clearTimeout(timer);
+      resolve(user || null);
+    }
+    const timer = setTimeout(function() { finish(null); }, maxWaitMs || 8000);
+    const unsub = onAuthStateChanged(auth, function(u) {
+      if (authEmailMatches(u, email)) finish(u);
+    });
+    if (authEmailMatches(auth.currentUser, email)) finish(auth.currentUser);
+  });
+}
+
 /** Charge avatar + bannière depuis Firestore et met à jour le cache local (sync PC ↔ téléphone). */
 export async function syncRemoteProfileMedia(userEmail) {
   const email = normalizeProfileEmail(userEmail);
@@ -1521,27 +1545,95 @@ export const profileAccountService = {
    * @returns {Promise<void>}
    */
   async setProfileAccountInfo(userEmail, fields) {
+    return this.ensureProfileRegistered(userEmail, fields || {});
+  },
+
+  /**
+   * Crée ou met à jour le profil public Firestore (visible par tous les visiteurs).
+   * @param {string} userEmail
+   * @param {{ username?: string, name?: string, country?: string, langue?: string, avatar?: string, picture?: string, provider?: string, uid?: string }} fields
+   */
+  async ensureProfileRegistered(userEmail, fields) {
+    fields = fields || {};
+    const norm = normalizeProfileEmail(userEmail);
+    if (!norm) return false;
+
+    const authed = await waitForAuthUser(userEmail, 10000);
+    if (!authed) {
+      console.warn('[Firebase ProfileAccount] ensureProfileRegistered: session Firebase Auth absente pour', norm);
+      return false;
+    }
+
     try {
       const profileRef = await resolveUserProfileDocRef(userEmail);
       const profileDoc = await getDoc(profileRef);
-      const normEmail = normalizeProfileEmail(userEmail);
-      const updates = { updated_at: serverTimestamp() };
-      if (fields.username !== undefined) updates.username = fields.username;
-      if (fields.country !== undefined) updates.country = fields.country;
-      if (fields.langue !== undefined) updates.langue = fields.langue;
+      const payload = {
+        email: norm,
+        updated_at: serverTimestamp()
+      };
+      if (fields.username) payload.username = fields.username;
+      if (fields.name) payload.name = fields.name;
+      if (fields.country) payload.country = fields.country;
+      if (fields.langue) payload.langue = fields.langue;
+      if (fields.avatar) payload.avatar = fields.avatar;
+      if (fields.picture) payload.picture = fields.picture;
+      if (fields.provider) payload.provider = fields.provider;
+      if (fields.uid) payload.uid = fields.uid;
+
       if (profileDoc.exists()) {
-        await updateDoc(profileRef, updates);
+        await updateDoc(profileRef, payload);
       } else {
         await setDoc(profileRef, {
-          id: normEmail,
-          email: normEmail,
-          ...updates,
+          id: norm,
+          ...payload,
           created_at: serverTimestamp()
         });
       }
+
+      try {
+        const username = fields.username || fields.name || norm.split('@')[0];
+        const cache = {
+          email: norm,
+          username: username,
+          name: fields.name || username,
+          avatar: fields.avatar || fields.picture || null,
+          picture: fields.picture || fields.avatar || null,
+          country: fields.country || null,
+          continent: fields.country || null,
+          provider: fields.provider || null
+        };
+        localStorage.setItem('profile_' + norm, JSON.stringify(cache));
+        if (cache.avatar) localStorage.setItem('avatar_' + norm, cache.avatar);
+
+        const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        const idx = accounts.findIndex(function(a) {
+          return normalizeProfileEmail(a && a.email) === norm;
+        });
+        const accPatch = {
+          email: userEmail,
+          username: username,
+          country: fields.country || 'fr',
+          langue: fields.langue || 'fr',
+          provider: fields.provider || 'google',
+          avatar: cache.avatar,
+          customAvatar: cache.avatar
+        };
+        if (idx >= 0) {
+          accounts[idx] = Object.assign({}, accounts[idx], accPatch);
+        } else {
+          accounts.push(Object.assign({
+            password: fields.provider === 'google' ? 'google_oauth' : '',
+            createdAt: new Date().toISOString()
+          }, accPatch));
+        }
+        localStorage.setItem('accounts', JSON.stringify(accounts));
+      } catch (cacheErr) { /* ignore */ }
+
+      console.log('[Firebase ProfileAccount] ✅ Profil public enregistré:', norm);
+      return true;
     } catch (error) {
-      console.error('[Firebase ProfileAccount] setProfileAccountInfo:', error);
-      throw error;
+      console.error('[Firebase ProfileAccount] ensureProfileRegistered:', error);
+      return false;
     }
   }
 };

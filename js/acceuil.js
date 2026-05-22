@@ -1,6 +1,8 @@
 // acceuil.js - Version simplifiée pour le popup d'authentification
 // Script dédié à la page d'accueil (acceuil.html)
 
+import { syncCurrentUserProfileToFirestore, syncProfileToFirestore } from './auth.js';
+
 // === FONCTIONS POUR MODALS D'ERREUR ET DE SUCCÈS ===
 
 // Afficher un modal d'erreur stylisé
@@ -268,6 +270,7 @@ async function loadAllDynamicSections() {
 async function initHomeDynamicSections() {
     if (homeSectionsLoadStarted) return;
     homeSectionsLoadStarted = true;
+    void syncCurrentUserProfileToFirestore();
     showHomeSectionPlaceholders();
     await loadAllDynamicSections();
 }
@@ -368,7 +371,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         const user = JSON.parse(localStorage.getItem('user') || 'null');
         if (user && user.email) {
-            const { avatarService } = await import('./firebase-service.js?v=6febe20');
+            const { avatarService } = await import('./firebase-service.js?v=6febe22');
             const avatarUrl = await avatarService.getAvatar(user.email);
             if (avatarUrl) {
                 user.customAvatar = avatarUrl;
@@ -1225,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     let firebaseAuthSuccess = false;
                     try {
                         console.log('🔐 Authentification Firebase Auth...');
-                        const { authService } = await import('./firebase-service.js?v=6febe20');
+                        const { authService } = await import('./firebase-service.js?v=6febe22');
                         try {
                             const result = await authService.signInWithEmail(email, password);
                             firebaseUid = result.user?.uid || null;
@@ -1311,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         // Déconnecter Firebase si on s'était connecté
                         if (firebaseAuthSuccess) {
                             try {
-                                const { authService } = await import('./firebase-service.js?v=6febe20');
+                                const { authService } = await import('./firebase-service.js?v=6febe22');
                                 await authService.signOut();
                             } catch (e) { /* ignore */ }
                         }
@@ -1339,6 +1342,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     } else {
                         sessionStorage.setItem('mangawatch_session_active', '1');
                     }
+
+                    await syncProfileToFirestore(account.email, user);
                     
                     // Fermer le popup d'authentification
                     closeAuthPopup();
@@ -1705,7 +1710,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     let firebaseUid = null;
                     try {
                         console.log('🔐 Création du compte Firebase Auth...');
-                        const { authService } = await import('./firebase-service.js?v=6febe20');
+                        const { authService } = await import('./firebase-service.js?v=6febe22');
                         const result = await authService.signUpWithEmail(email, password);
                         firebaseUid = result.user?.uid || null;
                         console.log('✅ Compte Firebase Auth créé, uid:', firebaseUid);
@@ -1772,19 +1777,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         sessionStorage.setItem('mangawatch_session_active', '1');
                     }
 
-                    // Synchroniser le profil Firestore (pseudo / pays / langue) si possible
-                    if (typeof window.profileAccountService !== 'undefined') {
-                        try {
-                            await window.profileAccountService.setProfileAccountInfo(email, {
-                                username: username,
-                                country: country,
-                                langue: langue
-                            });
-                            console.log('✅ Profil synchronisé sur Firestore');
-                        } catch (e) {
-                            console.warn('Sync profil Firestore (inscription email):', e);
-                        }
-                    }
+                    await syncProfileToFirestore(email, user);
+                    console.log('✅ Profil synchronisé sur Firestore');
                     
                     // Ajouter le nouvel utilisateur à la liste avec un avatar aléatoire
                     addNewUser(username);
@@ -2435,7 +2429,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Source Firestore (meme source que la page admin)
         try {
-            const mod = await import('./firebase-service.js?v=6febe20');
+            const mod = await import('./firebase-service.js?v=6febe22');
             if (mod && mod.profileAdminService && typeof mod.profileAdminService.listAllUserProfiles === 'function') {
                 const remoteUsers = await mod.profileAdminService.listAllUserProfiles();
                 if (Array.isArray(remoteUsers)) {
@@ -2488,7 +2482,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             let collectionService = null;
             let avatarService = null;
             try {
-                const mod = await import('./firebase-service.js?v=6febe20');
+                const mod = await import('./firebase-service.js?v=6febe22');
                 collectionService = mod.collectionService;
                 avatarService = mod.avatarService || null;
             } catch (e) { /* ignore */ }
