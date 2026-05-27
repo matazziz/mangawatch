@@ -912,9 +912,13 @@ function initializePage() {
     console.log('Filtres actuels:', currentFilters);
     console.log('Page actuelle:', currentPage);
     
-    // Charger les données
-    console.log('📡 Appel de fetchContentList depuis initializePage...');
-    fetchContentList()
+    // Charger les données (collection d'abord pour les statuts sur les cards)
+    console.log('📡 Chargement collection puis fetchContentList...');
+    loadUserCollectionForStatusFilter()
+        .then(items => {
+            cachedUserCollectionForStatus = items;
+            return fetchContentList();
+        })
         .then(() => {
             console.log('✅ fetchContentList terminé avec succès');
             setTimeout(() => {
@@ -965,7 +969,8 @@ async function fetchContentList() {
 
         // Filtre statut : afficher la collection, pas le catalogue API
         if (hasActiveStatusFilter()) {
-            const collectionContent = getStatusFilteredCollectionContent(cachedUserCollectionForStatus);
+            let collectionContent = getStatusFilteredCollectionContent(cachedUserCollectionForStatus);
+            collectionContent = await enrichCollectionDisplayItems(collectionContent);
             currentPage = 1;
             totalPages = 1;
             hasNextPage = false;
@@ -1498,6 +1503,190 @@ function collectionItemMatchesSelectedTypeForStatus(item, selectedType, selected
     return itemType === 'anime';
 }
 
+function extractMalId(item) {
+    const candidates = [item?.mal_id, item?.malId, item?.id, item?.content_id, item?.contentId];
+    for (const candidate of candidates) {
+        const raw = String(candidate || '').trim();
+        if (!raw) continue;
+        const digits = raw.replace(/[^\d]/g, '');
+        if (digits) return digits;
+        return raw;
+    }
+    return null;
+}
+
+function resolveItemMediaKind(item) {
+    const normalized = normalizeCollectionTypeForStatus(
+        item?.type || item?.content_type || item?.contentType || ''
+    );
+    if (normalized === 'anime' || normalized === 'film') return 'anime';
+    return 'manga';
+}
+
+function resolveCardMediaType(content) {
+    const collectionItem = findCollectionItemByMalId(content?.mal_id);
+    const raw = String(content?.type || collectionItem?.type || '').toLowerCase().trim();
+    if (['tv', 'ova', 'ona', 'special', 'music', 'movie', 'film', 'anime'].includes(raw)) {
+        return 'anime';
+    }
+    if (currentContentType === 'anime' && elements.typeFilter?.value === 'anime') {
+        return 'anime';
+    }
+    return 'manga';
+}
+
+function formatDisplayScore(score) {
+    const value = Number(score);
+    if (!Number.isFinite(value) || value <= 0) return 'N/A';
+    return value.toFixed(1);
+}
+
+function formatMetaCount(value, suffix) {
+    if (value === null || value === undefined || value === '' || value === 'null') return '?';
+    return `${value} ${suffix}`;
+}
+
+function mergeCollectionIntoDisplayItem(displayItem, collectionItem) {
+    if (!collectionItem) return displayItem;
+    const merged = { ...displayItem };
+    const collectionScore = Number(collectionItem.score);
+    if (!(Number(merged.score) > 0) && Number.isFinite(collectionScore) && collectionScore > 0) {
+        merged.score = collectionScore;
+    }
+    if (merged.episodes == null || merged.episodes === 'null') {
+        merged.episodes = collectionItem.episodes ?? merged.episodes;
+    }
+    if (merged.volumes == null || merged.volumes === 'null') {
+        merged.volumes = collectionItem.volumes ?? merged.volumes;
+    }
+    if (merged.chapters == null || merged.chapters === 'null') {
+        merged.chapters = collectionItem.chapters ?? merged.chapters;
+    }
+    if (!merged.duration) merged.duration = collectionItem.duration ?? merged.duration;
+    if (!merged.synopsis) merged.synopsis = collectionItem.synopsis || merged.synopsis;
+    if (!merged.images?.jpg?.large_image_url) {
+        const imageUrl = collectionItem.imageUrl || collectionItem.image || '';
+        if (imageUrl) {
+            merged.images = { jpg: { large_image_url: imageUrl, image_url: imageUrl } };
+        }
+    }
+    return merged;
+}
+
+function mapJikanDetailToDisplayContent(apiPayload, collectionItem) {
+    const data = apiPayload?.data ?? apiPayload;
+    if (!data) return mapCollectionItemToDisplayContent(collectionItem || {});
+
+    const col = collectionItem || {};
+    const mediaKind = resolveItemMediaKind(extractMalId(col) ? col : data);
+    const yearSource = mediaKind === 'manga' ? data.published : data.aired;
+    let yearNum = yearSource?.prop?.from?.year ?? null;
+    if (!yearNum && yearSource?.from) {
+        const parsed = new Date(yearSource.from);
+        if (!Number.isNaN(parsed.getTime())) yearNum = parsed.getFullYear();
+    }
+    if (!yearNum && col.year && col.year !== 'null') {
+        const parsedYear = Number(col.year);
+        if (Number.isFinite(parsedYear)) yearNum = parsedYear;
+    }
+
+    const scoreRaw = data.score ?? data.mean ?? col.score ?? 0;
+    const scoreNum = Number(scoreRaw);
+
+    return {
+        mal_id: data.mal_id || extractMalId(col),
+        title: data.title || data.title_english || col.title || col.titre || 'Sans titre',
+        score: Number.isFinite(scoreNum) ? scoreNum : 0,
+        synopsis: data.synopsis || col.synopsis || '',
+        genres: Array.isArray(data.genres)
+            ? data.genres
+                .map(g => {
+                    const name = (typeof g === 'string' ? g : (g?.name || '')).trim();
+                    return name ? { name } : null;
+                })
+                .filter(Boolean)
+            : [],
+        type: data.type || col.type || '',
+        episodes: data.episodes ?? col.episodes ?? null,
+        volumes: data.volumes ?? col.volumes ?? null,
+        chapters: data.chapters ?? col.chapters ?? null,
+        duration: data.duration || col.duration || null,
+        images: data.images || {
+            jpg: {
+                large_image_url: col.imageUrl || col.image || '',
+                image_url: col.imageUrl || col.image || ''
+            }
+        },
+        published: data.published || { prop: { from: { year: yearNum } } },
+        aired: data.aired || { prop: { from: { year: yearNum } } }
+    };
+}
+
+async function fetchJikanDetailByMalId(malId, mediaKind) {
+    const id = extractMalId({ id: malId, mal_id: malId });
+    if (!id) return null;
+
+    const url = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
+    url.searchParams.set('action', 'detail');
+    url.searchParams.set('mediaType', mediaKind === 'anime' ? 'anime' : 'manga');
+    url.searchParams.set('id', String(id));
+
+    const doFetch = async () => {
+        const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+        if (!response.ok) return null;
+        return response.json();
+    };
+
+    if (window.MW_API_CONFIG?.enqueueJikan) {
+        return window.MW_API_CONFIG.enqueueJikan(doFetch);
+    }
+    return doFetch();
+}
+
+async function enrichCollectionDisplayItems(items) {
+    if (!Array.isArray(items) || items.length === 0) return [];
+
+    const enriched = [];
+    for (let index = 0; index < items.length; index++) {
+        const item = items[index];
+        const collectionItem = findCollectionItemByMalId(item.mal_id);
+        const malId = extractMalId(item) || extractMalId(collectionItem);
+        if (!malId) {
+            enriched.push(item);
+            continue;
+        }
+
+        const mediaKind = resolveItemMediaKind(collectionItem || item);
+        const hasUsefulMeta = Number(item.score) > 0 ||
+            (item.episodes != null && item.episodes !== 'null') ||
+            (item.volumes != null && item.volumes !== 'null') ||
+            (item.chapters != null && item.chapters !== 'null');
+
+        if (hasUsefulMeta) {
+            enriched.push(mergeCollectionIntoDisplayItem(item, collectionItem));
+            continue;
+        }
+
+        try {
+            const detailPayload = await fetchJikanDetailByMalId(malId, mediaKind);
+            if (detailPayload) {
+                enriched.push(mapJikanDetailToDisplayContent(detailPayload, collectionItem || item));
+            } else {
+                enriched.push(mergeCollectionIntoDisplayItem(item, collectionItem));
+            }
+        } catch (error) {
+            console.warn('⚠️ Enrichissement API impossible pour', malId, error);
+            enriched.push(mergeCollectionIntoDisplayItem(item, collectionItem));
+        }
+
+        if (index < items.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 320));
+        }
+    }
+
+    return enriched;
+}
+
 function mapCollectionItemToDisplayContent(item) {
     const imageUrl = item?.imageUrl || item?.image || item?.images?.jpg?.large_image_url || item?.images?.jpg?.image_url || '';
     const yearNum = Number(item?.year);
@@ -1510,7 +1699,7 @@ function mapCollectionItemToDisplayContent(item) {
             })
             .filter(Boolean)
         : [];
-    const malId = item?.mal_id || item?.malId || item?.id;
+    const malId = extractMalId(item);
 
     return {
         mal_id: malId,
@@ -1585,7 +1774,36 @@ async function loadUserCollectionForStatusFilter() {
     const localFallback = getLocalCollectionFallback(userEmail);
     try {
         const { collectionService } = await import('./firebase-service.js?v=6febe20');
-        const firebaseItems = await collectionService.getAllItems(userEmail);
+        let firebaseItems = await collectionService.getAllItems(userEmail);
+
+        // Même logique que la page collection : resync local -> Firebase si besoin.
+        if ((!Array.isArray(firebaseItems) || firebaseItems.length === 0) && localFallback.length > 0) {
+            for (const item of localFallback) {
+                const itemId = extractMalId(item);
+                if (!itemId) continue;
+                try {
+                    await collectionService.addItem(userEmail, {
+                        id: itemId,
+                        title: item.title || item.titre,
+                        type: item.type || item.content_type || item.contentType,
+                        status: item.status || 'plan-to-watch',
+                        imageUrl: item.imageUrl || item.image || item.images?.jpg?.large_image_url || item.images?.jpg?.image_url,
+                        synopsis: item.synopsis,
+                        episodes: item.episodes,
+                        volumes: item.volumes,
+                        chapters: item.chapters,
+                        year: item.year,
+                        genres: item.genres || [],
+                        score: item.score || 0,
+                        stoppedAt: item.stoppedAt ?? item.stopped_at
+                    });
+                } catch (syncError) {
+                    console.warn('⚠️ Sync collection item échouée:', syncError);
+                }
+            }
+            firebaseItems = await collectionService.getAllItems(userEmail);
+        }
+
         return dedupeCollectionItemsByIdAndType([...(Array.isArray(firebaseItems) ? firebaseItems : []), ...localFallback]);
     } catch (error) {
         console.warn('⚠️ Chargement Firebase indisponible, fallback localStorage:', error);
@@ -1672,8 +1890,8 @@ function displayContentList(contentList) {
         })));
         
         // Retrouver les contenus originaux correspondants
-        const filteredIds = new Set(filtered.map(f => f.id));
-        contentToDisplay = sortedContentList.filter(c => filteredIds.has(c.mal_id));
+        const filteredIds = new Set(filtered.map(f => String(f.id)));
+        contentToDisplay = sortedContentList.filter(c => filteredIds.has(String(c.mal_id)));
     }
 
     // Sécurité finale : ne jamais afficher 0 carte si on avait des données valides
@@ -1887,7 +2105,7 @@ function createContentCard(content) {
     card.setAttribute('data-mal-id', content.mal_id);
     
     // Formater la note
-    const score = content.score ? content.score.toFixed(1) : 'N/A';
+    const score = formatDisplayScore(content.score);
     
     // Formater les genres (traduire les noms selon la langue : ex. "Award Winning" -> "Prix" en FR)
     const genresRaw = content.genres
@@ -1899,20 +2117,18 @@ function createContentCard(content) {
     const genres = genresRaw.map(name => getTranslatedGenreForCard(name));
     
     // Formater les informations spécifiques au type de contenu
+    const cardMediaType = resolveCardMediaType(content);
     let metaInfo = '';
-    if (currentContentType === 'manga') {
-        const volumes = content.volumes ? `${content.volumes} vol.` : '?';
-        const chapters = content.chapters ? `${content.chapters} ch.` : '?';
-        metaInfo = `${volumes} • ${chapters}`;
-    } else if (currentContentType === 'anime') {
-        const episodes = content.episodes ? `${content.episodes} ép.` : '?';
-        const duration = content.duration ? content.duration : '?';
-        metaInfo = `${episodes} • ${duration}`;
+    if (cardMediaType === 'manga') {
+        metaInfo = `${formatMetaCount(content.volumes, 'vol.')} • ${formatMetaCount(content.chapters, 'ch.')}`;
+    } else {
+        const duration = content.duration && content.duration !== 'null' ? content.duration : '?';
+        metaInfo = `${formatMetaCount(content.episodes, 'ép.')} • ${duration}`;
     }
     
     // Date de publication/diffusion
-    const year = currentContentType === 'manga' 
-        ? content.published?.prop?.from?.year 
+    const year = cardMediaType === 'manga'
+        ? content.published?.prop?.from?.year
         : content.aired?.prop?.from?.year;
     
     // Vérifier si l'item est déjà dans la collection (cache Firebase/local)
@@ -2608,6 +2824,7 @@ function updateItemStatusWithStoppedAt(status, stoppedAt) {
     
     try {
         localStorage.setItem(listKey, JSON.stringify(userList));
+        cachedUserCollectionForStatus = dedupeCollectionItemsByIdAndType(userList);
         console.log(`✅ Liste sauvegardée dans localStorage`);
         
         // Synchroniser aussi Firebase pour que la page Collection reflète immédiatement les changements.
@@ -2627,8 +2844,9 @@ function updateItemStatusWithStoppedAt(status, stoppedAt) {
                 score: syncItem.score || 0,
                 stoppedAt: stoppedAt ?? null
             }))
-            .then(() => {
+            .then(async () => {
                 console.log('✅ Statut synchronisé dans Firebase');
+                cachedUserCollectionForStatus = await loadUserCollectionForStatusFilter();
             })
             .catch((syncError) => {
                 console.warn('⚠️ Synchronisation Firebase échouée (localStorage ok):', syncError);
