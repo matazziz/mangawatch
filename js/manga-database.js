@@ -1546,6 +1546,50 @@ function formatMetaCount(value, suffix) {
     return `${value} ${suffix}`;
 }
 
+function normalizeGenreList(...sources) {
+    const genres = [];
+    const seen = new Set();
+    sources.forEach(source => {
+        const list = Array.isArray(source) ? source : [];
+        list.forEach(g => {
+            const name = (typeof g === 'string' ? g : (g?.name || '')).trim();
+            if (!name) return;
+            const key = name.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key);
+            genres.push({ name });
+        });
+    });
+    return genres;
+}
+
+function extractScoreFromJikanData(data) {
+    if (!data || typeof data !== 'object') return 0;
+    const candidates = [
+        data.score,
+        data.mean,
+        data.scored,
+        data?.statistics?.score,
+        data?.rating
+    ];
+    for (const candidate of candidates) {
+        const value = Number(candidate);
+        if (Number.isFinite(value) && value > 0) return value;
+    }
+    return 0;
+}
+
+function cardNeedsEnrichment(displayItem, collectionItem) {
+    const merged = mergeCollectionIntoDisplayItem(displayItem, collectionItem);
+    const hasScore = Number(merged.score) > 0;
+    const hasGenres = Array.isArray(merged.genres) && merged.genres.length > 0;
+    const hasMeta = (merged.episodes != null && merged.episodes !== 'null') ||
+        (merged.volumes != null && merged.volumes !== 'null') ||
+        (merged.chapters != null && merged.chapters !== 'null') ||
+        (merged.duration != null && merged.duration !== 'null' && merged.duration !== '');
+    return !hasScore || !hasGenres || !hasMeta;
+}
+
 function mergeCollectionIntoDisplayItem(displayItem, collectionItem) {
     if (!collectionItem) return displayItem;
     const merged = { ...displayItem };
@@ -1564,6 +1608,11 @@ function mergeCollectionIntoDisplayItem(displayItem, collectionItem) {
     }
     if (!merged.duration) merged.duration = collectionItem.duration ?? merged.duration;
     if (!merged.synopsis) merged.synopsis = collectionItem.synopsis || merged.synopsis;
+    if (!Array.isArray(merged.genres) || merged.genres.length === 0) {
+        merged.genres = normalizeGenreList(collectionItem.genres);
+    } else {
+        merged.genres = normalizeGenreList(merged.genres, collectionItem.genres);
+    }
     if (!merged.images?.jpg?.large_image_url) {
         const imageUrl = collectionItem.imageUrl || collectionItem.image || '';
         if (imageUrl) {
@@ -1590,22 +1639,21 @@ function mapJikanDetailToDisplayContent(apiPayload, collectionItem) {
         if (Number.isFinite(parsedYear)) yearNum = parsedYear;
     }
 
-    const scoreRaw = data.score ?? data.mean ?? col.score ?? 0;
-    const scoreNum = Number(scoreRaw);
+    const scoreNum = extractScoreFromJikanData(data) || Number(col.score) || 0;
+    const genres = normalizeGenreList(
+        data.genres,
+        data.themes,
+        data.demographics,
+        data.explicit_genres,
+        col.genres
+    );
 
     return {
         mal_id: data.mal_id || extractMalId(col),
         title: data.title || data.title_english || col.title || col.titre || 'Sans titre',
-        score: Number.isFinite(scoreNum) ? scoreNum : 0,
+        score: Number.isFinite(Number(scoreNum)) ? Number(scoreNum) : 0,
         synopsis: data.synopsis || col.synopsis || '',
-        genres: Array.isArray(data.genres)
-            ? data.genres
-                .map(g => {
-                    const name = (typeof g === 'string' ? g : (g?.name || '')).trim();
-                    return name ? { name } : null;
-                })
-                .filter(Boolean)
-            : [],
+        genres,
         type: data.type || col.type || '',
         episodes: data.episodes ?? col.episodes ?? null,
         volumes: data.volumes ?? col.volumes ?? null,
@@ -1626,21 +1674,38 @@ async function fetchJikanDetailByMalId(malId, mediaKind) {
     const id = extractMalId({ id: malId, mal_id: malId });
     if (!id) return null;
 
-    const url = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
-    url.searchParams.set('action', 'detail');
-    url.searchParams.set('mediaType', mediaKind === 'anime' ? 'anime' : 'manga');
-    url.searchParams.set('id', String(id));
+    const requestDetail = async (kind) => {
+        const url = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
+        url.searchParams.set('action', 'detail');
+        url.searchParams.set('mediaType', kind === 'anime' ? 'anime' : 'manga');
+        url.searchParams.set('id', String(id));
 
-    const doFetch = async () => {
-        const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
-        if (!response.ok) return null;
-        return response.json();
+        const doFetch = async () => {
+            const response = await fetch(url.toString(), { headers: { Accept: 'application/json' } });
+            if (response.ok) {
+                return response.json();
+            }
+
+            // Repli direct Jikan si le proxy n'est pas disponible (ex. hébergement statique).
+            const mediaPath = kind === 'anime' ? 'anime' : 'manga';
+            const directUrl = `https://api.jikan.moe/v4/${mediaPath}/${encodeURIComponent(String(id))}/full`;
+            const directResponse = await fetch(directUrl, { headers: { Accept: 'application/json' } });
+            if (!directResponse.ok) return null;
+            return directResponse.json();
+        };
+
+        if (window.MW_API_CONFIG?.enqueueJikan) {
+            return window.MW_API_CONFIG.enqueueJikan(doFetch);
+        }
+        return doFetch();
     };
 
-    if (window.MW_API_CONFIG?.enqueueJikan) {
-        return window.MW_API_CONFIG.enqueueJikan(doFetch);
-    }
-    return doFetch();
+    let payload = await requestDetail(mediaKind);
+    if (payload?.data) return payload;
+
+    const alternateKind = mediaKind === 'anime' ? 'manga' : 'anime';
+    payload = await requestDetail(alternateKind);
+    return payload;
 }
 
 async function enrichCollectionDisplayItems(items) {
@@ -1657,19 +1722,15 @@ async function enrichCollectionDisplayItems(items) {
         }
 
         const mediaKind = resolveItemMediaKind(collectionItem || item);
-        const hasUsefulMeta = Number(item.score) > 0 ||
-            (item.episodes != null && item.episodes !== 'null') ||
-            (item.volumes != null && item.volumes !== 'null') ||
-            (item.chapters != null && item.chapters !== 'null');
 
-        if (hasUsefulMeta) {
+        if (!cardNeedsEnrichment(item, collectionItem)) {
             enriched.push(mergeCollectionIntoDisplayItem(item, collectionItem));
             continue;
         }
 
         try {
             const detailPayload = await fetchJikanDetailByMalId(malId, mediaKind);
-            if (detailPayload) {
+            if (detailPayload?.data) {
                 enriched.push(mapJikanDetailToDisplayContent(detailPayload, collectionItem || item));
             } else {
                 enriched.push(mergeCollectionIntoDisplayItem(item, collectionItem));
@@ -1691,20 +1752,14 @@ function mapCollectionItemToDisplayContent(item) {
     const imageUrl = item?.imageUrl || item?.image || item?.images?.jpg?.large_image_url || item?.images?.jpg?.image_url || '';
     const yearNum = Number(item?.year);
     const safeYear = Number.isFinite(yearNum) ? yearNum : null;
-    const genres = Array.isArray(item?.genres)
-        ? item.genres
-            .map(g => {
-                const name = (typeof g === 'string' ? g : (g?.name || '')).trim();
-                return name ? { name } : null;
-            })
-            .filter(Boolean)
-        : [];
+    const genres = normalizeGenreList(item?.genres);
     const malId = extractMalId(item);
+    const collectionScore = Number(item?.score);
 
     return {
         mal_id: malId,
         title: item?.title || item?.titleEnglish || item?.titre || 'Sans titre',
-        score: Number(item?.score) || 0,
+        score: Number.isFinite(collectionScore) && collectionScore > 0 ? collectionScore : 0,
         synopsis: item?.synopsis || '',
         genres,
         type: item?.type || '',

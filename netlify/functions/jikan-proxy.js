@@ -22,7 +22,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({ error: "Missing id for detail action" })
       };
     }
-    upstreamUrl = `${JIKAN_API_BASE}/${mediaType}/${encodeURIComponent(id)}`;
+    upstreamUrl = `${JIKAN_API_BASE}/${mediaType}/${encodeURIComponent(id)}/full`;
   } else if (action === "relations") {
     const id = qs.id;
     if (!id) {
