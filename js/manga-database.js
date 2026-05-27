@@ -960,9 +960,11 @@ async function fetchContentList() {
             return;
         }
 
+        // Synchroniser la collection pour afficher correctement les statuts sur les cards.
+        cachedUserCollectionForStatus = await loadUserCollectionForStatusFilter();
+
         // Filtre statut : afficher la collection, pas le catalogue API
         if (hasActiveStatusFilter()) {
-            cachedUserCollectionForStatus = await loadUserCollectionForStatusFilter();
             const collectionContent = getStatusFilteredCollectionContent(cachedUserCollectionForStatus);
             currentPage = 1;
             totalPages = 1;
@@ -1368,22 +1370,34 @@ async function fetchContentFromAPI(endpoint, params) {
 }
 
 // Fonction pour récupérer les statuts personnels de la collection
-function getPersonalStatus(malId) {
-    try {
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        if (!user || !user.email) {
-            return null;
-        }
-        
-        const listKey = 'user_list_' + user.email;
-        const userList = JSON.parse(localStorage.getItem(listKey) || '[]');
-        const targetId = String(malId || '').trim();
-        const item = userList.find(item => {
+function findCollectionItemByMalId(malId) {
+    const targetId = String(malId || '').trim();
+    if (!targetId) return null;
+
+    const pickFromList = (list) => {
+        if (!Array.isArray(list) || list.length === 0) return null;
+        const matches = list.filter(item => {
             const candidateIds = [item?.id, item?.mal_id, item?.malId]
                 .map(v => String(v || '').trim())
                 .filter(Boolean);
             return candidateIds.includes(targetId);
         });
+        return matches.find(item => !!normalizePersonalStatus(item?.status)) || matches[0] || null;
+    };
+
+    const cachedMatch = pickFromList(cachedUserCollectionForStatus);
+    if (cachedMatch) return cachedMatch;
+
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const userEmail = String(user?.email || '').trim();
+    if (!userEmail) return null;
+    const localFallback = getLocalCollectionFallback(userEmail);
+    return pickFromList(localFallback);
+}
+
+function getPersonalStatus(malId) {
+    try {
+        const item = findCollectionItemByMalId(malId);
         return normalizePersonalStatus(item ? item.status : null);
     } catch (error) {
         console.error('Erreur lors de la récupération du statut personnel:', error);
@@ -1897,9 +1911,7 @@ function createContentCard(content) {
     let statusButton = '';
     
     if (user && user.email) {
-        const userList = JSON.parse(localStorage.getItem(`user_list_${user.email}`) || '[]');
-        const matchingItems = userList.filter(item => item.id === content.mal_id.toString());
-        const existingItem = matchingItems.find(item => !!item.status) || matchingItems[0];
+        const existingItem = findCollectionItemByMalId(content.mal_id);
         
         if (existingItem && existingItem.status) {
             // Afficher le bouton de statut existant
