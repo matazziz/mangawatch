@@ -1373,14 +1373,20 @@ async function fetchContentFromAPI(endpoint, params) {
 function findCollectionItemByMalId(malId) {
     const targetId = String(malId || '').trim();
     if (!targetId) return null;
+    const targetDigits = targetId.replace(/[^\d]/g, '');
 
     const pickFromList = (list) => {
         if (!Array.isArray(list) || list.length === 0) return null;
         const matches = list.filter(item => {
-            const candidateIds = [item?.id, item?.mal_id, item?.malId]
+            const candidateIds = [item?.id, item?.mal_id, item?.malId, item?.content_id, item?.contentId]
                 .map(v => String(v || '').trim())
                 .filter(Boolean);
-            return candidateIds.includes(targetId);
+            if (candidateIds.includes(targetId)) return true;
+            if (!targetDigits) return false;
+            return candidateIds.some(id => {
+                const idDigits = id.replace(/[^\d]/g, '');
+                return !!idDigits && idDigits === targetDigits;
+            });
         });
         return matches.find(item => !!normalizePersonalStatus(item?.status)) || matches[0] || null;
     };
@@ -1390,9 +1396,12 @@ function findCollectionItemByMalId(malId) {
 
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     const userEmail = String(user?.email || '').trim();
-    if (!userEmail) return null;
-    const localFallback = getLocalCollectionFallback(userEmail);
-    return pickFromList(localFallback);
+    if (userEmail) {
+        const localFallback = getLocalCollectionFallback(userEmail);
+        const localMatch = pickFromList(localFallback);
+        if (localMatch) return localMatch;
+    }
+    return null;
 }
 
 function getPersonalStatus(malId) {
@@ -1906,34 +1915,23 @@ function createContentCard(content) {
         ? content.published?.prop?.from?.year 
         : content.aired?.prop?.from?.year;
     
-    // Vérifier si l'item est déjà dans la liste de l'utilisateur
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    // Vérifier si l'item est déjà dans la collection (cache Firebase/local)
     let statusButton = '';
+    const existingItem = findCollectionItemByMalId(content.mal_id);
     
-    if (user && user.email) {
-        const existingItem = findCollectionItemByMalId(content.mal_id);
+    if (existingItem && existingItem.status) {
+        // Afficher le bouton de statut existant
+        const statusIcon = getStatusIcon(existingItem.status);
+        const statusText = getStatusText(existingItem.status);
+        const statusColor = getStatusColor(existingItem.status);
         
-        if (existingItem && existingItem.status) {
-            // Afficher le bouton de statut existant
-            const statusIcon = getStatusIcon(existingItem.status);
-            const statusText = getStatusText(existingItem.status);
-            const statusColor = getStatusColor(existingItem.status);
-            
-            statusButton = `
-                <button class="status-btn" style="background-color: ${statusColor};" data-mal-id="${content.mal_id}" data-title="${content.title}" data-type="${currentContentType === 'anime' && content.type === 'Movie' ? 'film' : (content.type || currentContentType)}" data-image-url="${content.images?.jpg?.large_image_url || content.images?.jpg?.image_url || ''}" data-synopsis="${cleanSynopsis(content.synopsis) || ''}" data-episodes="${content.episodes || content.volumes || 'null'}" data-year="${year || 'null'}" title="${statusText} - Cliquez pour modifier">
-                    <i class="${statusIcon}"></i>
-                </button>
-            `;
-        } else {
-            // Afficher le bouton favori
-            statusButton = `
-                <button class="favorite-btn" data-mal-id="${content.mal_id}" data-title="${content.title}" data-type="${currentContentType === 'anime' && content.type === 'Movie' ? 'film' : (content.type || currentContentType)}" data-image-url="${content.images?.jpg?.large_image_url || content.images?.jpg?.image_url || ''}" data-synopsis="${cleanSynopsis(content.synopsis) || ''}" data-episodes="${content.episodes || content.volumes || 'null'}" data-year="${year || 'null'}" title="Ajouter aux favoris">
-                    <i class="fas fa-bookmark"></i>
-                </button>
-            `;
-        }
+        statusButton = `
+            <button class="status-btn" style="background-color: ${statusColor};" data-mal-id="${content.mal_id}" data-title="${content.title}" data-type="${currentContentType === 'anime' && content.type === 'Movie' ? 'film' : (content.type || currentContentType)}" data-image-url="${content.images?.jpg?.large_image_url || content.images?.jpg?.image_url || ''}" data-synopsis="${cleanSynopsis(content.synopsis) || ''}" data-episodes="${content.episodes || content.volumes || 'null'}" data-year="${year || 'null'}" title="${statusText} - Cliquez pour modifier">
+                <i class="${statusIcon}"></i>
+            </button>
+        `;
     } else {
-        // Utilisateur non connecté, afficher le bouton favori
+        // Sinon, afficher le bouton favori
         statusButton = `
             <button class="favorite-btn" data-mal-id="${content.mal_id}" data-title="${content.title}" data-type="${currentContentType === 'anime' && content.type === 'Movie' ? 'film' : (content.type || currentContentType)}" data-image-url="${content.images?.jpg?.large_image_url || content.images?.jpg?.image_url || ''}" data-synopsis="${cleanSynopsis(content.synopsis) || ''}" data-episodes="${content.episodes || content.volumes || 'null'}" data-year="${year || 'null'}" title="Ajouter aux favoris">
                 <i class="fas fa-bookmark"></i>
