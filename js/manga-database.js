@@ -168,6 +168,7 @@ let currentPage = 1;
 let totalPages = 1;
 let hasNextPage = false;
 let currentMangaList = [];
+let cachedUserCollectionForStatus = [];
 let currentContentType = 'manga'; // 'manga' ou 'anime'
 let isUpdatingFilters = false; // Flag pour éviter les appels récursifs
 let currentFilters = {
@@ -961,7 +962,8 @@ async function fetchContentList() {
 
         // Filtre statut : afficher la collection, pas le catalogue API
         if (hasActiveStatusFilter()) {
-            const collectionContent = getStatusFilteredCollectionContent();
+            cachedUserCollectionForStatus = await loadUserCollectionForStatusFilter();
+            const collectionContent = getStatusFilteredCollectionContent(cachedUserCollectionForStatus);
             currentPage = 1;
             totalPages = 1;
             hasNextPage = false;
@@ -1524,11 +1526,56 @@ function hasActiveStatusFilter() {
     return !!(elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '');
 }
 
-function getStatusFilteredCollectionContent() {
+function dedupeCollectionItemsByIdAndType(collectionItems) {
+    const seen = new Set();
+    return (collectionItems || []).filter(item => {
+        const id = String(item?.id || item?.mal_id || item?.malId || '').trim();
+        const type = String(item?.type || item?.content_type || item?.contentType || '').toLowerCase().trim();
+        const key = `${id}::${type}`;
+        if (!id) return false;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function getLocalCollectionFallback(userEmail) {
+    const possibleEmails = [String(userEmail || '').trim(), String(userEmail || '').trim().toLowerCase()]
+        .filter(Boolean);
+    const merged = [];
+    possibleEmails.forEach(email => {
+        try {
+            const local = JSON.parse(localStorage.getItem(`user_list_${email}`) || '[]');
+            if (Array.isArray(local)) merged.push(...local);
+        } catch (error) {
+            console.warn('⚠️ Impossible de lire la collection locale:', error);
+        }
+    });
+    return dedupeCollectionItemsByIdAndType(merged);
+}
+
+async function loadUserCollectionForStatusFilter() {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const userEmail = String(user?.email || '').trim();
+    if (!userEmail) return [];
+
+    const localFallback = getLocalCollectionFallback(userEmail);
+    try {
+        const { collectionService } = await import('./firebase-service.js?v=6febe20');
+        const firebaseItems = await collectionService.getAllItems(userEmail);
+        return dedupeCollectionItemsByIdAndType([...(Array.isArray(firebaseItems) ? firebaseItems : []), ...localFallback]);
+    } catch (error) {
+        console.warn('⚠️ Chargement Firebase indisponible, fallback localStorage:', error);
+        return localFallback;
+    }
+}
+
+function getStatusFilteredCollectionContent(collectionSource = null) {
     const selectedStatus = normalizePersonalStatus(elements.statusFilter.value);
     const selectedType = elements.typeFilter ? elements.typeFilter.value : '';
     const selectedAnimeSubtype = elements.animeTypeFilter ? elements.animeTypeFilter.value : '';
-    let items = getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype);
+    const source = Array.isArray(collectionSource) ? collectionSource : cachedUserCollectionForStatus;
+    let items = getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype, source);
     items = dedupeContentByMalId(items);
 
     const searchQuery = (currentFilters.q || '').trim().toLowerCase();
@@ -1546,12 +1593,9 @@ function showPaginationBar() {
     }
 }
 
-function getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype) {
+function getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype, sourceCollection = null) {
     try {
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        if (!user || !user.email) return [];
-
-        const userList = JSON.parse(localStorage.getItem(`user_list_${user.email}`) || '[]');
+        const userList = Array.isArray(sourceCollection) ? sourceCollection : [];
         if (!Array.isArray(userList) || userList.length === 0) return [];
 
         const filtered = userList.filter(item => {
@@ -1586,18 +1630,7 @@ function displayContentList(contentList) {
     
     console.log('Affichage de', contentList.length, 'éléments');
     
-    // Filtre statut : uniquement la collection personnelle (pas le catalogue API)
     let sortedContentList = [...contentList];
-    if (hasActiveStatusFilter()) {
-        const selectedStatus = normalizePersonalStatus(elements.statusFilter.value);
-        console.log('🔍 Filtrage par statut personnel:', selectedStatus);
-        sortedContentList = getStatusFilteredCollectionContent();
-        currentMangaList = [...sortedContentList];
-        console.log(`📋 Résultat du filtrage statut "${selectedStatus}": ${sortedContentList.length} élément(s)`);
-        if (sortedContentList.length === 0) {
-            console.warn(`⚠️ Aucun résultat pour le statut "${selectedStatus}" avec les filtres courants`);
-        }
-    }
     
     // Vider la grille
     mangaGrid.innerHTML = '';
@@ -2130,9 +2163,9 @@ window.refreshCardsDisplay = function() {
     const hasStatusFilter = hasActiveStatusFilter();
     
     if (hasStatusFilter) {
-        // Si un filtre de statut est actif, recharger depuis la collection
+        // Si un filtre de statut est actif, recharger complètement pour resynchroniser Firebase/localStorage
         console.log('Filtre de statut actif, rechargement complet');
-        displayContentList(getStatusFilteredCollectionContent());
+        fetchContentList();
         return;
     }
 
