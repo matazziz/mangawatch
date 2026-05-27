@@ -958,6 +958,27 @@ async function fetchContentList() {
             await applyGenreSort();
             return;
         }
+
+        // Filtre statut : afficher la collection, pas le catalogue API
+        if (hasActiveStatusFilter()) {
+            const collectionContent = getStatusFilteredCollectionContent();
+            currentPage = 1;
+            totalPages = 1;
+            hasNextPage = false;
+            updatePagination();
+            updatePaginationForFilteredResults(collectionContent);
+            displayContentList(collectionContent);
+            setTimeout(() => {
+                if (window.localization) {
+                    window.localization.applyLanguage();
+                    forceTranslateAllI18nElements();
+                    forceTranslateGenreSortButton();
+                }
+            }, 200);
+            return;
+        }
+
+        showPaginationBar();
         
         const endpoint = effectiveEndpoint;
         
@@ -1408,6 +1429,22 @@ function normalizeCollectionTypeForStatus(value) {
     return raw;
 }
 
+function getItemAnimeSubtype(item) {
+    const raw = String(item?.type || item?.content_type || item?.contentType || '')
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/_/g, '-');
+    if (!raw || raw === 'anime') return null;
+    if (['movie', 'film'].includes(raw)) return 'film';
+    if (['tv', 'television'].includes(raw)) return 'tv';
+    if (raw === 'ova') return 'ova';
+    if (raw === 'ona') return 'ona';
+    if (raw === 'special') return 'special';
+    if (raw === 'music') return 'music';
+    return null;
+}
+
 function collectionItemMatchesSelectedTypeForStatus(item, selectedType, selectedAnimeSubtype) {
     const normalizedSelectedType = normalizeCollectionTypeForStatus(selectedType || '');
     if (!normalizedSelectedType) return true;
@@ -1417,21 +1454,37 @@ function collectionItemMatchesSelectedTypeForStatus(item, selectedType, selected
         return itemType === normalizedSelectedType;
     }
 
-    // Cas anime : si un sous-type est choisi (film/tv/ova/ona/special/music),
-    // le statut global ne doit afficher que ce sous-type.
-    const normalizedSubtype = normalizeCollectionTypeForStatus(selectedAnimeSubtype || '');
-    if (normalizedSubtype && normalizedSubtype !== 'anime') {
-        return itemType === normalizedSubtype;
+    const subtypeRaw = String(selectedAnimeSubtype || '').toLowerCase().trim();
+    if (!subtypeRaw) {
+        return itemType === 'anime' || itemType === 'film';
     }
 
-    return itemType === 'anime' || itemType === 'film';
+    const filterSubtype = subtypeRaw === 'movie' ? 'film' : subtypeRaw;
+    const itemSubtype = getItemAnimeSubtype(item);
+
+    if (filterSubtype === 'film') {
+        return itemType === 'film' || itemSubtype === 'film';
+    }
+
+    if (itemSubtype) {
+        return itemSubtype === filterSubtype;
+    }
+
+    return itemType === 'anime';
 }
 
 function mapCollectionItemToDisplayContent(item) {
     const imageUrl = item?.imageUrl || item?.image || item?.images?.jpg?.large_image_url || item?.images?.jpg?.image_url || '';
     const yearNum = Number(item?.year);
     const safeYear = Number.isFinite(yearNum) ? yearNum : null;
-    const genres = Array.isArray(item?.genres) ? item.genres.map(g => (typeof g === 'string' ? g : (g?.name || '')).trim()).filter(Boolean) : [];
+    const genres = Array.isArray(item?.genres)
+        ? item.genres
+            .map(g => {
+                const name = (typeof g === 'string' ? g : (g?.name || '')).trim();
+                return name ? { name } : null;
+            })
+            .filter(Boolean)
+        : [];
     const malId = item?.mal_id || item?.malId || item?.id;
 
     return {
@@ -1443,6 +1496,8 @@ function mapCollectionItemToDisplayContent(item) {
         type: item?.type || '',
         episodes: item?.episodes ?? null,
         volumes: item?.volumes ?? null,
+        chapters: item?.chapters ?? null,
+        duration: item?.duration ?? null,
         images: {
             jpg: {
                 large_image_url: imageUrl,
@@ -1452,6 +1507,43 @@ function mapCollectionItemToDisplayContent(item) {
         published: { prop: { from: { year: safeYear } } },
         aired: { prop: { from: { year: safeYear } } }
     };
+}
+
+function dedupeContentByMalId(contentList) {
+    const seen = new Set();
+    return (contentList || []).filter(item => {
+        const id = String(item?.mal_id || '').trim();
+        if (!id) return true;
+        if (seen.has(id)) return false;
+        seen.add(id);
+        return true;
+    });
+}
+
+function hasActiveStatusFilter() {
+    return !!(elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '');
+}
+
+function getStatusFilteredCollectionContent() {
+    const selectedStatus = normalizePersonalStatus(elements.statusFilter.value);
+    const selectedType = elements.typeFilter ? elements.typeFilter.value : '';
+    const selectedAnimeSubtype = elements.animeTypeFilter ? elements.animeTypeFilter.value : '';
+    let items = getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype);
+    items = dedupeContentByMalId(items);
+
+    const searchQuery = (currentFilters.q || '').trim().toLowerCase();
+    if (searchQuery) {
+        items = items.filter(item => (item.title || '').toLowerCase().includes(searchQuery));
+    }
+
+    return items;
+}
+
+function showPaginationBar() {
+    const pagination = document.querySelector('.pagination');
+    if (pagination) {
+        pagination.style.display = 'flex';
+    }
 }
 
 function getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype) {
@@ -1468,7 +1560,7 @@ function getGlobalStatusContentFromCollection(selectedStatus, selectedType, sele
             return collectionItemMatchesSelectedTypeForStatus(item, selectedType, selectedAnimeSubtype);
         });
 
-        return filtered.map(mapCollectionItemToDisplayContent);
+        return dedupeContentByMalId(filtered.map(mapCollectionItemToDisplayContent));
     } catch (error) {
         console.warn('⚠️ Impossible de préparer la vue globale par statut:', error);
         return [];
@@ -1494,29 +1586,14 @@ function displayContentList(contentList) {
     
     console.log('Affichage de', contentList.length, 'éléments');
     
-    // Filtrer par statut si un statut est sélectionné
-    const originalContentList = [...contentList];
+    // Filtre statut : uniquement la collection personnelle (pas le catalogue API)
     let sortedContentList = [...contentList];
-    if (elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '') {
+    if (hasActiveStatusFilter()) {
         const selectedStatus = normalizePersonalStatus(elements.statusFilter.value);
-        const selectedType = elements.typeFilter ? elements.typeFilter.value : '';
-        const selectedAnimeSubtype = elements.animeTypeFilter ? elements.animeTypeFilter.value : '';
         console.log('🔍 Filtrage par statut personnel:', selectedStatus);
-
-        const globalStatusContent = getGlobalStatusContentFromCollection(selectedStatus, selectedType, selectedAnimeSubtype);
-        if (globalStatusContent.length > 0) {
-            sortedContentList = globalStatusContent;
-        } else {
-            sortedContentList = sortedContentList.filter(item => {
-                const personalStatus = normalizePersonalStatus(getPersonalStatus(item.mal_id)) || '';
-                return personalStatus === selectedStatus;
-            });
-        }
-        
+        sortedContentList = getStatusFilteredCollectionContent();
+        currentMangaList = [...sortedContentList];
         console.log(`📋 Résultat du filtrage statut "${selectedStatus}": ${sortedContentList.length} élément(s)`);
-
-        // Garder le filtre actif même s'il n'y a aucun résultat :
-        // l'utilisateur doit voir un état vide explicite, pas un reset silencieux du filtre.
         if (sortedContentList.length === 0) {
             console.warn(`⚠️ Aucun résultat pour le statut "${selectedStatus}" avec les filtres courants`);
         }
@@ -1757,7 +1834,12 @@ function createContentCard(content) {
     const score = content.score ? content.score.toFixed(1) : 'N/A';
     
     // Formater les genres (traduire les noms selon la langue : ex. "Award Winning" -> "Prix" en FR)
-    const genresRaw = content.genres ? content.genres.map(genre => genre.name).slice(0, 3) : [];
+    const genresRaw = content.genres
+        ? content.genres
+            .map(genre => (typeof genre === 'string' ? genre : genre?.name))
+            .filter(Boolean)
+            .slice(0, 3)
+        : [];
     const genres = genresRaw.map(name => getTranslatedGenreForCard(name));
     
     // Formater les informations spécifiques au type de contenu
@@ -2044,24 +2126,24 @@ function getStatusColor(status) {
 
 // Fonction pour rafraîchir l'affichage des cartes
 window.refreshCardsDisplay = function() {
-    // Vérifier si on a des données à afficher
+    // Vérifier si un filtre de statut est actif
+    const hasStatusFilter = hasActiveStatusFilter();
+    
+    if (hasStatusFilter) {
+        // Si un filtre de statut est actif, recharger depuis la collection
+        console.log('Filtre de statut actif, rechargement complet');
+        displayContentList(getStatusFilteredCollectionContent());
+        return;
+    }
+
     if (!currentMangaList || currentMangaList.length === 0) {
         console.log('Aucune donnée à afficher');
         return;
     }
     
-    // Vérifier si un filtre de statut est actif
-    const hasStatusFilter = elements.statusFilter && elements.statusFilter.value && elements.statusFilter.value !== '';
-    
-    if (hasStatusFilter) {
-        // Si un filtre de statut est actif, recharger complètement pour re-trier
-        console.log('Filtre de statut actif, rechargement complet');
-        displayContentList(currentMangaList);
-    } else {
-        // Sinon, mettre à jour seulement les boutons de statut
-        console.log('Mise à jour des boutons de statut uniquement');
-        updateStatusButtons();
-    }
+    // Sinon, mettre à jour seulement les boutons de statut
+    console.log('Mise à jour des boutons de statut uniquement');
+    updateStatusButtons();
 }
 
 // Fonction pour mettre à jour seulement les boutons de statut
@@ -3167,6 +3249,8 @@ function resetFilters() {
     // Effacer l'état sauvegardé
     clearPageState();
     
+    showPaginationBar();
+
     // Recharger les données
     fetchContentList();
     
