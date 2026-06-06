@@ -4,7 +4,11 @@
 import { profileRatingService } from './firebase-service.js?v=6febe24';
 
 function t(key, fallback) {
-  return (typeof window.t === 'function' && window.t(key)) || fallback;
+  if (typeof window.t === 'function') {
+    const v = window.t(key);
+    if (v && v !== key) return v;
+  }
+  return fallback;
 }
 
 function formatRatingAverage(avg) {

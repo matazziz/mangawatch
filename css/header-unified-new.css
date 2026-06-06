@@ -518,6 +518,20 @@ body {
     .search-result-item .result-title {
         font-size: 1.08rem;
     }
+
+    .user-result-item .result-badges {
+        display: inline-flex !important;
+        align-items: center;
+        flex-shrink: 0;
+        min-width: max-content;
+        margin-left: auto;
+    }
+
+    .user-result-item .profile-rating-badge-search {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
 }
 
 .search-result-item .result-subtitle {

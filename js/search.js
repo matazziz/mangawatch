@@ -1,4 +1,30 @@
 // Système de recherche en temps réel
+
+async function loadProfileRatingsMap(emails) {
+    const norm = function (e) { return String(e || '').trim().toLowerCase(); };
+    const uniq = [...new Set((emails || []).map(norm).filter(Boolean))];
+    if (!uniq.length) return {};
+
+    if (typeof window.fetchProfileRatingsForSearch === 'function') {
+        try {
+            return await window.fetchProfileRatingsForSearch(uniq);
+        } catch (e) { /* fallback Firebase */ }
+    }
+
+    try {
+        const mod = await import('/js/firebase-service.js?v=6febe24');
+        if (!mod || !mod.profileRatingService) return {};
+        const out = {};
+        await Promise.all(uniq.map(async function (email) {
+            out[email] = await mod.profileRatingService.getStats(email);
+        }));
+        return out;
+    } catch (err) {
+        console.warn('Notes profil indisponibles', err);
+        return {};
+    }
+}
+
 class SearchManager {
     constructor() {
         this.searchInput = document.getElementById('searchInput');
@@ -414,13 +440,7 @@ class SearchManager {
         const limitedUsers = users.slice(0, this.maxResults);
         
         // Notes de profil
-        let ratingsMap = {};
-        try {
-            const ratingMod = await import('./profile-rating-ui.js?v=5');
-            ratingsMap = await ratingMod.fetchProfileRatingsForSearch(limitedUsers.map(function (u) { return u.email; }));
-        } catch (e) {
-            console.warn('Notes profil indisponibles', e);
-        }
+        const ratingsMap = await loadProfileRatingsMap(limitedUsers.map(function (u) { return u.email; }));
         
         // Récupérer les utilisateurs vérifiés
         const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
