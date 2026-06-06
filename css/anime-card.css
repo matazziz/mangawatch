@@ -201,6 +201,22 @@ html {
     padding: 4px 8px !important;
     overflow: visible !important;
   }
+
+  #reviews-section .card-list {
+    display: grid !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 420px;
+    width: fit-content;
+    max-width: calc(100% - 3rem);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .all-star-containers {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
 }
 
 /* Menus déroulants: fond opaque pour masquer le contenu dessous */

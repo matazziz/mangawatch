@@ -648,7 +648,9 @@ function displayProfileInfo(user, userEmail) {
 
     updateProfileSubbannerVisibility();
 
-    if (typeof window.initProfileRatingUI === 'function') {
+    if (typeof window.requestProfileRatingInit === 'function') {
+        window.requestProfileRatingInit({ profileEmail: userEmail, allowVote: true });
+    } else if (typeof window.initProfileRatingUI === 'function') {
         window.initProfileRatingUI({ profileEmail: userEmail, allowVote: true });
     }
 }
@@ -657,9 +659,20 @@ function normalizeBannerEmail(email) {
     return String(email || '').trim().toLowerCase();
 }
 
+var profileBannerLoadingTimer = null;
+
 function setProfileBannerLoading(loading) {
     var header = document.querySelector('.profile-header');
     if (header) header.classList.toggle('banner-loading', !!loading);
+    if (profileBannerLoadingTimer) {
+        clearTimeout(profileBannerLoadingTimer);
+        profileBannerLoadingTimer = null;
+    }
+    if (loading) {
+        profileBannerLoadingTimer = setTimeout(function () {
+            setProfileBannerLoading(false);
+        }, 12000);
+    }
 }
 
 function bannerMediaUrl(url, bustCache) {
@@ -699,6 +712,7 @@ function applyBannerToDom(banner, bannerImage, bannerVideo, options) {
             setProfileBannerLoading(false);
         };
         bannerImage.onerror = function() {
+            bannerImage.classList.add('active');
             setProfileBannerLoading(false);
         };
         bannerImage.src = displayUrl;
@@ -711,10 +725,12 @@ function applyBannerToDom(banner, bannerImage, bannerVideo, options) {
         bannerVideo.classList.remove('active');
         setProfileBannerLoading(true);
         bannerVideo.preload = 'auto';
-        bannerVideo.onloadeddata = function() {
+        function revealBannerVideo() {
             bannerVideo.classList.add('active');
             setProfileBannerLoading(false);
-        };
+        }
+        bannerVideo.onloadeddata = revealBannerVideo;
+        bannerVideo.oncanplay = revealBannerVideo;
         bannerVideo.onerror = function() {
             setProfileBannerLoading(false);
         };
@@ -1572,9 +1588,23 @@ function loadUserAnimeNotes() {
         window._publicProfileFirebaseReadyListener = true;
         window.addEventListener('firebaseNotesServiceReady', function() {
             if (!viewedUserEmail) return;
+            refreshPublicTop10Layout();
             void refreshPublicProfileReviewsDisplay().catch(function(err) {
                 console.error('[user-profile] refresh après firebaseNotesServiceReady:', err);
             });
+        });
+    }
+
+    if (!window._publicProfileLayoutListener) {
+        window._publicProfileLayoutListener = true;
+        var layoutResizeTimer = null;
+        window.addEventListener('resize', function () {
+            if (!viewedUserEmail) return;
+            clearTimeout(layoutResizeTimer);
+            layoutResizeTimer = setTimeout(function () {
+                refreshPublicTop10Layout();
+                void refreshPublicProfileReviewsDisplay().catch(function () { /* ignore */ });
+            }, 200);
         });
     }
 }
@@ -1793,6 +1823,33 @@ function createStarBadgesPublic() {
     }
     
     reviewsSection.appendChild(allContainers);
+    refreshPublicTop10Layout();
+}
+
+function refreshPublicTop10Layout() {
+    const list = document.querySelector('#reviews-section .card-list');
+    if (list) {
+        if (typeof window.applyTop10ContainerGridStyles === 'function') {
+            window.applyTop10ContainerGridStyles(list);
+        }
+        list.style.visibility = 'visible';
+        list.style.opacity = '1';
+        list.style.display = 'grid';
+    }
+    const wrap = document.querySelector('.all-star-containers');
+    if (wrap) {
+        wrap.style.display = 'flex';
+        wrap.style.visibility = 'visible';
+        wrap.style.opacity = '1';
+    }
+    for (let i = 1; i <= 10; i++) {
+        const card = document.getElementById('catalogue-card-' + i);
+        if (!card) continue;
+        applyPublicTop10SlotGridPosition(card, i - 1);
+        if (typeof window.applyTop10SlotCardStyles === 'function') {
+            window.applyTop10SlotCardStyles(card, { bordered: true });
+        }
+    }
 }
 
 // Afficher les notes d'animes avec les containers à étoiles

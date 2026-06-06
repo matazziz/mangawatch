@@ -15,20 +15,21 @@
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/profile.css?v=2.2">
     <link rel="stylesheet" href="/css/profile-rating.css?v=7">
-    <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
+    <link rel="stylesheet" href="/css/anime-card.css?v=2.37">
     <link rel="stylesheet" href="/css/messaging.css">
     <link rel="stylesheet" href="/css/mw-toast.css?v=1">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières -->
     <script type="module">
         import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe23';
-        import { initProfileRatingUI } from '/js/profile-rating-ui.js?v=4';
+        import { initProfileRatingUI, requestProfileRatingInit } from '/js/profile-rating-ui.js?v=5';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.profileAccountService = profileAccountService;
         window.syncRemoteProfileMedia = syncRemoteProfileMedia;
         window.initProfileRatingUI = initProfileRatingUI;
+        window.requestProfileRatingInit = requestProfileRatingInit;
         window.firebaseNotesService = firebaseNotesService;
         window.firebaseTop10Service = firebaseTop10Service;
         window.dispatchEvent(new CustomEvent('firebaseNotesServiceReady'));
@@ -4568,7 +4569,9 @@
                 console.warn('⚠️ Élément profile-description-text non trouvé');
             }
 
-            if (typeof window.initProfileRatingUI === 'function') {
+            if (typeof window.requestProfileRatingInit === 'function') {
+                window.requestProfileRatingInit({ profileEmail: user.email, allowVote: false });
+            } else if (typeof window.initProfileRatingUI === 'function') {
                 window.initProfileRatingUI({ profileEmail: user.email, allowVote: false });
             }
             

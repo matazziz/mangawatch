@@ -416,7 +416,7 @@ class SearchManager {
         // Notes de profil
         let ratingsMap = {};
         try {
-            const ratingMod = await import('./profile-rating-ui.js?v=4');
+            const ratingMod = await import('./profile-rating-ui.js?v=5');
             ratingsMap = await ratingMod.fetchProfileRatingsForSearch(limitedUsers.map(function (u) { return u.email; }));
         } catch (e) {
             console.warn('Notes profil indisponibles', e);

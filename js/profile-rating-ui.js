@@ -1,7 +1,7 @@
 /**
  * UI notation profil (profil public + profil perso + recherche)
  */
-import { profileRatingService } from './firebase-service.js?v=6febe21';
+import { profileRatingService } from './firebase-service.js?v=6febe24';
 
 function t(key, fallback) {
   return (typeof window.t === 'function' && window.t(key)) || fallback;
@@ -204,8 +204,31 @@ export async function fetchProfileRatingsForSearch(emails) {
   }
 }
 
+export function requestProfileRatingInit(options) {
+  const opts = options || {};
+  function run() {
+    if (typeof window.initProfileRatingUI === 'function') {
+      window.initProfileRatingUI(opts);
+      return true;
+    }
+    return false;
+  }
+  if (run()) return;
+  let attempts = 0;
+  const timer = setInterval(function () {
+    attempts += 1;
+    if (run() || attempts >= 40) clearInterval(timer);
+  }, 100);
+  window.addEventListener('profileRatingUIReady', function onReady() {
+    window.removeEventListener('profileRatingUIReady', onReady);
+    run();
+  }, { once: true });
+}
+
 if (typeof window !== 'undefined') {
   window.initProfileRatingUI = initProfileRatingUI;
   window.ratingBadgeHtml = ratingBadgeHtml;
   window.fetchProfileRatingsForSearch = fetchProfileRatingsForSearch;
+  window.requestProfileRatingInit = requestProfileRatingInit;
+  window.dispatchEvent(new CustomEvent('profileRatingUIReady'));
 }
