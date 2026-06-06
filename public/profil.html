@@ -10,65 +10,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/profile-rating.css?v=4">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
     <link rel="stylesheet" href="/css/messaging.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières et paramètres (confidentialité abonnements) -->
     <script type="module">
-        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe20';
+        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe23';
+        import { initProfileRatingUI } from '/js/profile-rating-ui.js?v=4';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.profileAccountService = profileAccountService;
         window.syncRemoteProfileMedia = syncRemoteProfileMedia;
+        window.initProfileRatingUI = initProfileRatingUI;
         window.dispatchEvent(new CustomEvent('bannerServiceReady'));
     </script>
     
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
     <script>
         (function() {
-            // Charger l'avatar avant que la page ne s'affiche
+            window.upgradeProfileAvatarUrl = window.upgradeProfileAvatarUrl || function (url) {
+                if (!url || typeof url !== 'string') return url;
+                if (url.indexOf('data:') === 0 || url.indexOf('blob:') === 0) return url;
+                if (url.indexOf('googleusercontent.com') !== -1) {
+                    return url.replace(/=s\d+(-c)?/gi, '=s512-c');
+                }
+                if (url.indexOf('gravatar.com') !== -1 && /[?&]s=\d+/.test(url)) {
+                    return url.replace(/([?&]s=)\d+/, '$1128');
+                }
+                return url;
+            };
             try {
                 const user = JSON.parse(localStorage.getItem('user') || 'null');
                 if (user && user.email) {
                     const avatarKey = 'avatar_' + user.email;
-                    let avatarUrl = null;
-                    
-                    // Prioriser l'avatar personnalisé (le plus récent)
-                    if (user.customAvatar) {
-                        avatarUrl = user.customAvatar;
-                    } else if (user.avatar) {
-                        avatarUrl = user.avatar;
-                    } else if (user.originalAvatar) {
-                        avatarUrl = user.originalAvatar;
-                    } else if (user.picture) {
-                        avatarUrl = user.picture;
-                    } else {
-                        // En dernier recours, vérifier le localStorage
-                        const storedAvatar = localStorage.getItem(avatarKey);
-                        if (storedAvatar) {
-                            avatarUrl = storedAvatar;
-                        }
+                    let avatarUrl = localStorage.getItem(avatarKey) || '';
+                    if (!avatarUrl || !String(avatarUrl).trim()) {
+                        avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || '';
                     }
-                    
-                    // Si on a trouvé un avatar, le précharger et mettre à jour le src par défaut
                     if (avatarUrl && avatarUrl !== '') {
-                        // Précharger l'image
                         const img = new Image();
-                        img.src = avatarUrl;
-                        
-                        // Mettre à jour le src de l'image dans le DOM dès qu'il est disponible
+                        img.src = window.upgradeProfileAvatarUrl(avatarUrl);
                         function updateAvatarSrc() {
                             const avatarElement = document.getElementById('user-avatar');
                             if (avatarElement) {
-                                avatarElement.src = avatarUrl;
+                                avatarElement.src = window.upgradeProfileAvatarUrl(avatarUrl);
                             } else {
-                                // Si l'élément n'existe pas encore, réessayer
                                 setTimeout(updateAvatarSrc, 10);
                             }
                         }
-                        
-                        // Démarrer la mise à jour immédiatement
                         if (document.readyState === 'loading') {
                             document.addEventListener('DOMContentLoaded', updateAvatarSrc);
                         } else {
@@ -83,6 +74,7 @@
     </script>
     
     <script src="/js/localization.js"></script>
+    <script src="/js/header-avatar.js?v=1"></script>
     <style>
         body {
             background-color: #181a20;
@@ -917,27 +909,23 @@
             opacity: 0.5;
         }
         
-        /* Description du profil dans la bannière */
-        .profile-description-wrapper {
-            position: absolute;
-            bottom: 1.5rem;
-            left: 2rem;
-            width: calc(100% - 4rem);
-            max-width: 600px;
-            z-index: 4;
-            pointer-events: none;
+        /* Description du profil (barre sous bannière) */
+        .profile-subbanner .profile-description-wrapper {
+            position: static;
+            bottom: auto;
+            left: auto;
+            width: auto;
+            max-width: none;
+            z-index: auto;
+            pointer-events: auto;
+        }
+        
+        .profile-subbanner.visible {
+            display: flex;
         }
         
         .profile-description-wrapper > * {
             pointer-events: auto;
-        }
-        
-        @media (max-width: 768px) {
-            .profile-description-wrapper {
-                left: 1rem;
-                right: 1rem;
-                bottom: 1rem;
-            }
         }
         
         .profile-description {
@@ -2362,18 +2350,26 @@
         </button>
     </div>
 
+    <input type="file" id="profile-avatar-file-input" class="banner-file-input" accept="image/jpeg,image/png,image/webp,image/*">
+    <script src="/js/profile-avatar-upload.js?v=4"></script>
+
     <main class="profile-container">
         <div class="profile-header" id="profile-header">
             <!-- Bannière en arrière-plan -->
             <img id="banner-image" class="profile-header-banner" alt="Bannière du profil" loading="eager">
             <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="auto" muted></video>
             <div class="profile-header-banner-overlay"></div>
+
+            <div class="profile-rating-banner-badge" id="profile-rating-banner-badge" style="display: none;" aria-label="Note du profil">
+                <i class="fas fa-star" aria-hidden="true"></i>
+                <strong id="profile-rating-average">—</strong><span class="profile-rating-max">/10</span>
+            </div>
             
             <!-- Contenu du header (avatar et pseudo) -->
             <div class="profile-header-content">
-                <div class="profile-avatar-wrapper" id="profile-avatar-wrapper">
-                    <img src="" alt="Avatar utilisateur" id="profile-avatar" class="profile-avatar" onerror="this.onerror=null; this.src='/images/logo.png';">
-                </div>
+                <label class="profile-avatar-wrapper" id="profile-avatar-wrapper" for="profile-avatar-file-input" title="Modifier la photo de profil">
+                    <img src="" alt="Avatar utilisateur" id="profile-avatar" class="profile-avatar" decoding="async" fetchpriority="high" onerror="this.onerror=null; this.src='/images/logo.png';">
+                </label>
                 <div class="profile-info">
                     <h1 id="user-name">
                         <span id="user-name-text"></span>
@@ -2404,20 +2400,20 @@
                     </button>
                 </div>
             </div>
-            
-            <!-- Description en bas de la bannière -->
+        </div>
+
+        <div class="profile-subbanner visible" id="profile-subbanner" aria-label="Description du profil">
             <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: block;">
                 <div class="profile-description" id="profile-description-display">
                     <span id="profile-description-text">Écrivez votre description ici...</span>
-                    <button class="profile-description-edit-btn" id="profile-description-edit-btn" title="Modifier la description">
+                    <button class="profile-description-edit-btn" id="profile-description-edit-btn" title="Modifier la description" type="button">
                         <i class="fas fa-edit"></i>
                     </button>
                 </div>
                 <div class="profile-description-edit" id="profile-description-edit" style="display: none;">
-                    <textarea id="profile-description-textarea" placeholder="Écrivez votre description ici..." maxlength="80"></textarea>
-                    <div class="profile-description-char-count" id="profile-description-char-count">0 / 80</div>
+                    <textarea id="profile-description-textarea" placeholder="Écrivez votre description ici..." maxlength="50"></textarea>
+                    <div class="profile-description-char-count" id="profile-description-char-count">0 / 50</div>
                 </div>
-            </div>
             </div>
         </div>
 
@@ -2436,7 +2432,7 @@
                         <h3>Préférences</h3>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> Photo de profil</label>
-                            <button class="edit-btn" id="edit-avatar-btn" style="margin-top: 0.5rem;"><i class="fas fa-image"></i> Modifier</button>
+                            <label class="edit-btn" id="edit-avatar-btn" for="profile-avatar-file-input" style="margin-top: 0.5rem; cursor: pointer;"><i class="fas fa-image"></i> Modifier</label>
                         </div>
                         <div class="setting-item">
                             <label><i class="fas fa-image"></i> Bannière du profil</label>
@@ -2680,205 +2676,23 @@
             }, duration);
         }
         
-        // Fonction globale pour gérer le clic sur le bouton de modification de l'avatar
-        // Définie AVANT window.onload pour être accessible partout
+        // Photo de profil : input persistant + profile-avatar-upload.js (compatible mobile)
         window.handleAvatarEditClick = function(e) {
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-            // Fonction pour optimiser l'avatar avec qualité maximale
-            function optimizeAvatarQuality(file, maxSize = 2048, quality = 1.0) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-                            
-                            // Calculer les dimensions optimales en gardant le ratio (avatar carré)
-                            if (width > maxSize || height > maxSize) {
-                                const ratio = Math.min(maxSize / width, maxSize / height);
-                                width = Math.round(width * ratio);
-                                height = Math.round(height * ratio);
-                            }
-                            
-                            // S'assurer que les dimensions sont des nombres entiers
-                            width = Math.round(width);
-                            height = Math.round(height);
-                            
-                            canvas.width = width;
-                            canvas.height = height;
-                            
-                            const ctx = canvas.getContext('2d', { 
-                                alpha: true,  // Garder alpha pour les avatars (transparence possible)
-                                willReadFrequently: false
-                            });
-                            
-                            // Paramètres de qualité maximale pour le rendu
-                            ctx.imageSmoothingEnabled = true;
-                            ctx.imageSmoothingQuality = 'high';
-                            
-                            // Support cross-browser
-                            ctx.webkitImageSmoothingEnabled = true;
-                            ctx.mozImageSmoothingEnabled = true;
-                            ctx.msImageSmoothingEnabled = true;
-                            
-                            // Rendre l'image avec la meilleure qualité possible
-                            ctx.drawImage(img, 0, 0, width, height);
-                            
-                            // Utiliser PNG pour qualité maximale (sans perte)
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    // Créer un nouveau File avec le nom original
-                                    const optimizedFile = new File([blob], file.name, {
-                                        type: 'image/png',
-                                        lastModified: Date.now()
-                                    });
-                                    resolve(optimizedFile);
-                                } else {
-                                    reject(new Error('Erreur lors de la conversion en blob'));
-                                }
-                            }, 'image/png', quality);
-                        };
-                        img.onerror = reject;
-                        img.src = e.target.result;
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
+            if (typeof window.openProfileAvatarFilePicker === 'function') {
+                window.openProfileAvatarFilePicker(e);
+                return;
             }
-            
-            console.log('📸 Clic sur le bouton Modifier la photo de profil');
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = async function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const user = JSON.parse(localStorage.getItem('user') || 'null');
-                    if (!user || !user.email) {
-                        console.error('❌ Utilisateur non trouvé');
-                        return;
-                    }
-                    
-                    try {
-                        // Optimiser l'avatar avec qualité maximale (2048x2048, qualité 100%)
-                        console.log('🎨 Optimisation de l\'avatar avec qualité maximale...');
-                        const optimizedFile = await optimizeAvatarQuality(file, 2048, 1.0);
-                        
-                        // Afficher l'image optimisée immédiatement pour l'aperçu
-                        const reader = new FileReader();
-                        reader.onload = function(event) {
-                            const userAvatar = document.getElementById('user-avatar');
-                            const profileAvatar = document.getElementById('profile-avatar');
-                            const previewUrl = event.target.result;
-                            
-                            // Afficher l'aperçu immédiatement
-                            if (userAvatar) userAvatar.src = previewUrl;
-                            if (profileAvatar) profileAvatar.src = previewUrl;
-                        };
-                        reader.readAsDataURL(optimizedFile);
-                        
-                            // Sauvegarder dans Firebase Storage et Firestore avec le fichier optimisé
-                            if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                                try {
-                                    console.log('📤 Upload avatar optimisé vers Firebase Storage...');
-                                    const avatarUrl = await window.avatarService.saveAvatar(user.email, optimizedFile);
-                                    console.log('✅ Avatar sauvegardé dans Firebase:', avatarUrl);
-                                    
-                                    // Mettre à jour l'affichage avec l'URL Firebase
-                                    const userAvatar = document.getElementById('user-avatar');
-                                    const profileAvatar = document.getElementById('profile-avatar');
-                                    if (userAvatar) userAvatar.src = avatarUrl;
-                                    if (profileAvatar) profileAvatar.src = avatarUrl;
-                                    
-                                    // Mettre à jour l'objet user
-                                    user.customAvatar = avatarUrl;
-                                    user.avatar = avatarUrl;
-                                    localStorage.setItem('user', JSON.stringify(user));
-                                    
-                                    // IMPORTANT : Mettre à jour accounts AVANT syncAndLoadUserData pour éviter que l'ancienne photo soit rechargée
-                                    const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                                    const accountIndex = accounts.findIndex(acc => acc.email === user.email);
-                                    if (accountIndex !== -1) {
-                                        accounts[accountIndex] = {
-                                            ...accounts[accountIndex],
-                                            avatar: avatarUrl,
-                                            customAvatar: avatarUrl
-                                        };
-                                        localStorage.setItem('accounts', JSON.stringify(accounts));
-                                    }
-                                    
-                                    // Mettre à jour aussi la clé dédiée avatar_
-                                    localStorage.setItem('avatar_' + user.email, avatarUrl);
-                                    
-                                    // Mettre à jour profile_
-                                    const profileKey = 'profile_' + user.email;
-                                    const existingProfileData = localStorage.getItem(profileKey);
-                                    let existingProfile = {};
-                                    if (existingProfileData) {
-                                        try {
-                                            existingProfile = JSON.parse(existingProfileData);
-                                        } catch (e) {
-                                            console.error('Erreur parsing profile:', e);
-                                        }
-                                    }
-                                    const updatedProfile = {
-                                        ...existingProfile,
-                                        customAvatar: avatarUrl,
-                                        avatar: avatarUrl,
-                                        email: user.email
-                                    };
-                                    localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
-                                    
-                                    // Afficher un message de succès
-                                    if (typeof showToast === 'function') {
-                                        showToast('Succès', 'Avatar mis à jour avec succès !', 'success');
-                                    }
-                                    
-                                    // Ne PAS appeler syncAndLoadUserData() car elle pourrait recharger l'ancienne photo
-                                    // L'affichage est déjà mis à jour ci-dessus
-                                } catch (error) {
-                                    console.error('❌ Erreur lors de la sauvegarde de l\'avatar:', error);
-                                    const errorMessage = error.message || error.toString() || '';
-                                    
-                                    if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
-                                        alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
-                                    } else {
-                                        alert('❌ Erreur lors de l\'upload de l\'avatar.\n\nErreur : ' + errorMessage);
-                                    }
-                                }
-                            } else {
-                                console.error('❌ avatarService non disponible');
-                                alert('❌ Firebase Storage n\'est pas disponible. Vérifiez que firebase-service.js est chargé.');
-                            }
-                        } catch (optimizeError) {
-                            console.error('❌ Erreur lors de l\'optimisation de l\'avatar:', optimizeError);
-                            alert('❌ Erreur lors de l\'optimisation de l\'avatar. Tentative avec le fichier original...');
-                            
-                            // Fallback : utiliser le fichier original si l'optimisation échoue
-                            if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                                try {
-                                    const avatarUrl = await window.avatarService.saveAvatar(user.email, file);
-                                    const userAvatar = document.getElementById('user-avatar');
-                                    const profileAvatar = document.getElementById('profile-avatar');
-                                    if (userAvatar) userAvatar.src = avatarUrl;
-                                    if (profileAvatar) profileAvatar.src = avatarUrl;
-                                    user.customAvatar = avatarUrl;
-                                    user.avatar = avatarUrl;
-                                    localStorage.setItem('user', JSON.stringify(user));
-                                    localStorage.setItem('avatar_' + user.email, avatarUrl);
-                                } catch (error) {
-                                    console.error('❌ Erreur lors de la sauvegarde avec fichier original:', error);
-                                }
-                            }
-                        }
-                    }
-            };
-            input.click();
+            var input = document.getElementById('profile-avatar-file-input');
+            if (input) {
+                input.value = '';
+                input.click();
+            } else {
+                alert('Impossible d\'ouvrir la galerie photo. Rechargez la page.');
+            }
         };
         
         // Initialisation Google Sign-In
@@ -4102,45 +3916,24 @@
                 }
             }
             
-            // Afficher l'avatar (FORCER la mise à jour)
-            const userAvatar = document.getElementById('user-avatar');
-            const profileAvatar = document.getElementById('profile-avatar');
-            const avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || '';
-            
-            if (avatarUrl) {
-                console.log('🖼️ Affichage avatar:', avatarUrl.substring(0, 50) + '...');
-                
-                // Fonction pour charger l'avatar simplement
-                function loadAvatar(imgElement, url) {
-                    if (!imgElement) return;
-                    
-                    // Supprimer les anciens gestionnaires d'événements
-                    imgElement.onerror = null;
-                    imgElement.onload = null;
-                    
-                    // Définir directement l'URL
-                    imgElement.src = url;
-                    
-                    // Gestionnaire de succès
-                    imgElement.onload = function() {
-                        console.log('✅ Avatar chargé avec succès');
-                    };
-                    
-                    // Gestionnaire d'erreur (seulement pour logging, onerror dans le HTML gérera le fallback)
-                    imgElement.onerror = function() {
-                        console.warn('⚠️ Erreur lors du chargement de l\'avatar, le fallback HTML sera utilisé');
-                    };
+            // Afficher l'avatar header + profil
+            const resolvedAvatar = typeof window.resolveProfileAvatarUrl === 'function'
+                ? window.resolveProfileAvatarUrl(user)
+                : (user.customAvatar || user.avatar || user.originalAvatar || user.picture || '');
+            if (resolvedAvatar) {
+                if (typeof window.refreshHeaderAvatar === 'function') {
+                    window.refreshHeaderAvatar({ cacheBust: false });
+                } else if (typeof window.applyProfileAvatars === 'function') {
+                    window.applyProfileAvatars(resolvedAvatar, { cacheBust: false });
                 }
-                
-                if (userAvatar) {
-                    loadAvatar(userAvatar, avatarUrl);
-                }
-                if (profileAvatar) {
-                    loadAvatar(profileAvatar, avatarUrl);
-                }
-            } else {
-                // Si pas d'avatar, ne rien faire (l'image par défaut sera gérée par onerror dans le HTML)
-                console.log('⚠️ Pas d\'avatar disponible');
+            }
+
+            if (typeof window.syncRemoteProfileMedia === 'function' && !window.avatarSaveInProgress) {
+                void window.syncRemoteProfileMedia(user.email).then(function() {
+                    if (typeof window.refreshHeaderAvatar === 'function') {
+                        window.refreshHeaderAvatar();
+                    }
+                }).catch(function() {});
             }
             
             // Afficher la description
@@ -4200,6 +3993,10 @@
                 }
             } else {
                 console.warn('⚠️ Élément profile-description-text non trouvé');
+            }
+
+            if (typeof window.initProfileRatingUI === 'function') {
+                window.initProfileRatingUI({ profileEmail: user.email, allowVote: false });
             }
             
             // AFFICHER LES INFORMATIONS DU COMPTE dans la section Paramètres
@@ -4830,189 +4627,11 @@
       };
 
       document.addEventListener('DOMContentLoaded', function() {
-        // Définir la fonction directement ici pour être sûr qu'elle est disponible
-        if (typeof window.handleAvatarEditClick !== 'function') {
-            // Fonction pour optimiser l'avatar avec qualité maximale (réutilisable)
-            function optimizeAvatarQualityForUpload(file, maxSize = 2048, quality = 1.0) {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            let width = img.width;
-                            let height = img.height;
-                            
-                            // Calculer les dimensions optimales en gardant le ratio (avatar carré)
-                            if (width > maxSize || height > maxSize) {
-                                const ratio = Math.min(maxSize / width, maxSize / height);
-                                width = Math.round(width * ratio);
-                                height = Math.round(height * ratio);
-                            }
-                            
-                            // S'assurer que les dimensions sont des nombres entiers
-                            width = Math.round(width);
-                            height = Math.round(height);
-                            
-                            canvas.width = width;
-                            canvas.height = height;
-                            
-                            const ctx = canvas.getContext('2d', { 
-                                alpha: true,  // Garder alpha pour les avatars (transparence possible)
-                                willReadFrequently: false
-                            });
-                            
-                            // Paramètres de qualité maximale pour le rendu
-                            ctx.imageSmoothingEnabled = true;
-                            ctx.imageSmoothingQuality = 'high';
-                            
-                            // Support cross-browser
-                            ctx.webkitImageSmoothingEnabled = true;
-                            ctx.mozImageSmoothingEnabled = true;
-                            ctx.msImageSmoothingEnabled = true;
-                            
-                            // Rendre l'image avec la meilleure qualité possible
-                            ctx.drawImage(img, 0, 0, width, height);
-                            
-                            // Utiliser PNG pour qualité maximale (sans perte)
-                            canvas.toBlob((blob) => {
-                                if (blob) {
-                                    // Créer un nouveau File avec le nom original
-                                    const optimizedFile = new File([blob], file.name, {
-                                        type: 'image/png',
-                                        lastModified: Date.now()
-                                    });
-                                    resolve(optimizedFile);
-                                } else {
-                                    reject(new Error('Erreur lors de la conversion en blob'));
-                                }
-                            }, 'image/png', quality);
-                        };
-                        img.onerror = reject;
-                        img.src = e.target.result;
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                });
-            }
-            
-            window.handleAvatarEditClick = function(e) {
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                console.log('📸 Clic sur le bouton Modifier la photo de profil');
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'image/*';
-                input.onchange = async function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        const user = JSON.parse(localStorage.getItem('user') || 'null');
-                        if (!user || !user.email) {
-                            console.error('❌ Utilisateur non trouvé');
-                            return;
-                        }
-                        
-                        try {
-                            // Optimiser l'avatar avec qualité maximale (2048x2048, qualité 100%)
-                            console.log('🎨 Optimisation de l\'avatar avec qualité maximale...');
-                            const optimizedFile = await optimizeAvatarQualityForUpload(file, 2048, 1.0);
-                            
-                            // Afficher l'image optimisée immédiatement pour l'aperçu
-                            const reader = new FileReader();
-                            reader.onload = function(event) {
-                                const userAvatar = document.getElementById('user-avatar');
-                                const profileAvatar = document.getElementById('profile-avatar');
-                                const previewUrl = event.target.result;
-                                
-                                // Afficher l'aperçu immédiatement
-                                if (userAvatar) userAvatar.src = previewUrl;
-                                if (profileAvatar) profileAvatar.src = previewUrl;
-                            };
-                            reader.readAsDataURL(optimizedFile);
-                            
-                            // Sauvegarder dans Firebase Storage et Firestore avec le fichier optimisé
-                            if (window.avatarService && typeof window.avatarService.saveAvatar === 'function') {
-                                try {
-                                    console.log('📤 Upload avatar optimisé vers Firebase Storage...');
-                                    const avatarUrl = await window.avatarService.saveAvatar(user.email, optimizedFile);
-                                console.log('✅ Avatar sauvegardé dans Firebase:', avatarUrl);
-                                
-                                // Mettre à jour l'affichage avec l'URL Firebase
-                                const userAvatar = document.getElementById('user-avatar');
-                                const profileAvatar = document.getElementById('profile-avatar');
-                                if (userAvatar) userAvatar.src = avatarUrl;
-                                if (profileAvatar) profileAvatar.src = avatarUrl;
-                                
-                                // Mettre à jour l'objet user
-                                user.customAvatar = avatarUrl;
-                                user.avatar = avatarUrl;
-                                localStorage.setItem('user', JSON.stringify(user));
-                                
-                                // IMPORTANT : Mettre à jour accounts AVANT syncAndLoadUserData pour éviter que l'ancienne photo soit rechargée
-                                const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
-                                const accountIndex = accounts.findIndex(acc => acc.email === user.email);
-                                if (accountIndex !== -1) {
-                                    accounts[accountIndex] = {
-                                        ...accounts[accountIndex],
-                                        avatar: avatarUrl,
-                                        customAvatar: avatarUrl
-                                    };
-                                    localStorage.setItem('accounts', JSON.stringify(accounts));
-                                }
-                                
-                                // Mettre à jour aussi la clé dédiée avatar_
-                                localStorage.setItem('avatar_' + user.email, avatarUrl);
-                                
-                                // Mettre à jour profile_
-                                const profileKey = 'profile_' + user.email;
-                                const existingProfileData = localStorage.getItem(profileKey);
-                                let existingProfile = {};
-                                if (existingProfileData) {
-                                    try {
-                                        existingProfile = JSON.parse(existingProfileData);
-                                    } catch (e) {
-                                        console.error('Erreur parsing profile:', e);
-                                    }
-                                }
-                                const updatedProfile = {
-                                    ...existingProfile,
-                                    customAvatar: avatarUrl,
-                                    avatar: avatarUrl,
-                                    email: user.email
-                                };
-                                localStorage.setItem(profileKey, JSON.stringify(updatedProfile));
-                                
-                                // Afficher un message de succès
-                                if (typeof showToast === 'function') {
-                                    showToast('Succès', 'Avatar mis à jour avec succès !', 'success');
-                                }
-                                
-                                // Ne PAS appeler syncAndLoadUserData() car elle pourrait recharger l'ancienne photo
-                                // L'affichage est déjà mis à jour ci-dessus
-                            } catch (error) {
-                                console.error('❌ Erreur lors de la sauvegarde de l\'avatar:', error);
-                                const errorMessage = error.message || error.toString() || '';
-                                
-                                if (error.code === 'storage/unauthorized' || errorMessage.includes('PERMISSION_DENIED')) {
-                                    alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
-                                } else {
-                                    alert('❌ Erreur lors de l\'upload de l\'avatar.\n\nErreur : ' + errorMessage);
-                                }
-                            }
-                        } else {
-                            console.error('❌ avatarService non disponible');
-                            alert('❌ Firebase Storage n\'est pas disponible. Vérifiez que firebase-service.js est chargé.');
-                        }
-                    }
-                };
-                input.click();
-            };
-            console.log('✅ handleAvatarEditClick définie dans DOMContentLoaded');
+        if (typeof window.initProfileAvatarUpload === 'function') {
+            window.initProfileAvatarUpload();
         }
         
-        // Attacher le gestionnaire d'événement pour le bouton avatar
+        // Attacher le gestionnaire d'événement pour le bouton avatar (fallback)
         if (typeof attachAvatarEditHandler === 'function') {
             attachAvatarEditHandler();
         }
@@ -5480,6 +5099,96 @@
           const bannerRemoveBtn = document.getElementById('banner-remove-btn');
           const bannerImage = document.getElementById('banner-image');
           const bannerVideo = document.getElementById('banner-video');
+
+          async function playBannerVideoSafely(videoEl) {
+              if (!videoEl) return;
+              try {
+                  await videoEl.play();
+              } catch (e) {
+                  try {
+                      videoEl.muted = true;
+                      await videoEl.play();
+                  } catch (e2) {
+                      console.error('Lecture vidéo impossible (même en muet):', e2);
+                  }
+              }
+          }
+
+          let bannerSaveQueue = Promise.resolve();
+          let bannerLoadGeneration = 0;
+          let bannerPreviewObjectUrl = null;
+
+          function revokeBannerPreviewUrl() {
+              if (bannerPreviewObjectUrl) {
+                  try { URL.revokeObjectURL(bannerPreviewObjectUrl); } catch (e) {}
+                  bannerPreviewObjectUrl = null;
+              }
+          }
+
+          function resetBannerMediaElements() {
+              const img = document.getElementById('banner-image');
+              const vid = document.getElementById('banner-video');
+              if (vid) {
+                  try { vid.pause(); } catch (e) {}
+                  vid.removeAttribute('src');
+                  try { vid.load(); } catch (e) {}
+                  vid.classList.remove('active');
+              }
+              if (img) {
+                  img.removeAttribute('src');
+                  img.classList.remove('active');
+              }
+              revokeBannerPreviewUrl();
+          }
+
+          function setBannerInputsDisabled(disabled) {
+              if (bannerImageInput) bannerImageInput.disabled = disabled;
+              if (bannerVideoInput) bannerVideoInput.disabled = disabled;
+          }
+
+          function queueBannerSaveLocal(task) {
+              bannerSaveQueue = bannerSaveQueue.catch(function () {}).then(task);
+              return bannerSaveQueue;
+          }
+
+          function applyBannerPreview(type, previewUrl) {
+              revokeBannerPreviewUrl();
+              bannerPreviewObjectUrl = previewUrl;
+              if (type === 'image' && bannerImage) {
+                  bannerImage.src = previewUrl;
+                  bannerImage.classList.add('active');
+                  if (bannerVideo) {
+                      try { bannerVideo.pause(); } catch (e) {}
+                      bannerVideo.removeAttribute('src');
+                      try { bannerVideo.load(); } catch (e) {}
+                      bannerVideo.classList.remove('active');
+                  }
+              } else if (type === 'video' && bannerVideo) {
+                  bannerVideo.src = previewUrl;
+                  bannerVideo.classList.add('active');
+                  if (bannerImage) {
+                      bannerImage.removeAttribute('src');
+                      bannerImage.classList.remove('active');
+                  }
+                  playBannerVideoSafely(bannerVideo);
+              }
+          }
+
+          function finalizeBannerSave(saveGen, bannerData) {
+              if (!bannerData || saveGen !== bannerLoadGeneration) return;
+              revokeBannerPreviewUrl();
+              try {
+                  const u = JSON.parse(localStorage.getItem('user') || 'null');
+                  if (u && u.email) {
+                      localStorage.setItem('profile_banner_' + u.email, JSON.stringify({
+                          type: bannerData.type,
+                          url: bannerData.url,
+                          volume: bannerData.volume !== undefined ? bannerData.volume : 35
+                      }));
+                  }
+              } catch (e) {}
+              displayBannerBlock(bannerData);
+          }
           
           // Fonction pour ouvrir le menu modal
           function openBannerMenu() {
@@ -5747,120 +5456,117 @@
               });
           }
           
-          // Charger la bannière sauvegardée
+          // Charger la bannière sauvegardée (cache d'abord pour affichage immédiat, puis Firebase)
           async function loadBanner() {
+              if (window.bannerSaveInProgress) return;
               const user = JSON.parse(localStorage.getItem('user') || 'null');
               if (!user || !user.email) return;
+              const loadGen = bannerLoadGeneration;
               
-              // Charger les utilisateurs bloqués
               loadBlockedUsers();
               
-              // S'assurer que les éléments de la bannière existent
               const bannerImage = document.getElementById('banner-image');
               const bannerVideo = document.getElementById('banner-video');
               if (!bannerImage || !bannerVideo) {
-                  console.warn('⚠️ Éléments de bannière non trouvés, réessai dans 100ms...');
-                  setTimeout(loadBanner, 100);
+                  setTimeout(loadBanner, 80);
                   return;
               }
               
-              // Charger depuis Firebase si disponible, sinon localStorage
               let banner = null;
-              
-              console.log('🔄 Chargement bannière pour:', user.email);
-              console.log('🔍 bannerService disponible:', !!window.bannerService);
+              const cached = localStorage.getItem('profile_banner_' + user.email);
+              if (cached) {
+                  try {
+                      banner = JSON.parse(cached);
+                      displayBannerBlock(banner);
+                  } catch (e) {}
+              }
               
               if (window.bannerService) {
                   try {
-                      console.log('📥 Tentative de chargement depuis Firebase (lecture serveur fraîche)...');
-                      banner = await window.bannerService.getBanner(user.email);
-                      if (banner) {
-                          console.log('✅ Bannière chargée depuis Firebase:', banner);
-                          // Mettre à jour localStorage pour garder la source de vérité synchronisée
-                          try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: banner.type, url: banner.url, volume: banner.volume !== undefined ? banner.volume : 0 })); } catch (e) {}
-                      } else {
-                          console.log('⚠️ Firebase n\'a pas retourné de bannière');
+                      const firebaseBanner = await window.bannerService.getBanner(user.email);
+                      if (loadGen !== bannerLoadGeneration || window.bannerSaveInProgress) return;
+                      if (firebaseBanner) {
+                          try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: firebaseBanner.type, url: firebaseBanner.url, volume: firebaseBanner.volume !== undefined ? firebaseBanner.volume : 35 })); } catch (e) {}
+                          displayBannerBlock(firebaseBanner);
                       }
-                  } catch (error) {
-                      console.error('❌ Erreur lors du chargement Firebase:', error);
+                  } catch (err) {
+                      console.warn('Bannière Firebase:', err);
                   }
               }
               
-              // Fallback vers localStorage si Firebase n'a pas retourné de bannière
-              if (!banner) {
-                  console.log('📥 Tentative de chargement depuis localStorage...');
+              if (!banner && !window.bannerService) {
                   const bannerData = localStorage.getItem('profile_banner_' + user.email);
                   if (bannerData) {
                       try {
                           banner = JSON.parse(bannerData);
-                          console.log('✅ Bannière chargée depuis localStorage:', banner);
-                      } catch (e) {
-                          console.error('❌ Erreur parsing localStorage bannière:', e);
+                          displayBannerBlock(banner);
+                      } catch (e) {}
+                  }
+              }
+          }
+          
+          function displayBannerBlock(banner) {
+              if (!banner) return;
+              
+              console.log('🎨 Affichage de la bannière:', banner.type, banner.url ? 'URL présente' : 'URL manquante');
+              try {
+                  var type = (banner.type || '').toLowerCase();
+                  var bannerImgEl = document.getElementById('banner-image');
+                  var bannerVidEl = document.getElementById('banner-video');
+                  if (bannerImgEl) { bannerImgEl.removeAttribute('src'); bannerImgEl.classList.remove('active'); bannerImgEl.onerror = null; bannerImgEl.onload = null; }
+                  if (bannerVidEl) {
+                      try { bannerVidEl.pause(); } catch (e) {}
+                      bannerVidEl.removeAttribute('src');
+                      try { bannerVidEl.load(); } catch (e) {}
+                      bannerVidEl.classList.remove('active');
+                      bannerVidEl.onerror = null;
+                      bannerVidEl.onloadeddata = null;
+                  }
+                  var displayUrl = banner.url;
+                  if (displayUrl && !displayUrl.startsWith('data:')) displayUrl = displayUrl + (displayUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                  if (type === 'image' && banner.url) {
+                      if (bannerImgEl) {
+                          bannerImgEl.onload = function() { this.classList.add('active'); };
+                          bannerImgEl.onerror = function() {
+                              var u = this.src; setTimeout(() => { if (this.src === u && !this.complete) this.src = (banner.url || '') + (banner.url && !banner.url.startsWith('data:') ? (banner.url.includes('?') ? '&' : '?') + 'retry=' + Date.now() : ''); }, 1000);
+                          };
+                          bannerImgEl.src = displayUrl;
+                          bannerImgEl.classList.add('active');
+                      }
+                  } else if (type === 'video' && banner.url) {
+                      if (bannerVidEl) {
+                          bannerImgEl && bannerImgEl.classList.remove('active');
+                          setTimeout(() => {
+                              bannerVidEl.src = displayUrl;
+                              bannerVidEl.load();
+                              bannerVidEl.classList.add('active');
+                              playBannerVideoSafely(bannerVidEl);
+                          }, 10);
+                          bannerVidEl.onerror = function() {
+                              var u = this.src; setTimeout(() => { if (this.src === u && this.readyState === 0) this.src = displayUrl.split('?')[0] + '?retry=' + Date.now(); }, 1000);
+                          };
+                          bannerVidEl.onloadeddata = function() { this.classList.add('active'); };
+                          bannerVidEl.addEventListener('timeupdate', function() { if (this.currentTime >= 45) this.currentTime = 0; });
+                          var savedVolume = banner.volume !== undefined ? banner.volume : 35;
+                          if (!savedVolume || savedVolume <= 0) savedVolume = 35;
+                          bannerVidEl.volume = savedVolume / 100;
+                          bannerVidEl.muted = false;
+                          var volumeSetting = document.getElementById('banner-volume-setting');
+                          var volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
+                          var volumeSettingValue = document.getElementById('banner-volume-setting-value');
+                          if (volumeSetting) volumeSetting.style.display = 'block';
+                          if (volumeSettingSlider) volumeSettingSlider.value = savedVolume;
+                          if (volumeSettingValue) volumeSettingValue.textContent = savedVolume + '%';
+                          if (typeof updateVolumeIcon === 'function') updateVolumeIcon(savedVolume);
                       }
                   } else {
-                      console.log('⚠️ Aucune bannière trouvée dans localStorage');
+                      const volumeSetting = document.getElementById('banner-volume-setting');
+                      if (volumeSetting) volumeSetting.style.display = 'none';
                   }
+              } catch (e) {
+                  console.error('Erreur lors du chargement de la bannière:', e);
               }
               
-              if (banner) {
-                  console.log('🎨 Affichage de la bannière:', banner.type, banner.url ? 'URL présente' : 'URL manquante');
-                  try {
-                      var type = (banner.type || '').toLowerCase();
-                      var bannerImgEl = document.getElementById('banner-image');
-                      var bannerVidEl = document.getElementById('banner-video');
-                      // IMPORTANT : Toujours vider l'ancienne bannière d'abord pour laisser place à la nouvelle
-                      if (bannerImgEl) { bannerImgEl.removeAttribute('src'); bannerImgEl.classList.remove('active'); bannerImgEl.onerror = null; bannerImgEl.onload = null; }
-                      if (bannerVidEl) { bannerVidEl.pause(); bannerVidEl.removeAttribute('src'); bannerVidEl.currentTime = 0; bannerVidEl.classList.remove('active'); bannerVidEl.onerror = null; bannerVidEl.onloadeddata = null; }
-                      var displayUrl = banner.url;
-                      if (displayUrl && !displayUrl.startsWith('data:')) displayUrl = displayUrl + (displayUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
-                      if (type === 'image' && banner.url) {
-                          if (bannerImgEl) {
-                              console.log('🖼️ Affichage image bannière:', banner.url.substring(0, 50) + '...');
-                              bannerImgEl.onload = function() { this.classList.add('active'); };
-                              bannerImgEl.onerror = function() {
-                                  var u = this.src; setTimeout(() => { if (this.src === u && !this.complete) this.src = (banner.url || '') + (banner.url && !banner.url.startsWith('data:') ? (banner.url.includes('?') ? '&' : '?') + 'retry=' + Date.now() : ''); }, 1000);
-                              };
-                              bannerImgEl.src = displayUrl;
-                              bannerImgEl.classList.add('active');
-                          }
-                      } else if (type === 'video' && banner.url) {
-                          console.log('🎥 Affichage vidéo bannière:', banner.url);
-                          if (bannerVidEl) {
-                              bannerImgEl && bannerImgEl.classList.remove('active');
-                              setTimeout(() => {
-                                  bannerVidEl.src = displayUrl;
-                                  bannerVidEl.load();
-                                  bannerVidEl.classList.add('active');
-                                  bannerVidEl.play().catch(e => console.error('Erreur lecture vidéo:', e));
-                              }, 10);
-                              // Gérer les erreurs de chargement de vidéo
-                              bannerVidEl.onerror = function() {
-                                  var u = this.src; setTimeout(() => { if (this.src === u && this.readyState === 0) this.src = displayUrl.split('?')[0] + '?retry=' + Date.now(); }, 1000);
-                              };
-                              bannerVidEl.onloadeddata = function() { this.classList.add('active'); };
-                              bannerVidEl.addEventListener('timeupdate', function() { if (this.currentTime >= 45) this.currentTime = 0; });
-                              var savedVolume = banner.volume !== undefined ? banner.volume : 0;
-                              bannerVidEl.volume = savedVolume / 100;
-                              bannerVidEl.muted = true;
-                              var volumeSetting = document.getElementById('banner-volume-setting');
-                              var volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
-                              var volumeSettingValue = document.getElementById('banner-volume-setting-value');
-                              if (volumeSetting) volumeSetting.style.display = 'block';
-                              if (volumeSettingSlider) volumeSettingSlider.value = savedVolume;
-                              if (volumeSettingValue) volumeSettingValue.textContent = savedVolume + '%';
-                              if (typeof updateVolumeIcon === 'function') updateVolumeIcon(savedVolume);
-                          }
-                      } else {
-                          // Masquer le contrôle de volume si ce n'est pas une vidéo
-                          const volumeSetting = document.getElementById('banner-volume-setting');
-                          if (volumeSetting) volumeSetting.style.display = 'none';
-                      }
-                  } catch (e) {
-                      console.error('Erreur lors du chargement de la bannière:', e);
-                  }
-              }
-              
-              // Après le chargement de la bannière, synchroniser toutes les données utilisateur
               if (typeof syncAndLoadUserData === 'function') {
                   syncAndLoadUserData();
               }
@@ -5878,10 +5584,14 @@
           
           // Sauvegarder la bannière
           async function saveBanner(type, url, volume = null) {
+              return queueBannerSaveLocal(async function () {
+              const saveGen = ++bannerLoadGeneration;
+              window.bannerSaveInProgress = true;
+              setBannerInputsDisabled(true);
+              try {
               const user = JSON.parse(localStorage.getItem('user') || 'null');
               if (!user || !user.email) return;
               
-              // Vérifier si l'utilisateur est certifié pour l'upload de vidéo
               if (type === 'video') {
                   try {
                       const isVerified = await window.isUserVerified(user.email);
@@ -5897,118 +5607,42 @@
               }
               
               try {
-                  // Récupérer les données existantes pour préserver le volume
-                  let existingVolume = 0;
+                  let existingVolume = 35;
                   if (window.bannerService) {
-                      // Essayer de charger depuis Firebase
                       const existingBanner = await window.bannerService.getBanner(user.email);
                       if (existingBanner) {
-                          existingVolume = existingBanner.volume || 0;
+                          existingVolume = existingBanner.volume !== undefined ? existingBanner.volume : 35;
                       }
                   } else {
-                      // Fallback vers localStorage
                       const existingData = localStorage.getItem('profile_banner_' + user.email);
                       if (existingData) {
                           try {
                               const existing = JSON.parse(existingData);
-                              existingVolume = existing.volume !== undefined ? existing.volume : 0;
+                              existingVolume = existing.volume !== undefined ? existing.volume : 35;
                           } catch (e) {
-                              existingVolume = 0;
+                              existingVolume = 35;
                           }
                       }
                   }
                   
                   const finalVolume = volume !== null ? volume : existingVolume;
                   
-                  // Si c'est un File (upload), utiliser Firebase Storage
                   if (url instanceof File) {
                       console.log('📤 Sauvegarde bannière File:', { type, fileName: url.name, size: url.size });
                       
-                      // Fonction helper pour compresser une image avec qualité maximale
-                      const compressImage = (file, maxWidth = 3840, maxHeight = 2160, quality = 1.0) => {
-                          return new Promise((resolve, reject) => {
-                              const reader = new FileReader();
-                              reader.onload = function(e) {
-                                  const img = new Image();
-                                  img.onload = function() {
-                                      const canvas = document.createElement('canvas');
-                                      let width = img.width;
-                                      let height = img.height;
-                                      
-                                      // Redimensionner si nécessaire en gardant le ratio
-                                      if (width > maxWidth || height > maxHeight) {
-                                          const ratio = Math.min(maxWidth / width, maxHeight / height);
-                                          width = Math.round(width * ratio);
-                                          height = Math.round(height * ratio);
-                                      }
-                                      
-                                      // S'assurer que les dimensions sont des nombres entiers
-                                      width = Math.round(width);
-                                      height = Math.round(height);
-                                      
-                                      canvas.width = width;
-                                      canvas.height = height;
-                                      
-                                      const ctx = canvas.getContext('2d', { 
-                                          alpha: false,
-                                          willReadFrequently: false
-                                      });
-                                      
-                                      // Paramètres de qualité maximale
-                                      ctx.imageSmoothingEnabled = true;
-                                      ctx.imageSmoothingQuality = 'high';
-                                      ctx.webkitImageSmoothingEnabled = true;
-                                      ctx.mozImageSmoothingEnabled = true;
-                                      ctx.msImageSmoothingEnabled = true;
-                                      
-                                      ctx.drawImage(img, 0, 0, width, height);
-                                      
-                                      // Utiliser PNG pour qualité maximale si qualité = 1.0, sinon JPEG haute qualité
-                                      const mimeType = quality >= 1.0 ? 'image/png' : 'image/jpeg';
-                                      const compressedDataUrl = canvas.toDataURL(mimeType, quality);
-                                      resolve(compressedDataUrl);
-                                  };
-                                  img.onerror = reject;
-                                  img.src = e.target.result;
-                              };
-                              reader.onerror = reject;
-                              reader.readAsDataURL(file);
-                          });
-                      };
-                      
-                      // Firebase Storage est maintenant le seul moyen de sauvegarder les bannières
-                      // localStorage n'est utilisé que comme cache de lecture (fallback)
-                      
-                      // Essayer Firebase Storage d'abord (maintenant que CORS est configuré)
                       if (window.bannerService) {
                           try {
-                              // Ajouter un timeout (vidéos = 90s, images = 15s)
                               const uploadPromise = window.bannerService.saveBanner(user.email, type, url, finalVolume);
-                              const timeoutMs = type === 'video' ? 90000 : 15000;
+                              const isMobileBanner = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
+                              const timeoutMs = type === 'video' ? 90000 : (isMobileBanner ? 45000 : 15000);
                               const timeoutPromise = new Promise((_, reject) => 
                                   setTimeout(() => reject(new Error('TIMEOUT: Upload trop long, vérifiez votre connexion')), timeoutMs)
                               );
                               
                               const bannerData = await Promise.race([uploadPromise, timeoutPromise]);
                               console.log('✅ Bannière sauvegardée dans Firebase:', bannerData);
-                              // Mettre en cache dans localStorage pour la page profil public
-                              if (bannerData && user && user.email) {
-                                  try {
-                                      localStorage.setItem('profile_banner_' + user.email, JSON.stringify({
-                                          type: bannerData.type,
-                                          url: bannerData.url,
-                                          volume: bannerData.volume !== undefined ? bannerData.volume : 0
-                                      }));
-                                  } catch (e) {}
-                              }
-                              // Recharger la bannière après sauvegarde
-                              setTimeout(() => {
-                                  if (typeof loadBanner === 'function') {
-                                      loadBanner();
-                                  }
-                              }, 500);
+                              finalizeBannerSave(saveGen, bannerData);
                           } catch (error) {
-                              // Vérifier si c'est une erreur CORS, timeout ou autre
                               const errorMessage = error.message || error.toString() || '';
                               const isCorsError = error.isCorsError || 
                                                 errorMessage.includes('CORS') || 
@@ -6022,13 +5656,14 @@
                               
                               console.error('❌ Erreur lors de la sauvegarde dans Firebase Storage:', error);
                               
-                              // Ne PAS utiliser localStorage comme fallback - Firebase Storage est requis
                               const isPermissionError = error.code === 'storage/unauthorized' || 
                                                        error.code === 'permission-denied' ||
                                                        errorMessage.includes('PERMISSION_DENIED') ||
                                                        errorMessage.includes('does not have permission');
                               
-                              if (isPermissionError) {
+                              if (errorMessage.includes('SESSION_FIREBASE_REQUISE') || error.code === 'auth/not-authenticated') {
+                                  alert('❌ Session expirée.\n\nDéconnectez-vous puis reconnectez-vous, puis réessayez d\'ajouter votre bannière.');
+                              } else if (isPermissionError) {
                                   alert('❌ Erreur de permissions Firebase Storage.\n\nVérifiez que :\n1. Les règles Storage sont publiées dans Firebase Console → Storage → Rules\n2. Vous êtes bien connecté avec Firebase Auth (pas seulement localStorage)\n3. Les règles permettent l\'écriture pour les utilisateurs authentifiés\n\nErreur : ' + errorMessage);
                               } else if (isCorsError) {
                                   alert('❌ Erreur CORS lors de l\'upload vers Firebase Storage.\n\nVérifiez que CORS est bien configuré avec la commande :\ngsutil cors set cors.json gs://mangawatch-98ed0.firebasestorage.app\n\nErreur : ' + errorMessage);
@@ -6037,38 +5672,20 @@
                               }
                           }
                       } else {
-                          // bannerService non disponible - Firebase Storage est requis
                           console.error('❌ bannerService non disponible. Firebase Storage est requis pour sauvegarder les bannières.');
                           alert('❌ Firebase Storage n\'est pas disponible.\n\nVérifiez que :\n1. Firebase Storage est bien activé\n2. Le fichier firebase-service.js est chargé correctement\n3. Les règles de sécurité sont configurées');
                       }
                   } else {
-                      // C'est une URL (déjà uploadée ou URL externe)
                       console.log('📤 Sauvegarde bannière URL:', { type, url });
                       if (window.bannerService) {
                           try {
                               const bannerData = await window.bannerService.saveBanner(user.email, type, url, finalVolume);
                               console.log('✅ Bannière sauvegardée dans Firebase:', bannerData);
-                              // Mettre en cache dans localStorage pour la page profil public
-                              if (bannerData && user && user.email) {
-                                  try {
-                                      localStorage.setItem('profile_banner_' + user.email, JSON.stringify({
-                                          type: bannerData.type,
-                                          url: bannerData.url,
-                                          volume: bannerData.volume !== undefined ? bannerData.volume : 0
-                                      }));
-                                  } catch (e) {}
-                              }
-                              // Recharger la bannière après sauvegarde
-                              setTimeout(() => {
-                                  if (typeof loadBanner === 'function') {
-                                      loadBanner();
-                                  }
-                              }, 500);
+                              finalizeBannerSave(saveGen, bannerData);
                           } catch (error) {
                               console.error('❌ Erreur lors de la sauvegarde dans Firebase Storage:', error);
                               const errorMessage = error.message || error.toString() || '';
                               
-                              // Ne PAS utiliser localStorage comme fallback - Firebase Storage est requis
                               if (error.code === 'storage/unauthorized') {
                                   alert('❌ Erreur d\'autorisation Firebase Storage.\n\nVérifiez que les règles de sécurité sont configurées dans Firebase Console → Storage → Rules.\n\nErreur : ' + errorMessage);
                               } else {
@@ -6076,7 +5693,6 @@
                               }
                           }
                       } else {
-                          // bannerService non disponible - Firebase Storage est requis
                           console.error('❌ bannerService non disponible. Firebase Storage est requis pour sauvegarder les bannières.');
                           alert('❌ Firebase Storage n\'est pas disponible.\n\nVérifiez que :\n1. Firebase Storage est bien activé\n2. Le fichier firebase-service.js est chargé correctement\n3. Les règles de sécurité sont configurées');
                       }
@@ -6084,10 +5700,13 @@
               } catch (error) {
                   console.error('❌ Erreur lors de la sauvegarde de la bannière:', error);
                   const errorMessage = error.message || error.toString() || '';
-                  
-                  // Ne PAS utiliser localStorage comme fallback - Firebase Storage est requis
                   alert('❌ Erreur lors de la sauvegarde de la bannière.\n\nErreur : ' + errorMessage + '\n\nVérifiez votre connexion et la configuration Firebase Storage.');
               }
+              } finally {
+                  window.bannerSaveInProgress = false;
+                  setBannerInputsDisabled(false);
+              }
+              });
           }
           
           // Ouvrir le menu d'édition depuis le bouton dans les préférences
@@ -6699,44 +6318,28 @@
           if (bannerImageInput) {
               bannerImageInput.addEventListener('change', function(e) {
                   const file = e.target.files[0];
-                  if (file) {
-                      // Optimiser l'image avec une qualité maximale (4K max, qualité 100%)
-                      optimizeImageQuality(file, 3840, 2160, 1.0).then(imageUrl => {
-                          // Arrêter complètement la vidéo si elle était en cours
-                          if (bannerVideo) {
-                              bannerVideo.pause();
-                              bannerVideo.removeAttribute('src');
-                              bannerVideo.currentTime = 0;
-                              bannerVideo.classList.remove('active');
-                          }
-                          
-                          // Afficher l'image optimisée immédiatement
-                          if (bannerImage) {
-                              bannerImage.src = imageUrl;
-                              bannerImage.classList.add('active');
-                          }
-                          
-                          // IMPORTANT : Sauvegarder le File directement pour Firebase Storage
-                          // On garde l'image optimisée pour l'affichage, mais on sauvegarde le File original
-                          if (typeof saveBanner === 'function') {
-                              saveBanner('image', file);
-                          } else {
-                              console.error('❌ saveBanner n\'est pas définie !');
-                          }
-                          
-                          // Masquer le contrôle de volume dans les paramètres
-                          const volumeSetting = document.getElementById('banner-volume-setting');
-                          if (volumeSetting) volumeSetting.style.display = 'none';
-                          
-                          closeBannerMenu();
+                  if (!file) return;
+                  if (window.bannerSaveInProgress) {
+                      this.value = '';
+                      return;
+                  }
+
+                  resetBannerMediaElements();
+                  applyBannerPreview('image', URL.createObjectURL(file));
+                  closeBannerMenu();
+
+                  const volumeSetting = document.getElementById('banner-volume-setting');
+                  if (volumeSetting) volumeSetting.style.display = 'none';
+
+                  if (typeof saveBanner === 'function') {
+                      saveBanner('image', file).then(function () {
                           if (typeof showToast === 'function') {
                               showToast('Succès', 'Bannière image ajoutée avec succès !', 'success');
                           }
-                      });
-                      
-                      // Réinitialiser l'input pour permettre de sélectionner le même fichier à nouveau
-                      this.value = '';
+                      }).catch(function () {});
                   }
+
+                  this.value = '';
               });
           } else {
               console.warn('⚠️ bannerImageInput non trouvé');
@@ -6793,101 +6396,68 @@
           if (bannerVideoInput) {
               bannerVideoInput.addEventListener('change', async function(e) {
                   const file = e.target.files[0];
-                  if (file) {
-                      // Vérifier si l'utilisateur est certifié avant d'autoriser l'upload
-                      const user = JSON.parse(localStorage.getItem('user') || 'null');
-                      if (user && user.email) {
-                          try {
-                              const isVerified = await window.isUserVerified(user.email);
-                              if (!isVerified) {
-                                  showToast('Erreur', 'Seuls les utilisateurs certifiés peuvent mettre une vidéo dans leur bannière', 'error');
-                                  this.value = '';
-                                  return;
-                              }
-                          } catch (e) {
-                              console.error('Erreur lors de la vérification de certification:', e);
-                              showToast('Erreur', 'Impossible de vérifier votre statut de certification', 'error');
+                  if (!file) return;
+                  if (window.bannerSaveInProgress) {
+                      this.value = '';
+                      return;
+                  }
+
+                  const user = JSON.parse(localStorage.getItem('user') || 'null');
+                  if (user && user.email) {
+                      try {
+                          const isVerified = await window.isUserVerified(user.email);
+                          if (!isVerified) {
+                              showToast('Erreur', 'Seuls les utilisateurs certifiés peuvent mettre une vidéo dans leur bannière', 'error');
                               this.value = '';
                               return;
                           }
-                      }
-                      
-                      // Vérifier la taille du fichier (max 150MB pour vidéos haute qualité)
-                      if (file.size > 150 * 1024 * 1024) {
-                          showToast('Erreur', 'La vidéo ne doit pas dépasser 150MB', 'error');
+                      } catch (err) {
+                          console.error('Erreur lors de la vérification de certification:', err);
+                          showToast('Erreur', 'Impossible de vérifier votre statut de certification', 'error');
                           this.value = '';
                           return;
                       }
-                      
-                          // IMPORTANT : Sauvegarder le File directement pour Firebase, pas la data URL
-                      // On garde FileReader pour l'affichage immédiat, mais on sauvegarde le File
-                      const reader = new FileReader();
-                      reader.onload = function(event) {
-                          const videoUrl = event.target.result;
-                          if (bannerVideo) {
-                              bannerVideo.src = videoUrl;
-                              bannerVideo.classList.add('active');
-                          }
-                          if (bannerImage) {
-                              bannerImage.removeAttribute('src');
-                              bannerImage.classList.remove('active');
-                          }
-                          // Sauvegarder le File directement (Firebase Storage) au lieu de la data URL
-                          if (typeof saveBanner === 'function') {
-                              saveBanner('video', file, 0); // Passer le File, pas la data URL
-                          } else {
-                              console.error('❌ saveBanner n\'est pas définie !');
-                          }
-                          updateVolumeControlVisibility();
-                          
-                          // Limiter la vidéo à 45 secondes pour optimiser les performances
-                          bannerVideo.addEventListener('loadedmetadata', function() {
-                              // Si la vidéo dépasse 45 secondes, on la limite
-                              if (bannerVideo.duration > 45) {
-                                  // La vidéo sera coupée à 45 secondes grâce à l'event listener timeupdate
-                              }
-                          }, { once: true });
-                          
-                          // Event listener pour limiter la vidéo à 45 secondes
-                          bannerVideo.addEventListener('timeupdate', function() {
-                              if (bannerVideo.currentTime >= 45) {
-                                  bannerVideo.currentTime = 0;
-                              }
-                          });
-                          
-                          // Réinitialiser les sliders de volume
-                          if (volumeSlider && volumeValue) {
-                              volumeSlider.value = 0;
-                              volumeValue.textContent = '0%';
-                          }
-                          const volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
-                          const volumeSettingValue = document.getElementById('banner-volume-setting-value');
-                          if (volumeSettingSlider && volumeSettingValue) {
-                              volumeSettingSlider.value = 0;
-                              volumeSettingValue.textContent = '0%';
-                          }
-                          
-                          // Afficher le contrôle de volume dans les paramètres
-                          const volumeSetting = document.getElementById('banner-volume-setting');
-                          if (volumeSetting) volumeSetting.style.display = 'block';
-                          
-                          // Appliquer le volume (muted car volume = 0)
-                          bannerVideo.volume = 0;
-                          bannerVideo.muted = true;
-                          
-                          // Démarrer la lecture de la vidéo
-                          bannerVideo.play().catch(e => {
-                              console.log('Erreur de lecture vidéo:', e);
-                          });
-                          
-                          closeBannerMenu();
-                          showToast('Succès', 'Bannière vidéo ajoutée avec succès !', 'success');
-                      };
-                      reader.readAsDataURL(file);
-                      
-                      // Réinitialiser l'input pour permettre de sélectionner le même fichier à nouveau
-                      this.value = '';
                   }
+
+                  if (file.size > 150 * 1024 * 1024) {
+                      showToast('Erreur', 'La vidéo ne doit pas dépasser 150MB', 'error');
+                      this.value = '';
+                      return;
+                  }
+
+                  resetBannerMediaElements();
+                  applyBannerPreview('video', URL.createObjectURL(file));
+                  updateVolumeControlVisibility();
+
+                  if (volumeSlider && volumeValue) {
+                      volumeSlider.value = 35;
+                      volumeValue.textContent = '35%';
+                  }
+                  const volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
+                  const volumeSettingValue = document.getElementById('banner-volume-setting-value');
+                  if (volumeSettingSlider && volumeSettingValue) {
+                      volumeSettingSlider.value = 35;
+                      volumeSettingValue.textContent = '35%';
+                  }
+                  const volumeSetting = document.getElementById('banner-volume-setting');
+                  if (volumeSetting) volumeSetting.style.display = 'block';
+                  if (bannerVideo) {
+                      bannerVideo.volume = 0.35;
+                      bannerVideo.muted = false;
+                  }
+
+                  closeBannerMenu();
+
+                  try {
+                      if (typeof saveBanner === 'function') {
+                          await saveBanner('video', file, 35);
+                      }
+                      showToast('Succès', 'Bannière vidéo ajoutée avec succès !', 'success');
+                  } catch (err) {
+                      console.error('Erreur upload bannière vidéo:', err);
+                  }
+
+                  this.value = '';
               });
           }
           
@@ -7349,11 +6919,11 @@
               // Mettre à jour le compteur de caractères
               if (profileDescriptionCharCount) {
                   const currentLength = profileDescriptionTextarea.value.length;
-                  profileDescriptionCharCount.textContent = currentLength + ' / 80';
-                  if (currentLength >= 70) {
+                  profileDescriptionCharCount.textContent = currentLength + ' / 50';
+                  if (currentLength >= 45) {
                       profileDescriptionCharCount.classList.add('error');
                       profileDescriptionCharCount.classList.remove('warning');
-                  } else if (currentLength >= 60) {
+                  } else if (currentLength >= 40) {
                       profileDescriptionCharCount.classList.add('warning');
                       profileDescriptionCharCount.classList.remove('error');
                   } else {
@@ -7569,7 +7139,7 @@
     <!-- Synchronisation locale du profil -->
     <script src="/js/profile-sync.js"></script>
     <script src="/js/minorContentFilter.js"></script>
-    <script src="/js/profile-anime-cards.js?v=2.22" onerror="console.error('❌ ERREUR DE CHARGEMENT DU SCRIPT profile-anime-cards.js');"></script>
+    <script src="/js/profile-anime-cards.js?v=2.23" onerror="console.error('❌ ERREUR DE CHARGEMENT DU SCRIPT profile-anime-cards.js');"></script>
     <script src="/js/search.js"></script>
     <script>
         // Vérifier immédiatement si le script s'est chargé

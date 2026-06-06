@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/footer-unified.css">
-    <link rel="stylesheet" href="/css/list.css">
+    <link rel="stylesheet" href="/css/list.css?v=20260604-pagination">
     <link rel="stylesheet" href="/css/messaging.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
@@ -131,13 +131,14 @@
                 <p class="list-subtitle" data-i18n="collection.subtitle">Gérez vos mangas et animes préférés</p>
             </div>
 
+            <button id="mobile-collection-filters-toggle" class="mobile-collection-filters-toggle" type="button" aria-expanded="false">
+                <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                <span data-i18n="filters">Filtres</span>
+            </button>
+
             <!-- Filtres par statut -->
             <div class="status-filters">
-                <button class="status-filter active" data-status="all">
-                    <i class="fas fa-list"></i>
-                    <span data-i18n="collection.filter.all">Tous</span>
-                </button>
-                <button class="status-filter" data-status="watching">
+                <button class="status-filter active" data-status="watching">
                     <i class="fas fa-play"></i>
                     <span data-i18n="collection.filter.watching">En cours</span>
                 </button>
@@ -248,20 +249,15 @@
 
                 <!-- Pagination -->
                 <div id="pagination-container" class="pagination-container" style="display: none;">
-                    <div class="pagination-info">
-                        <span id="pagination-text">Affichage de 1-120 sur 0 items</span>
-                    </div>
-                    <div class="pagination-controls">
-                        <button id="prev-page" class="pagination-btn" disabled>
-                            <i class="fas fa-chevron-left"></i>
-                            <span data-i18n="collection.pagination.previous">Précédent</span>
+                    <div class="pagination collection-pagination">
+                        <button id="prev-page" type="button" class="pagination-btn" disabled aria-label="Page précédente">
+                            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                            <span class="pagination-btn-label" data-i18n="collection.pagination.previous">Précédent</span>
                         </button>
-                        <div class="page-numbers" id="page-numbers">
-                            <!-- Les numéros de page seront générés ici -->
-                        </div>
-                        <button id="next-page" class="pagination-btn">
-                            <span data-i18n="collection.pagination.next">Suivant</span>
-                            <i class="fas fa-chevron-right"></i>
+                        <div class="page-numbers" id="page-numbers"></div>
+                        <button id="next-page" type="button" class="pagination-btn" aria-label="Page suivante">
+                            <span class="pagination-btn-label" data-i18n="collection.pagination.next">Suivant</span>
+                            <i class="fas fa-chevron-right" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -415,7 +411,7 @@
         </div>
     </footer>
 
-    <script src="/js/list.js"></script>
+    <script type="module" src="/js/list.js"></script>
     <script src="/js/search.js"></script>
     <script src="/js/hamburger-menu.js"></script>
     <!-- Système de messagerie -->

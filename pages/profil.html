@@ -14,18 +14,21 @@
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/profile.css?v=2.2">
+    <link rel="stylesheet" href="/css/profile-rating.css?v=4">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
     <link rel="stylesheet" href="/css/messaging.css">
     <link rel="stylesheet" href="/css/mw-toast.css?v=1">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières -->
     <script type="module">
-        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe20';
+        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe23';
+        import { initProfileRatingUI } from '/js/profile-rating-ui.js?v=4';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.profileAccountService = profileAccountService;
         window.syncRemoteProfileMedia = syncRemoteProfileMedia;
+        window.initProfileRatingUI = initProfileRatingUI;
         window.firebaseNotesService = firebaseNotesService;
         window.firebaseTop10Service = firebaseTop10Service;
         window.dispatchEvent(new CustomEvent('firebaseNotesServiceReady'));
@@ -51,23 +54,9 @@
                 const user = JSON.parse(localStorage.getItem('user') || 'null');
                 if (user && user.email) {
                     const avatarKey = 'avatar_' + user.email;
-                    let avatarUrl = null;
-                    
-                    // Prioriser l'avatar personnalisé (le plus récent)
-                    if (user.customAvatar) {
-                        avatarUrl = user.customAvatar;
-                    } else if (user.avatar) {
-                        avatarUrl = user.avatar;
-                    } else if (user.originalAvatar) {
-                        avatarUrl = user.originalAvatar;
-                    } else if (user.picture) {
-                        avatarUrl = user.picture;
-                    } else {
-                        // En dernier recours, vérifier le localStorage
-                        const storedAvatar = localStorage.getItem(avatarKey);
-                        if (storedAvatar) {
-                            avatarUrl = storedAvatar;
-                        }
+                    let avatarUrl = localStorage.getItem(avatarKey) || '';
+                    if (!avatarUrl || !String(avatarUrl).trim()) {
+                        avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || '';
                     }
                     
                     // Si on a trouvé un avatar, le précharger et mettre à jour le src par défaut
@@ -102,6 +91,7 @@
     </script>
     
     <script src="/js/localization.js"></script>
+    <script src="/js/header-avatar.js?v=1"></script>
     <style>
         /* Ne pas utiliser padding:0 sur body : il écrase le padding-top du header fixe (header-unified-new.css) et casse header/footer mobile comme sur les autres pages */
         body {
@@ -2725,13 +2715,9 @@
             }
         }
 
-        /* Suppression de la description sur le profil perso */
-        .profile-description-wrapper,
-        .profile-description,
-        .profile-description-edit,
-        .profile-description-edit-btn {
-            display: none !important;
-            visibility: hidden !important;
+        /* Barre sous bannière visible sur profil perso */
+        .profile-subbanner.visible {
+            display: flex;
         }
 
         .profile-banner-bottom {
@@ -2976,7 +2962,7 @@
     </div>
 
     <input type="file" id="profile-avatar-file-input" class="banner-file-input" accept="image/jpeg,image/png,image/webp,image/*">
-    <script src="/js/profile-avatar-upload.js?v=2"></script>
+    <script src="/js/profile-avatar-upload.js?v=4"></script>
 
     <main class="profile-container">
         <div class="profile-header" id="profile-header">
@@ -2984,6 +2970,11 @@
             <img id="banner-image" class="profile-header-banner" alt="" data-i18n-alt="profile.banner_alt" loading="eager">
             <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="auto" muted></video>
             <div class="profile-header-banner-overlay"></div>
+
+            <div class="profile-rating-banner-badge" id="profile-rating-banner-badge" style="display: none;" aria-label="Note du profil">
+                <i class="fas fa-star" aria-hidden="true"></i>
+                <strong id="profile-rating-average">—</strong><span class="profile-rating-max">/10</span>
+            </div>
             
             <!-- Contenu du header (avatar et pseudo) -->
             <div class="profile-header-content">
@@ -3004,20 +2995,8 @@
                 </div>
             </div>
             
-            <!-- Description + abonnés : une seule ligne en bas de bannière -->
+            <!-- Abonnés en bas de bannière -->
             <div class="profile-banner-bottom">
-                <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: block;">
-                    <div class="profile-description" id="profile-description-display">
-                        <span id="profile-description-text" data-i18n="profile.description_placeholder">Écrivez votre description ici...</span>
-                        <button class="profile-description-edit-btn" id="profile-description-edit-btn" title="" data-i18n-title="profile.edit_description">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                    <div class="profile-description-edit" id="profile-description-edit" style="display: none;">
-                        <textarea id="profile-description-textarea" data-i18n-placeholder="profile.description_placeholder" placeholder="Écrivez votre description ici..." maxlength="80"></textarea>
-                        <div class="profile-description-char-count" id="profile-description-char-count">0 / 80</div>
-                    </div>
-                </div>
                 <div class="profile-follow-section" id="profile-follow-section">
                     <div class="profile-follow-stats" id="profile-follow-stats">
                         <div class="follow-stat-item" id="followers-stat">
@@ -3033,6 +3012,21 @@
                         <i class="fas fa-user-plus"></i>
                         <span id="follow-btn-text" data-i18n="profile.subscribe">S'abonner</span>
                     </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-subbanner visible" id="profile-subbanner" aria-label="Description du profil">
+            <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: block;">
+                <div class="profile-description" id="profile-description-display">
+                    <span id="profile-description-text" data-i18n="profile.description_placeholder">Écrivez votre description ici...</span>
+                    <button class="profile-description-edit-btn" id="profile-description-edit-btn" title="" data-i18n-title="profile.edit_description" type="button">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+                <div class="profile-description-edit" id="profile-description-edit" style="display: none;">
+                    <textarea id="profile-description-textarea" data-i18n-placeholder="profile.description_placeholder" placeholder="Écrivez votre description ici..." maxlength="50"></textarea>
+                    <div class="profile-description-char-count" id="profile-description-char-count">0 / 50</div>
                 </div>
             </div>
         </div>
@@ -4495,45 +4489,24 @@
                 }
             }
             
-            // Afficher l'avatar (FORCER la mise à jour)
-            const userAvatar = document.getElementById('user-avatar');
-            const profileAvatar = document.getElementById('profile-avatar');
-            const avatarUrl = user.customAvatar || user.avatar || user.originalAvatar || user.picture || '';
-            
-            if (avatarUrl) {
-                console.log('🖼️ Affichage avatar:', avatarUrl.substring(0, 50) + '...');
-                
-                // Fonction pour charger l'avatar simplement
-                function loadAvatar(imgElement, url) {
-                    if (!imgElement) return;
-                    
-                    // Supprimer les anciens gestionnaires d'événements
-                    imgElement.onerror = null;
-                    imgElement.onload = null;
-                    
-                    // Définir directement l'URL
-                    imgElement.src = (window.upgradeProfileAvatarUrl || function (u) { return u; })(url);
-                    
-                    // Gestionnaire de succès
-                    imgElement.onload = function() {
-                        console.log('✅ Avatar chargé avec succès');
-                    };
-                    
-                    // Gestionnaire d'erreur (seulement pour logging, onerror dans le HTML gérera le fallback)
-                    imgElement.onerror = function() {
-                        console.warn('⚠️ Erreur lors du chargement de l\'avatar, le fallback HTML sera utilisé');
-                    };
+            // Afficher l'avatar header + profil
+            const resolvedAvatar = typeof window.resolveProfileAvatarUrl === 'function'
+                ? window.resolveProfileAvatarUrl(user)
+                : (user.customAvatar || user.avatar || user.originalAvatar || user.picture || '');
+            if (resolvedAvatar) {
+                if (typeof window.refreshHeaderAvatar === 'function') {
+                    window.refreshHeaderAvatar({ cacheBust: false });
+                } else if (typeof window.applyProfileAvatars === 'function') {
+                    window.applyProfileAvatars(resolvedAvatar, { cacheBust: false });
                 }
-                
-                if (userAvatar) {
-                    loadAvatar(userAvatar, avatarUrl);
-                }
-                if (profileAvatar) {
-                    loadAvatar(profileAvatar, avatarUrl);
-                }
-            } else {
-                // Si pas d'avatar, ne rien faire (l'image par défaut sera gérée par onerror dans le HTML)
-                console.log('⚠️ Pas d\'avatar disponible');
+            }
+
+            if (typeof window.syncRemoteProfileMedia === 'function' && !window.avatarSaveInProgress) {
+                void window.syncRemoteProfileMedia(user.email).then(function() {
+                    if (typeof window.refreshHeaderAvatar === 'function') {
+                        window.refreshHeaderAvatar();
+                    }
+                }).catch(function() {});
             }
             
             // Afficher la description
@@ -4593,6 +4566,10 @@
                 }
             } else {
                 console.warn('⚠️ Élément profile-description-text non trouvé');
+            }
+
+            if (typeof window.initProfileRatingUI === 'function') {
+                window.initProfileRatingUI({ profileEmail: user.email, allowVote: false });
             }
             
             // AFFICHER LES INFORMATIONS DU COMPTE dans la section Paramètres
@@ -5747,6 +5724,82 @@
                   }
               }
           }
+
+          let bannerSaveQueue = Promise.resolve();
+          let bannerLoadGeneration = 0;
+          let bannerPreviewObjectUrl = null;
+
+          function revokeBannerPreviewUrl() {
+              if (bannerPreviewObjectUrl) {
+                  try { URL.revokeObjectURL(bannerPreviewObjectUrl); } catch (e) {}
+                  bannerPreviewObjectUrl = null;
+              }
+          }
+
+          function resetBannerMediaElements() {
+              const img = document.getElementById('banner-image');
+              const vid = document.getElementById('banner-video');
+              if (vid) {
+                  try { vid.pause(); } catch (e) {}
+                  vid.removeAttribute('src');
+                  try { vid.load(); } catch (e) {}
+                  vid.classList.remove('active');
+              }
+              if (img) {
+                  img.removeAttribute('src');
+                  img.classList.remove('active');
+              }
+              revokeBannerPreviewUrl();
+          }
+
+          function setBannerInputsDisabled(disabled) {
+              if (bannerImageInput) bannerImageInput.disabled = disabled;
+              if (bannerVideoInput) bannerVideoInput.disabled = disabled;
+          }
+
+          function queueBannerSaveLocal(task) {
+              bannerSaveQueue = bannerSaveQueue.catch(function () {}).then(task);
+              return bannerSaveQueue;
+          }
+
+          function applyBannerPreview(type, previewUrl) {
+              revokeBannerPreviewUrl();
+              bannerPreviewObjectUrl = previewUrl;
+              if (type === 'image' && bannerImage) {
+                  bannerImage.src = previewUrl;
+                  bannerImage.classList.add('active');
+                  if (bannerVideo) {
+                      try { bannerVideo.pause(); } catch (e) {}
+                      bannerVideo.removeAttribute('src');
+                      try { bannerVideo.load(); } catch (e) {}
+                      bannerVideo.classList.remove('active');
+                  }
+              } else if (type === 'video' && bannerVideo) {
+                  bannerVideo.src = previewUrl;
+                  bannerVideo.classList.add('active');
+                  if (bannerImage) {
+                      bannerImage.removeAttribute('src');
+                      bannerImage.classList.remove('active');
+                  }
+                  playBannerVideoSafely(bannerVideo);
+              }
+          }
+
+          function finalizeBannerSave(saveGen, bannerData) {
+              if (!bannerData || saveGen !== bannerLoadGeneration) return;
+              revokeBannerPreviewUrl();
+              try {
+                  const u = JSON.parse(localStorage.getItem('user') || 'null');
+                  if (u && u.email) {
+                      localStorage.setItem('profile_banner_' + u.email, JSON.stringify({
+                          type: bannerData.type,
+                          url: bannerData.url,
+                          volume: bannerData.volume !== undefined ? bannerData.volume : 35
+                      }));
+                  }
+              } catch (e) {}
+              displayBannerBlock(bannerData);
+          }
           
           // Fonction pour ouvrir le menu modal
           function openBannerMenu() {
@@ -6017,8 +6070,10 @@
           
           // Charger la bannière sauvegardée (cache d'abord pour affichage immédiat, puis Firebase)
           async function loadBanner() {
+              if (window.bannerSaveInProgress) return;
               const user = JSON.parse(localStorage.getItem('user') || 'null');
               if (!user || !user.email) return;
+              const loadGen = bannerLoadGeneration;
               
               loadBlockedUsers();
               
@@ -6043,6 +6098,7 @@
               if (window.bannerService) {
                   try {
                       const firebaseBanner = await window.bannerService.getBanner(user.email);
+                      if (loadGen !== bannerLoadGeneration || window.bannerSaveInProgress) return;
                       if (firebaseBanner) {
                           try { localStorage.setItem('profile_banner_' + user.email, JSON.stringify({ type: firebaseBanner.type, url: firebaseBanner.url, volume: firebaseBanner.volume !== undefined ? firebaseBanner.volume : 35 })); } catch (e) {}
                           displayBannerBlock(firebaseBanner);
@@ -6074,7 +6130,14 @@
                       var bannerVidEl = document.getElementById('banner-video');
                       // IMPORTANT : Toujours vider l'ancienne bannière d'abord pour laisser place à la nouvelle
                       if (bannerImgEl) { bannerImgEl.removeAttribute('src'); bannerImgEl.classList.remove('active'); bannerImgEl.onerror = null; bannerImgEl.onload = null; }
-                      if (bannerVidEl) { bannerVidEl.pause(); bannerVidEl.removeAttribute('src'); bannerVidEl.currentTime = 0; bannerVidEl.classList.remove('active'); bannerVidEl.onerror = null; bannerVidEl.onloadeddata = null; }
+                      if (bannerVidEl) {
+                          try { bannerVidEl.pause(); } catch (e) {}
+                          bannerVidEl.removeAttribute('src');
+                          try { bannerVidEl.load(); } catch (e) {}
+                          bannerVidEl.classList.remove('active');
+                          bannerVidEl.onerror = null;
+                          bannerVidEl.onloadeddata = null;
+                      }
                       var displayUrl = banner.url;
                       if (displayUrl && !displayUrl.startsWith('data:')) displayUrl = displayUrl + (displayUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
                       if (type === 'image' && banner.url) {
@@ -6142,6 +6205,11 @@
           
           // Sauvegarder la bannière
           async function saveBanner(type, url, volume = null) {
+              return queueBannerSaveLocal(async function () {
+              const saveGen = ++bannerLoadGeneration;
+              window.bannerSaveInProgress = true;
+              setBannerInputsDisabled(true);
+              try {
               const user = JSON.parse(localStorage.getItem('user') || 'null');
               if (!user || !user.email) return;
               
@@ -6266,12 +6334,7 @@
                                       }));
                                   } catch (e) {}
                               }
-                              // Recharger la bannière après sauvegarde
-                              setTimeout(() => {
-                                  if (typeof loadBanner === 'function') {
-                                      loadBanner();
-                                  }
-                              }, 500);
+                              finalizeBannerSave(saveGen, bannerData);
                           } catch (error) {
                               // Vérifier si c'est une erreur CORS, timeout ou autre
                               const errorMessage = error.message || error.toString() || '';
@@ -6325,12 +6388,7 @@
                                       }));
                                   } catch (e) {}
                               }
-                              // Recharger la bannière après sauvegarde
-                              setTimeout(() => {
-                                  if (typeof loadBanner === 'function') {
-                                      loadBanner();
-                                  }
-                              }, 500);
+                              finalizeBannerSave(saveGen, bannerData);
                           } catch (error) {
                               console.error('❌ Erreur lors de la sauvegarde dans Firebase Storage:', error);
                               const errorMessage = error.message || error.toString() || '';
@@ -6355,6 +6413,11 @@
                   // Ne PAS utiliser localStorage comme fallback - Firebase Storage est requis
                   alert('❌ Erreur lors de la sauvegarde de la bannière.\n\nErreur : ' + errorMessage + '\n\nVérifiez votre connexion et la configuration Firebase Storage.');
               }
+              } finally {
+                  window.bannerSaveInProgress = false;
+                  setBannerInputsDisabled(false);
+              }
+              });
           }
           
           function onEditBannerClick(e) {
@@ -6965,44 +7028,28 @@
           if (bannerImageInput) {
               bannerImageInput.addEventListener('change', function(e) {
                   const file = e.target.files[0];
-                  if (file) {
-                      // Optimiser l'image avec une qualité maximale (4K max, qualité 100%)
-                      optimizeImageQuality(file, 3840, 2160, 1.0).then(imageUrl => {
-                          // Arrêter complètement la vidéo si elle était en cours
-                          if (bannerVideo) {
-                              bannerVideo.pause();
-                              bannerVideo.removeAttribute('src');
-                              bannerVideo.currentTime = 0;
-                              bannerVideo.classList.remove('active');
-                          }
-                          
-                          // Afficher l'image optimisée immédiatement
-                          if (bannerImage) {
-                              bannerImage.src = imageUrl;
-                              bannerImage.classList.add('active');
-                          }
-                          
-                          // IMPORTANT : Sauvegarder le File directement pour Firebase Storage
-                          // On garde l'image optimisée pour l'affichage, mais on sauvegarde le File original
-                          if (typeof saveBanner === 'function') {
-                              saveBanner('image', file);
-                          } else {
-                              console.error('❌ saveBanner n\'est pas définie !');
-                          }
-                          
-                          // Masquer le contrôle de volume dans les paramètres
-                          const volumeSetting = document.getElementById('banner-volume-setting');
-                          if (volumeSetting) volumeSetting.style.display = 'none';
-                          
-                          closeBannerMenu();
+                  if (!file) return;
+                  if (window.bannerSaveInProgress) {
+                      this.value = '';
+                      return;
+                  }
+
+                  resetBannerMediaElements();
+                  applyBannerPreview('image', URL.createObjectURL(file));
+                  closeBannerMenu();
+
+                  const volumeSetting = document.getElementById('banner-volume-setting');
+                  if (volumeSetting) volumeSetting.style.display = 'none';
+
+                  if (typeof saveBanner === 'function') {
+                      saveBanner('image', file).then(function () {
                           if (typeof showToast === 'function') {
                               showToast('Succès', 'Bannière image ajoutée avec succès !', 'success');
                           }
-                      });
-                      
-                      // Réinitialiser l'input pour permettre de sélectionner le même fichier à nouveau
-                      this.value = '';
+                      }).catch(function () {});
                   }
+
+                  this.value = '';
               });
           } else {
               console.warn('⚠️ bannerImageInput non trouvé');
@@ -7059,99 +7106,68 @@
           if (bannerVideoInput) {
               bannerVideoInput.addEventListener('change', async function(e) {
                   const file = e.target.files[0];
-                  if (file) {
-                      // Vérifier si l'utilisateur est certifié avant d'autoriser l'upload
-                      const user = JSON.parse(localStorage.getItem('user') || 'null');
-                      if (user && user.email) {
-                          try {
-                              const isVerified = await window.isUserVerified(user.email);
-                              if (!isVerified) {
-                                  showToast('Erreur', 'Seuls les utilisateurs certifiés peuvent mettre une vidéo dans leur bannière', 'error');
-                                  this.value = '';
-                                  return;
-                              }
-                          } catch (e) {
-                              console.error('Erreur lors de la vérification de certification:', e);
-                              showToast('Erreur', 'Impossible de vérifier votre statut de certification', 'error');
+                  if (!file) return;
+                  if (window.bannerSaveInProgress) {
+                      this.value = '';
+                      return;
+                  }
+
+                  const user = JSON.parse(localStorage.getItem('user') || 'null');
+                  if (user && user.email) {
+                      try {
+                          const isVerified = await window.isUserVerified(user.email);
+                          if (!isVerified) {
+                              showToast('Erreur', 'Seuls les utilisateurs certifiés peuvent mettre une vidéo dans leur bannière', 'error');
                               this.value = '';
                               return;
                           }
-                      }
-                      
-                      // Vérifier la taille du fichier (max 150MB pour vidéos haute qualité)
-                      if (file.size > 150 * 1024 * 1024) {
-                          showToast('Erreur', 'La vidéo ne doit pas dépasser 150MB', 'error');
+                      } catch (err) {
+                          console.error('Erreur lors de la vérification de certification:', err);
+                          showToast('Erreur', 'Impossible de vérifier votre statut de certification', 'error');
                           this.value = '';
                           return;
                       }
-                      
-                          // IMPORTANT : Sauvegarder le File directement pour Firebase, pas la data URL
-                      // On garde FileReader pour l'affichage immédiat, mais on sauvegarde le File
-                      const reader = new FileReader();
-                      reader.onload = function(event) {
-                          const videoUrl = event.target.result;
-                          if (bannerVideo) {
-                              bannerVideo.src = videoUrl;
-                              bannerVideo.classList.add('active');
-                          }
-                          if (bannerImage) {
-                              bannerImage.removeAttribute('src');
-                              bannerImage.classList.remove('active');
-                          }
-                          // Sauvegarder le File directement (Firebase Storage) au lieu de la data URL
-                          if (typeof saveBanner === 'function') {
-                              saveBanner('video', file, 35); // Volume par défaut activé
-                          } else {
-                              console.error('❌ saveBanner n\'est pas définie !');
-                          }
-                          updateVolumeControlVisibility();
-                          
-                          // Limiter la vidéo à 45 secondes pour optimiser les performances
-                          bannerVideo.addEventListener('loadedmetadata', function() {
-                              // Si la vidéo dépasse 45 secondes, on la limite
-                              if (bannerVideo.duration > 45) {
-                                  // La vidéo sera coupée à 45 secondes grâce à l'event listener timeupdate
-                              }
-                          }, { once: true });
-                          
-                          // Event listener pour limiter la vidéo à 45 secondes
-                          bannerVideo.addEventListener('timeupdate', function() {
-                              if (bannerVideo.currentTime >= 45) {
-                                  bannerVideo.currentTime = 0;
-                              }
-                          });
-                          
-                          // Réinitialiser les sliders de volume (son activé par défaut)
-                          if (volumeSlider && volumeValue) {
-                              volumeSlider.value = 35;
-                              volumeValue.textContent = '35%';
-                          }
-                          const volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
-                          const volumeSettingValue = document.getElementById('banner-volume-setting-value');
-                          if (volumeSettingSlider && volumeSettingValue) {
-                              volumeSettingSlider.value = 35;
-                              volumeSettingValue.textContent = '35%';
-                          }
-                          
-                          // Afficher le contrôle de volume dans les paramètres
-                          const volumeSetting = document.getElementById('banner-volume-setting');
-                          if (volumeSetting) volumeSetting.style.display = 'block';
-                          
-                          // Appliquer le volume par défaut (son actif)
-                          bannerVideo.volume = 0.35;
-                          bannerVideo.muted = false;
-                          
-                          // Démarrer la lecture de la vidéo
-                          playBannerVideoSafely(bannerVideo);
-                          
-                          closeBannerMenu();
-                          showToast('Succès', 'Bannière vidéo ajoutée avec succès !', 'success');
-                      };
-                      reader.readAsDataURL(file);
-                      
-                      // Réinitialiser l'input pour permettre de sélectionner le même fichier à nouveau
-                      this.value = '';
                   }
+
+                  if (file.size > 150 * 1024 * 1024) {
+                      showToast('Erreur', 'La vidéo ne doit pas dépasser 150MB', 'error');
+                      this.value = '';
+                      return;
+                  }
+
+                  resetBannerMediaElements();
+                  applyBannerPreview('video', URL.createObjectURL(file));
+                  updateVolumeControlVisibility();
+
+                  if (volumeSlider && volumeValue) {
+                      volumeSlider.value = 35;
+                      volumeValue.textContent = '35%';
+                  }
+                  const volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
+                  const volumeSettingValue = document.getElementById('banner-volume-setting-value');
+                  if (volumeSettingSlider && volumeSettingValue) {
+                      volumeSettingSlider.value = 35;
+                      volumeSettingValue.textContent = '35%';
+                  }
+                  const volumeSetting = document.getElementById('banner-volume-setting');
+                  if (volumeSetting) volumeSetting.style.display = 'block';
+                  if (bannerVideo) {
+                      bannerVideo.volume = 0.35;
+                      bannerVideo.muted = false;
+                  }
+
+                  closeBannerMenu();
+
+                  try {
+                      if (typeof saveBanner === 'function') {
+                          await saveBanner('video', file, 35);
+                      }
+                      showToast('Succès', 'Bannière vidéo ajoutée avec succès !', 'success');
+                  } catch (err) {
+                      console.error('Erreur upload bannière vidéo:', err);
+                  }
+
+                  this.value = '';
               });
           }
           
@@ -7650,11 +7666,11 @@
               // Mettre à jour le compteur de caractères
               if (profileDescriptionCharCount) {
                   const currentLength = profileDescriptionTextarea.value.length;
-                  profileDescriptionCharCount.textContent = currentLength + ' / 80';
-                  if (currentLength >= 70) {
+                  profileDescriptionCharCount.textContent = currentLength + ' / 50';
+                  if (currentLength >= 45) {
                       profileDescriptionCharCount.classList.add('error');
                       profileDescriptionCharCount.classList.remove('warning');
-                  } else if (currentLength >= 60) {
+                  } else if (currentLength >= 40) {
                       profileDescriptionCharCount.classList.add('warning');
                       profileDescriptionCharCount.classList.remove('error');
                   } else {
@@ -7871,7 +7887,7 @@
     <script src="/js/profile-sync.js"></script>
     <script src="/js/fake-users-generator.js"></script>
     <script src="/js/minorContentFilter.js"></script>
-    <script src="/js/profile-anime-cards.js?v=2.22" onerror="console.error('❌ ERREUR DE CHARGEMENT DU SCRIPT profile-anime-cards.js');"></script>
+    <script src="/js/profile-anime-cards.js?v=2.23" onerror="console.error('❌ ERREUR DE CHARGEMENT DU SCRIPT profile-anime-cards.js');"></script>
     <script src="/js/search.js"></script>
     <script>
         // Vérifier immédiatement si le script s'est chargé

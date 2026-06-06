@@ -15,6 +15,13 @@ service cloud.firestore {
     function isOwnerByEmail(userEmail) {
       return isAuthenticated() && request.auth.token.email == userEmail;
     }
+
+    function isSiteAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email == 'mangawatch.off@gmail.com'
+      );
+    }
     
     // Forum Topics - Sujets du forum
     match /forum_topics/{topicId} {
@@ -101,6 +108,12 @@ service cloud.firestore {
       allow create, update: if true;
     }
 
+    // Vote du jour (accueil) — mêmes 3 œuvres pour tous les visiteurs
+    match /site_daily_vote/{dayId} {
+      allow read: if true;
+      allow create, update: if true;
+    }
+
     // Sondage nouveautés site (accueil) — compteurs agrégés
     match /feature_poll/{docId} {
       allow read: if true;
@@ -111,7 +124,22 @@ service cloud.firestore {
     match /feature_poll_proposals/{proposalId} {
       allow read: if true;
       allow create: if true;
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if true;
+    }
+
+    // Notes de profil utilisateur
+    match /profile_rating_votes/{voteId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() &&
+        request.resource.data.voter_email == request.auth.token.email;
+      allow delete: if false;
+    }
+
+    match /profile_rating_stats/{profileId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
     }
 
     // Un document par email — votes up/down par proposition (mise à jour autorisée)
@@ -119,6 +147,23 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if true;
       allow delete: if false;
+    }
+
+    // Signalements utilisateur (profil public)
+    match /user_reports/{reportId} {
+      allow read: if isAuthenticated() && (
+        isSiteAdmin() ||
+        resource.data.reported_by == request.auth.token.email
+      );
+      allow create: if isAuthenticated() &&
+        request.resource.data.reported_by == request.auth.token.email &&
+        request.resource.data.reported_user is string &&
+        request.resource.data.reported_by != request.resource.data.reported_user;
+      allow update: if false;
+      allow delete: if isAuthenticated() && (
+        isSiteAdmin() ||
+        resource.data.reported_by == request.auth.token.email
+      );
     }
 
     // Support Tickets - Tickets d'aide (conversation user + admin, fermeture par l'un ou l'autre)

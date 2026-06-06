@@ -10199,7 +10199,135 @@ function normalizeTop10Type(type) {
     return t;
 }
 
-async function getUserTop10(user, genre = null, type = null) {
+/** Cache + file d'attente pour éviter les pertes lors d'ajouts rapides au top 10 */
+const top10ScopeCache = new Map();
+const top10ScopeQueues = new Map();
+
+function cloneTop10Slots(top10) {
+    const out = [];
+    for (let i = 0; i < 10; i++) {
+        out[i] = top10 && top10[i] ? top10[i] : null;
+    }
+    return out;
+}
+
+function getTop10ScopeKey(user, genre, type) {
+    const finalType = normalizeTop10Type(type);
+    const hasGenre = genre && typeof genre === 'string' && genre.trim() !== '';
+    return getUserTop10Key(user, hasGenre ? genre : null, finalType);
+}
+
+function readTop10Cache(key) {
+    if (!top10ScopeCache.has(key)) return null;
+    return cloneTop10Slots(top10ScopeCache.get(key));
+}
+
+function writeTop10Cache(key, top10) {
+    const clean = cloneTop10Slots(top10);
+    top10ScopeCache.set(key, clean);
+    try {
+        localStorage.setItem(key, JSON.stringify(clean));
+    } catch (e) {
+        console.warn('[Top10] Échec écriture localStorage:', e);
+    }
+    return clean;
+}
+
+function runTop10Queued(scopeKey, task) {
+    const prev = top10ScopeQueues.get(scopeKey) || Promise.resolve();
+    const next = prev.catch(function () { return null; }).then(task);
+    top10ScopeQueues.set(scopeKey, next);
+    return next;
+}
+
+async function syncTop10ToFirebase(user, cleanTop10, genre, finalType, hasGenre) {
+    if (hasGenre) {
+        if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
+            const genreKey = window.firebaseTop10Service.normalizeGenreKey
+                ? window.firebaseTop10Service.normalizeGenreKey(genre)
+                : String(genre).toLowerCase().replace(/\s+/g, '_').replace(/,/g, '_');
+            await window.firebaseTop10Service.deleteTop10Scope(user.email, {
+                genreKey: genreKey,
+                type: finalType
+            });
+            for (let i = 0; i < cleanTop10.length; i++) {
+                if (cleanTop10[i]) {
+                    const itemContentType = cleanTop10[i].contentType || finalType || 'anime';
+                    await window.firebaseTop10Service.saveTop10Item(user.email, {
+                        id: cleanTop10[i].id,
+                        contentType: itemContentType,
+                        genreKey: genreKey,
+                        rang: i + 1,
+                        titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
+                        image: cleanTop10[i].image,
+                        synopsis: cleanTop10[i].synopsis,
+                        genres: cleanTop10[i].genres || [],
+                        score: cleanTop10[i].score || 0
+                    });
+                }
+            }
+        }
+        return;
+    }
+
+    if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
+        await window.firebaseTop10Service.deleteTop10Scope(user.email, {
+            genreKey: '',
+            type: finalType
+        });
+        for (let i = 0; i < cleanTop10.length; i++) {
+            if (cleanTop10[i]) {
+                const itemContentType = cleanTop10[i].contentType || finalType;
+                await window.firebaseTop10Service.saveTop10Item(user.email, {
+                    id: cleanTop10[i].id,
+                    contentType: itemContentType,
+                    genreKey: '',
+                    rang: i + 1,
+                    titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
+                    image: cleanTop10[i].image,
+                    synopsis: cleanTop10[i].synopsis,
+                    genres: cleanTop10[i].genres || [],
+                    score: cleanTop10[i].score || 0
+                });
+            }
+        }
+    }
+}
+
+async function mutateUserTop10(user, genre, type, mutator) {
+    const finalType = normalizeTop10Type(type);
+    const hasGenre = genre && typeof genre === 'string' && genre.trim() !== '';
+    const scopeKey = getTop10ScopeKey(user, genre, type);
+
+    return runTop10Queued(scopeKey, async function () {
+        let current = readTop10Cache(scopeKey);
+        if (!current) {
+            current = cloneTop10Slots(await fetchUserTop10FromSources(user, genre, type));
+        }
+        const updated = mutator(cloneTop10Slots(current));
+        const cleanTop10 = writeTop10Cache(scopeKey, updated);
+
+        window.top10SaveInProgress = true;
+        try {
+            await syncTop10ToFirebase(user, cleanTop10, genre, finalType, hasGenre);
+            localStorage.setItem('top10_updated', 'true');
+        } finally {
+            window.top10SaveInProgress = false;
+        }
+
+        if (!isRenderingTop10) {
+            document.dispatchEvent(new CustomEvent('top10Updated', {
+                detail: { genre: genre, type: type, top10: cleanTop10 }
+            }));
+        }
+        if (typeof refreshAllCardMoreButtons === 'function') {
+            setTimeout(function () { refreshAllCardMoreButtons(true); }, 0);
+        }
+        return cleanTop10;
+    });
+}
+
+async function fetchUserTop10FromSources(user, genre = null, type = null) {
     const finalType = normalizeTop10Type(type);
     
     // Top 10 par genre : stockage séparé du top 10 global
@@ -10323,120 +10451,44 @@ async function getUserTop10(user, genre = null, type = null) {
     return new Array(10).fill(null);
 }
 
+async function getUserTop10(user, genre = null, type = null) {
+    const scopeKey = getTop10ScopeKey(user, genre, type);
+    const cached = readTop10Cache(scopeKey);
+    if (cached) return cached;
+    const loaded = cloneTop10Slots(await fetchUserTop10FromSources(user, genre, type));
+    writeTop10Cache(scopeKey, loaded);
+    return loaded;
+}
+
 async function setUserTop10(user, top10, genre = null, type = null) {
-    // S'assurer que top10 est un tableau de 10 éléments
-    const cleanTop10 = [];
-    for (let i = 0; i < 10; i++) {
-        cleanTop10[i] = top10[i] || null;
-    }
-    
-    // S'assurer qu'il y a toujours exactement 10 éléments
-    while (cleanTop10.length < 10) {
-        cleanTop10.push(null);
-    }
-    
     const finalType = normalizeTop10Type(type);
     const hasGenre = genre && typeof genre === 'string' && genre.trim() !== '';
-    const localKey = getUserTop10Key(user, hasGenre ? genre : null, finalType);
+    const scopeKey = getTop10ScopeKey(user, genre, type);
+    const cleanTop10 = cloneTop10Slots(top10);
 
-    window.top10SaveInProgress = true;
-    try {
-        // Toujours écrire le cache local en premier pour un affichage stable (pas de flash)
-        localStorage.setItem(localKey, JSON.stringify(cleanTop10));
-
-        if (hasGenre) {
-            console.log('✅ Top 10 (genre) sauvegardé dans localStorage, genre:', genre, 'type:', finalType || 'all');
-            if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
-                try {
-                    const genreKey = window.firebaseTop10Service.normalizeGenreKey
-                        ? window.firebaseTop10Service.normalizeGenreKey(genre)
-                        : String(genre).toLowerCase().replace(/\s+/g, '_').replace(/,/g, '_');
-                    await window.firebaseTop10Service.deleteTop10Scope(user.email, {
-                        genreKey: genreKey,
-                        type: finalType
-                    });
-                    for (let i = 0; i < cleanTop10.length; i++) {
-                        if (cleanTop10[i]) {
-                            const itemContentType = cleanTop10[i].contentType || finalType || 'anime';
-                            await window.firebaseTop10Service.saveTop10Item(user.email, {
-                                id: cleanTop10[i].id,
-                                contentType: itemContentType,
-                                genreKey: genreKey,
-                                rang: i + 1,
-                                titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
-                                image: cleanTop10[i].image,
-                                synopsis: cleanTop10[i].synopsis,
-                                genres: cleanTop10[i].genres || [],
-                                score: cleanTop10[i].score || 0
-                            });
-                        }
-                    }
-                    console.log('✅ Top 10 (genre) sauvegardé dans Firebase, genre:', genre);
-                } catch (err) {
-                    console.error('❌ Erreur lors de la sauvegarde Firebase (genre):', err);
-                }
-            }
-        } else if (typeof window.firebaseTop10Service !== 'undefined' && window.firebaseTop10Service) {
-            // Top 10 global : synchro Firebase (scope global uniquement, pas les top 10 par genre)
-            try {
-                await window.firebaseTop10Service.deleteTop10Scope(user.email, {
-                    genreKey: '',
-                    type: finalType
-                });
-                for (let i = 0; i < cleanTop10.length; i++) {
-                    if (cleanTop10[i]) {
-                        const itemContentType = cleanTop10[i].contentType || finalType;
-                        await window.firebaseTop10Service.saveTop10Item(user.email, {
-                            id: cleanTop10[i].id,
-                            contentType: itemContentType,
-                            genreKey: '',
-                            rang: i + 1,
-                            titre: cleanTop10[i].titre || cleanTop10[i].title || cleanTop10[i].name,
-                            image: cleanTop10[i].image,
-                            synopsis: cleanTop10[i].synopsis,
-                            genres: cleanTop10[i].genres || [],
-                            score: cleanTop10[i].score || 0
-                        });
-                    }
-                }
-                console.log('✅ Top 10 global sauvegardé dans Firebase pour type:', finalType || 'all');
-            } catch (err) {
-                console.error('❌ Erreur lors de la sauvegarde Firebase:', err);
-                throw err;
-            }
-        } else {
-            console.log('✅ Top 10 sauvegardé dans localStorage pour type:', finalType || 'all');
+    return runTop10Queued(scopeKey, async function () {
+        writeTop10Cache(scopeKey, cleanTop10);
+        window.top10SaveInProgress = true;
+        try {
+            await syncTop10ToFirebase(user, cleanTop10, genre, finalType, hasGenre);
+            localStorage.setItem('top10_updated', 'true');
+        } catch (err) {
+            console.error('❌ Erreur lors de la sauvegarde du top 10:', err);
+            throw err;
+        } finally {
+            window.top10SaveInProgress = false;
         }
-    } catch (err) {
-        console.error('❌ Erreur lors de la sauvegarde du top 10:', err);
-        throw err;
-    } finally {
-        window.top10SaveInProgress = false;
-    }
-    
-    // Marquer la mise à jour pour forcer le rafraîchissement au retour sur le profil
-    // et garder la page publique alignée après ajout/retrait d'une carte du Top 10.
-    localStorage.setItem('top10_updated', 'true');
 
-    // Déclencher un événement personnalisé pour notifier les mises à jour
-    // Mais seulement si renderTop10Slots n'est pas déjà en cours pour éviter les boucles infinies
-    if (!isRenderingTop10) {
-        const event = new CustomEvent('top10Updated', { 
-            detail: { 
-                genre: genre,
-                type: type,
-                top10: cleanTop10 
-            } 
-        });
-        document.dispatchEvent(event);
-    }
-
-    // Masquer immédiatement les boutons "..." sur les cartes visibles (pages étoiles > 1 incluses)
-    if (typeof refreshAllCardMoreButtons === 'function') {
-        setTimeout(() => refreshAllCardMoreButtons(true), 0);
-    }
-    
-    return cleanTop10;
+        if (!isRenderingTop10) {
+            document.dispatchEvent(new CustomEvent('top10Updated', {
+                detail: { genre: genre, type: type, top10: cleanTop10 }
+            }));
+        }
+        if (typeof refreshAllCardMoreButtons === 'function') {
+            setTimeout(function () { refreshAllCardMoreButtons(true); }, 0);
+        }
+        return cleanTop10;
+    });
 }
 
 // Fonction simplifiée pour nettoyer les Top 10 des cartes qui n'ont plus de notes
@@ -11602,17 +11654,14 @@ async function renderTop10Slots(forcedTop10 = null) {
                         }
                     }
                     
-                    const finalGenre = genre; // genre est déjà la clé composite depuis renderTop10Slots
-                    
-                    
-                    let top10 = await getUserTop10(user, finalGenre, finalType);
-                    
-                    // Récupérer l'ID de l'anime avant de le supprimer
-                    const removedAnimeId = completeAnimeData?.id || top10[i]?.id;
-                    
-                    top10[i] = null;
-                    
-                    await setUserTop10(user, top10, finalGenre, finalType);
+                    const finalGenre = genre;
+                    const removeIndex = i;
+                    const removedAnimeId = completeAnimeData?.id;
+
+                    await mutateUserTop10(user, finalGenre, finalType, function (top10) {
+                        top10[removeIndex] = null;
+                        return top10;
+                    });
                     
                     // Fermer le menu après l'action
                     moreMenu.style.opacity = '0';
@@ -15019,25 +15068,6 @@ async function showTop10MiniInterface() {
             
             console.log('🔍 Chargement du top 10, genre:', loadGenre, 'type:', loadType, 'itemRealType:', itemRealType);
             
-            // Charger le top 10 existant AVANT d'insérer
-            let top10 = await getUserTop10(user, loadGenre, loadType) || [];
-            // S'assurer que top10 est un tableau de 10 éléments
-            while (top10.length < 10) {
-                top10.push(null);
-            }
-            
-            console.log('🔍 Top 10 chargé avant insertion:', top10);
-            
-            // Utiliser la fonction insertIntoTop10 globale définie plus bas
-            top10 = insertIntoTop10(top10, item, slotIndex);
-            
-            console.log('🔍 Top 10 après insertion:', top10);
-            
-            // Nettoyer les entrées vides (au cas où)
-            top10 = top10.map(item => item || null);
-            
-            // Sauvegarder le top 10 mis à jour
-            
             // Si on est dans un contexte de genre avec un genre "type" (Doujin, Manhwa, Manhua)
             // ET que le type sélectionné est 'manga', alors utiliser le type réel correspondant au genre
             let itemFinalType = itemRealType;
@@ -15087,10 +15117,18 @@ async function showTop10MiniInterface() {
                 itemFinalType = itemRealType;
             }
             
-            // Sauvegarder immédiatement (sans délai pour éviter les problèmes de synchronisation)
+            // Sauvegarder via file d'attente (évite les conflits lors d'ajouts rapides)
+            const placementItem = item;
+            const placementSlot = slotIndex;
             try {
-                await setUserTop10(user, top10, finalGenre, itemFinalType);
-                console.log('✅ Top 10 sauvegardé avec succès dans Firebase, genre:', finalGenre, 'type:', itemFinalType);
+                if (grid) grid.style.pointerEvents = 'none';
+                slot.style.opacity = '0.65';
+
+                await mutateUserTop10(user, finalGenre, itemFinalType, function (top10) {
+                    while (top10.length < 10) top10.push(null);
+                    return insertIntoTop10(top10, placementItem, placementSlot);
+                });
+                console.log('✅ Top 10 sauvegardé avec succès, genre:', finalGenre, 'type:', itemFinalType);
                 
                 // Afficher un message de succès
                 const successMsg = document.createElement('div');
@@ -15100,6 +15138,8 @@ async function showTop10MiniInterface() {
                 setTimeout(() => { successMsg.remove(); }, 2000);
             } catch (err) {
                 console.error('❌ ERREUR lors de la sauvegarde du top 10:', err);
+                if (grid) grid.style.pointerEvents = '';
+                slot.style.opacity = '';
                 alert((typeof window.t === 'function' && window.t('profile.top10_save_error')) || 'Erreur: Impossible de sauvegarder le top 10. Veuillez réessayer.');
                 return; // Ne pas fermer l'interface en cas d'erreur
             }

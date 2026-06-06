@@ -1,8 +1,55 @@
 /**
- * Upload photo de profil — input fichier persistant (compatible iOS / Android).
+ * Upload photo de profil — file d'attente, aperçu Object URL (mobile-friendly).
  */
 (function(global) {
     const INPUT_ID = 'profile-avatar-file-input';
+
+    let avatarSaveQueue = Promise.resolve();
+    let avatarLoadGeneration = 0;
+    let avatarPreviewObjectUrl = null;
+
+    function revokeAvatarPreviewUrl() {
+        if (avatarPreviewObjectUrl) {
+            try { URL.revokeObjectURL(avatarPreviewObjectUrl); } catch (e) { /* ignore */ }
+            avatarPreviewObjectUrl = null;
+        }
+    }
+
+    function getAvatarFileInput() {
+        return document.getElementById(INPUT_ID);
+    }
+
+    function setAvatarInputDisabled(disabled) {
+        const input = getAvatarFileInput();
+        if (input) input.disabled = disabled;
+        const wrapper = document.getElementById('profile-avatar-wrapper');
+        if (wrapper) wrapper.style.pointerEvents = disabled ? 'none' : '';
+        const editBtn = document.getElementById('edit-avatar-btn');
+        if (editBtn) editBtn.style.pointerEvents = disabled ? 'none' : '';
+    }
+
+    function queueAvatarSaveLocal(task) {
+        avatarSaveQueue = avatarSaveQueue.catch(function() {}).then(task);
+        return avatarSaveQueue;
+    }
+
+    function applyAvatarPreview(url, opts) {
+        if (typeof global.applyProfileAvatars === 'function') {
+            global.applyProfileAvatars(url, Object.assign({ cacheBust: false }, opts || {}));
+            return;
+        }
+        const userAvatar = document.getElementById('user-avatar');
+        const profileAvatar = document.getElementById('profile-avatar');
+        const disp = (global.upgradeProfileAvatarUrl || function(u) { return u; })(url);
+        if (userAvatar) userAvatar.src = disp;
+        if (profileAvatar) profileAvatar.src = disp;
+    }
+
+    function applyAvatarPreviewFromFile(file) {
+        revokeAvatarPreviewUrl();
+        avatarPreviewObjectUrl = URL.createObjectURL(file);
+        applyAvatarPreview(avatarPreviewObjectUrl);
+    }
 
     function optimizeAvatarFile(file, maxSize, quality) {
         maxSize = maxSize || 2048;
@@ -50,12 +97,20 @@
         });
     }
 
-    function applyAvatarPreview(url) {
-        const userAvatar = document.getElementById('user-avatar');
-        const profileAvatar = document.getElementById('profile-avatar');
-        const disp = (global.upgradeProfileAvatarUrl || function(u) { return u; })(url);
-        if (userAvatar) userAvatar.src = disp;
-        if (profileAvatar) profileAvatar.src = disp;
+    async function prepareAvatarFile(file) {
+        const isMobile = typeof global.matchMedia === 'function' && global.matchMedia('(max-width: 768px)').matches;
+        if (isMobile) {
+            return file;
+        }
+        if (file.size < 800 * 1024) {
+            return file;
+        }
+        try {
+            return await optimizeAvatarFile(file, 2048, 1.0);
+        } catch (optErr) {
+            console.warn('[Avatar] Optimisation échouée, fichier original:', optErr);
+            return file;
+        }
     }
 
     function persistAvatarLocally(user, avatarUrl) {
@@ -96,53 +151,69 @@
     }
 
     async function uploadAvatarFile(file) {
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        if (!user || !user.email) {
-            alert('Vous devez être connecté pour modifier votre photo.');
-            return;
-        }
+        return queueAvatarSaveLocal(async function() {
+            const saveGen = ++avatarLoadGeneration;
+            global.avatarSaveInProgress = true;
+            setAvatarInputDisabled(true);
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                if (!user || !user.email) {
+                    alert('Vous devez être connecté pour modifier votre photo.');
+                    return;
+                }
 
-        const isMobile = typeof global.matchMedia === 'function' && global.matchMedia('(max-width: 768px)').matches;
-        const maxSize = isMobile ? 1024 : 2048;
-        const quality = isMobile ? 0.88 : 1.0;
+                applyAvatarPreviewFromFile(file);
 
-        let fileToUpload = file;
-        try {
-            fileToUpload = await optimizeAvatarFile(file, maxSize, quality);
-        } catch (optErr) {
-            console.warn('[Avatar] Optimisation échouée, fichier original:', optErr);
-            fileToUpload = file;
-        }
+                if (!global.avatarService || typeof global.avatarService.saveAvatar !== 'function') {
+                    alert('Firebase Storage n\'est pas disponible. Rechargez la page.');
+                    return;
+                }
 
-        const previewReader = new FileReader();
-        previewReader.onload = function(ev) { applyAvatarPreview(ev.target.result); };
-        previewReader.readAsDataURL(fileToUpload);
+                const fileToUpload = await prepareAvatarFile(file);
 
-        if (!global.avatarService || typeof global.avatarService.saveAvatar !== 'function') {
-            alert('Firebase Storage n\'est pas disponible. Rechargez la page.');
-            return;
-        }
+                if (typeof global.showMangaWatchToast === 'function') {
+                    global.showMangaWatchToast('Envoi de la photo…', 'info', 1200);
+                }
 
-        try {
-            if (typeof global.showMangaWatchToast === 'function') {
-                global.showMangaWatchToast('Envoi de la photo…', 'info', 1200);
+                const isMobile = typeof global.matchMedia === 'function' && global.matchMedia('(max-width: 768px)').matches;
+                const timeoutMs = isMobile ? 45000 : 20000;
+                const uploadPromise = global.avatarService.saveAvatar(user.email, fileToUpload);
+                const timeoutPromise = new Promise(function(_, reject) {
+                    setTimeout(function() {
+                        reject(new Error('TIMEOUT: Upload trop long, vérifiez votre connexion'));
+                    }, timeoutMs);
+                });
+
+                const avatarUrl = await Promise.race([uploadPromise, timeoutPromise]);
+
+                if (saveGen !== avatarLoadGeneration) return;
+
+                applyAvatarPreview(avatarUrl, { cacheBust: true });
+                revokeAvatarPreviewUrl();
+                persistAvatarLocally(user, avatarUrl);
+
+                try {
+                    global.dispatchEvent(new CustomEvent('profileAvatarUpdated', { detail: { url: avatarUrl } }));
+                } catch (e) { /* ignore */ }
+
+                if (typeof global.showToast === 'function') {
+                    global.showToast('Succès', 'Photo de profil mise à jour !', 'success');
+                } else if (typeof global.showMangaWatchToast === 'function') {
+                    global.showMangaWatchToast('Photo de profil mise à jour !', 'success');
+                }
+            } catch (err) {
+                if (saveGen === avatarLoadGeneration) {
+                    console.error('[Avatar] Upload:', err);
+                    notifyAvatarError(err);
+                }
+            } finally {
+                global.avatarSaveInProgress = false;
+                setAvatarInputDisabled(false);
+                if (typeof global.refreshHeaderAvatar === 'function') {
+                    global.refreshHeaderAvatar();
+                }
             }
-            const avatarUrl = await global.avatarService.saveAvatar(user.email, fileToUpload);
-            applyAvatarPreview(avatarUrl);
-            persistAvatarLocally(user, avatarUrl);
-            if (typeof global.showToast === 'function') {
-                global.showToast('Succès', 'Photo de profil mise à jour !', 'success');
-            } else if (typeof global.showMangaWatchToast === 'function') {
-                global.showMangaWatchToast('Photo de profil mise à jour !', 'success');
-            }
-        } catch (err) {
-            console.error('[Avatar] Upload:', err);
-            notifyAvatarError(err);
-        }
-    }
-
-    function getAvatarFileInput() {
-        return document.getElementById(INPUT_ID);
+        });
     }
 
     function openProfileAvatarFilePicker(e) {
@@ -150,6 +221,7 @@
             e.preventDefault();
             e.stopPropagation();
         }
+        if (global.avatarSaveInProgress) return;
         const input = getAvatarFileInput();
         if (!input) {
             alert('Sélecteur de photo indisponible. Rechargez la page.');
@@ -162,6 +234,10 @@
     async function onAvatarFileChange(ev) {
         const file = ev.target && ev.target.files && ev.target.files[0];
         if (!file) return;
+        if (global.avatarSaveInProgress) {
+            ev.target.value = '';
+            return;
+        }
         if (!String(file.type || '').toLowerCase().startsWith('image/')) {
             alert('Veuillez choisir une image (JPG, PNG, etc.).');
             ev.target.value = '';

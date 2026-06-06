@@ -1421,3 +1421,23 @@ main.manga-database {
         transform: translateX(100%);
     }
 }
+
+/* Bouton messagerie — un peu plus bas (page Manga & Anime uniquement) */
+body[data-page="manga-database"] .message-button {
+    bottom: 16px !important;
+    right: 20px;
+}
+
+@media (max-width: 768px) {
+    body[data-page="manga-database"] .message-button {
+        bottom: 8px !important;
+        right: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    body[data-page="manga-database"] .message-button {
+        bottom: 6px !important;
+        right: 12px;
+    }
+}

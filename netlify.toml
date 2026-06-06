@@ -10,6 +10,18 @@
   SECRETS_SCAN_OMIT_PATHS = "js/firebase-config.js"
 
 [[redirects]]
+  # Accueil : version complète (sondage, vote du jour, avatars…)
+  from = "/public/acceuil.html"
+  to = "/pages/acceuil.html"
+  status = 301
+
+[[redirects]]
+  # Admin : une seule page (sidebar + menu mobile)
+  from = "/public/admin.html"
+  to = "/pages/admin.html"
+  status = 301
+
+[[redirects]]
   # Rediriger la racine vers la page d'accueil
   from = "/"
   to = "/pages/acceuil.html"

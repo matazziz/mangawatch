@@ -15,41 +15,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Variables de pagination
     const paginationContainer = document.getElementById('pagination-container');
-    const paginationText = document.getElementById('pagination-text');
     const prevPageBtn = document.getElementById('prev-page');
     const nextPageBtn = document.getElementById('next-page');
     const pageNumbersContainer = document.getElementById('page-numbers');
     
-    let currentFilter = 'all';
+    let currentFilter = 'watching';
     let currentTypeFilter = 'all';
     let currentItemId = null;
     let currentPage = 1;
-    let itemsPerPage = window.matchMedia('(max-width: 768px)').matches ? 50 : 120;
+    const itemsPerPage = 50;
     let allItems = []; // Tous les items filtrés
     let currentPageItems = []; // Items de la page actuelle
-
-    function getResponsiveItemsPerPage() {
-        return window.matchMedia('(max-width: 768px)').matches ? 50 : 120;
-    }
-
-    function applyResponsivePagination() {
-        const nextItemsPerPage = getResponsiveItemsPerPage();
-        if (itemsPerPage === nextItemsPerPage) return;
-
-        itemsPerPage = nextItemsPerPage;
-        currentPage = 1;
-
-        if (allItems.length > 0) {
-            displayCurrentPage();
-        } else {
-            updatePagination();
-        }
-    }
     
     // Initialiser la page
     initList();
 
-    window.addEventListener('resize', applyResponsivePagination);
+    window.addEventListener('resize', function () {
+        if (allItems.length > itemsPerPage) {
+            generatePageNumbers(Math.ceil(allItems.length / itemsPerPage));
+        }
+    });
     
     // Mettre à jour les cartes (badges type + épisodes/volumes) au changement de langue
     document.addEventListener('languageChanged', function() {
@@ -64,16 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
             await updateStats();
             
             // Réappliquer le filtre actuel
-            if (currentFilter && currentFilter !== 'all') {
-                await filterItems(currentFilter);
-            } else {
-                // S'assurer que tous les éléments sont visibles
-                const items = document.querySelectorAll('.list-item');
-                items.forEach(item => {
-                    item.style.display = 'flex';
-                });
-                emptyList.style.display = 'none';
-            }
+            await filterItems(currentFilter);
         }
     });
     
@@ -434,17 +410,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function updatePagination() {
         const totalItems = allItems.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const startItem = (currentPage - 1) * itemsPerPage + 1;
-        const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-        
-        // Mettre à jour le texte d'information
-        const displayText = window.localization ? 
-            window.localization.get('collection.pagination.display')
-                .replace('{start}', startItem)
-                .replace('{end}', endItem)
-                .replace('{total}', totalItems) :
-            `Affichage de ${startItem}-${endItem} sur ${totalItems} items`;
-        paginationText.textContent = displayText;
         
         // Mettre à jour les boutons précédent/suivant
         prevPageBtn.disabled = currentPage <= 1;
@@ -461,15 +426,54 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Fonction pour générer les numéros de page
+    function appendPageButton(container, page) {
+        const pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.className = 'page-number' + (page === currentPage ? ' active' : '');
+        pageBtn.textContent = String(page);
+        pageBtn.addEventListener('click', function () {
+            currentPage = page;
+            displayCurrentPage();
+            scrollToListTopOnMobile();
+        });
+        container.appendChild(pageBtn);
+    }
+
+    function appendPageEllipsis(container) {
+        const ellipsis = document.createElement('span');
+        ellipsis.className = 'page-ellipsis';
+        ellipsis.textContent = '…';
+        container.appendChild(ellipsis);
+    }
+
+    // Fonction pour générer les numéros de page (logique manga-database sur mobile)
     function generatePageNumbers(totalPages) {
         pageNumbersContainer.innerHTML = '';
-        
-        // Afficher maximum 5 pages autour de la page actuelle
+        if (totalPages <= 1) return;
+
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+        if (isMobile) {
+            const pagesToDisplay = new Set([1, currentPage - 1, currentPage, currentPage + 1]);
+            if (totalPages > 1) pagesToDisplay.add(totalPages);
+            const sortedPages = Array.from(pagesToDisplay)
+                .filter(function (page) { return page >= 1 && page <= totalPages; })
+                .sort(function (a, b) { return a - b; });
+
+            let previousRenderedPage = 0;
+            sortedPages.forEach(function (page) {
+                if (previousRenderedPage && page - previousRenderedPage > 1) {
+                    appendPageEllipsis(pageNumbersContainer);
+                }
+                appendPageButton(pageNumbersContainer, page);
+                previousRenderedPage = page;
+            });
+            return;
+        }
+
         let startPage = Math.max(1, currentPage - 2);
         let endPage = Math.min(totalPages, currentPage + 2);
-        
-        // Ajuster pour toujours afficher 5 pages si possible
+
         if (endPage - startPage < 4) {
             if (startPage === 1) {
                 endPage = Math.min(totalPages, startPage + 4);
@@ -477,60 +481,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 startPage = Math.max(1, endPage - 4);
             }
         }
-        
-        // Bouton "Première page" si nécessaire
+
         if (startPage > 1) {
-            const firstPageBtn = document.createElement('button');
-            firstPageBtn.className = 'page-number';
-            firstPageBtn.textContent = '1';
-            firstPageBtn.addEventListener('click', () => {
-                currentPage = 1;
-                displayCurrentPage();
-            });
-            pageNumbersContainer.appendChild(firstPageBtn);
-            
-            if (startPage > 2) {
-                const ellipsis = document.createElement('span');
-                ellipsis.className = 'page-number disabled';
-                ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
-            }
+            appendPageButton(pageNumbersContainer, 1);
+            if (startPage > 2) appendPageEllipsis(pageNumbersContainer);
         }
-        
-        // Pages numérotées
+
         for (let i = startPage; i <= endPage; i++) {
-            const pageBtn = document.createElement('button');
-            pageBtn.className = `page-number ${i === currentPage ? 'active' : ''}`;
-            pageBtn.textContent = i;
-            pageBtn.addEventListener('click', () => {
-                currentPage = i;
-                displayCurrentPage();
-            });
-            pageNumbersContainer.appendChild(pageBtn);
+            appendPageButton(pageNumbersContainer, i);
         }
-        
-        // Bouton "Dernière page" si nécessaire
+
         if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                const ellipsis = document.createElement('span');
-                ellipsis.className = 'page-number disabled';
-                ellipsis.textContent = '...';
-                pageNumbersContainer.appendChild(ellipsis);
-            }
-            
-            const lastPageBtn = document.createElement('button');
-            lastPageBtn.className = 'page-number';
-            lastPageBtn.textContent = totalPages;
-            lastPageBtn.addEventListener('click', () => {
-                currentPage = totalPages;
-                displayCurrentPage();
-            });
-            pageNumbersContainer.appendChild(lastPageBtn);
+            if (endPage < totalPages - 1) appendPageEllipsis(pageNumbersContainer);
+            appendPageButton(pageNumbersContainer, totalPages);
         }
     }
     
     // Fonction d'initialisation
     async function initList() {
+        currentFilter = 'watching';
+        currentTypeFilter = 'all';
+        setActiveFilter('watching');
+        setActiveTypeFilter('all');
         await loadUserList();
         await updateStats();
     }

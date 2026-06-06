@@ -17,19 +17,23 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
-    <link rel="stylesheet" href="/css/list.css">
+    <link rel="stylesheet" href="/css/list.css?v=20260604-cards9">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/profile.css?v=2.2">
+    <link rel="stylesheet" href="/css/profile-rating.css?v=4">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
     <link rel="stylesheet" href="/css/messaging.css">
     <script src="/js/localization.js"></script>
     <!-- Import Firebase Service pour charger la bannière et les paramètres (confidentialité abonnements) -->
     <script type="module">
-        import { bannerService, profileSettingsService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe20';
+        import { bannerService, profileSettingsService, syncRemoteProfileMedia, userReportService } from '/js/firebase-service.js?v=6febe24';
+        import { initProfileRatingUI } from '/js/profile-rating-ui.js?v=4';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
+        window.initProfileRatingUI = initProfileRatingUI;
         window.profileSettingsService = profileSettingsService;
         window.syncRemoteProfileMedia = syncRemoteProfileMedia;
+        window.userReportService = userReportService;
         window.firebaseNotesService = firebaseNotesService;
         window.firebaseTop10Service = firebaseTop10Service;
         window.dispatchEvent(new CustomEvent('bannerServiceReady'));
@@ -62,7 +66,6 @@
                 padding-right: 7rem;
             }
 
-            #collection-section,
             #tierlist-section {
                 padding-left: 3rem;
                 padding-right: 3rem;
@@ -503,26 +506,22 @@
             font-size: 0.8rem;
         }
         
-        /* Bouton de signalement */
+        /* Bouton de signalement (dans la barre sous la bannière) */
         .profile-report-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            bottom: auto;
+            position: static;
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            padding: 0.35rem 0.75rem;
+            padding: 0.4rem 0.8rem;
             background: linear-gradient(135deg, rgba(225, 112, 85, 0.15) 0%, rgba(225, 112, 85, 0.1) 100%);
             border: 1px solid rgba(225, 112, 85, 0.35);
             border-radius: 18px;
             color: #e17055;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(12px);
-            z-index: 5;
+            flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         
@@ -542,8 +541,76 @@
         }
         
         .profile-report-btn span {
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             letter-spacing: 0.3px;
+        }
+
+        /* Barre sous la bannière : description + signaler */
+        .profile-subbanner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            margin: 0 0 1rem 0;
+            padding: 0.7rem 1.15rem;
+            background: rgba(12, 14, 20, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        .profile-subbanner.visible {
+            display: flex;
+        }
+
+        .profile-subbanner.report-only {
+            justify-content: flex-end;
+        }
+
+        .profile-subbanner .profile-description-wrapper {
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: none;
+            margin: 0;
+            position: static;
+        }
+
+        .profile-subbanner .profile-description {
+            font-style: normal;
+            font-size: 0.86rem;
+            line-height: 1.45;
+            padding: 0.45rem 0.7rem;
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.12);
+            text-shadow: none;
+        }
+
+        .profile-subbanner .profile-description #profile-description-text {
+            display: block;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        @media (max-width: 768px) {
+            .profile-subbanner {
+                flex-wrap: wrap;
+                padding: 0.6rem 0.75rem;
+                gap: 0.55rem;
+            }
+
+            .profile-subbanner .profile-description-wrapper {
+                flex: 1 1 100%;
+                order: 1;
+            }
+
+            .profile-subbanner .profile-report-btn {
+                order: 2;
+                margin-left: auto;
+            }
+
+            .profile-subbanner.report-only .profile-report-btn {
+                margin-left: 0;
+            }
         }
 
         .banner-mute-btn {
@@ -1217,27 +1284,13 @@
                 white-space: nowrap;
             }
 
-            .profile-report-btn {
-                top: 10px;
-                right: 10px;
-                bottom: auto;
-                padding: 0.22rem 0.34rem;
-                min-width: 24px;
-                min-height: 24px;
-                border-radius: 999px;
-                opacity: 0.62;
-                background: rgba(225, 112, 85, 0.08);
-                border-color: rgba(225, 112, 85, 0.24);
-                box-shadow: none;
-                gap: 0;
+            .profile-subbanner .profile-report-btn {
+                padding: 0.32rem 0.55rem;
+                font-size: 0.68rem;
             }
 
-            .profile-report-btn span {
-                display: none;
-            }
-
-            .profile-report-btn i {
-                font-size: 0.62rem;
+            .profile-subbanner .profile-report-btn span {
+                display: inline;
             }
         }
 
@@ -1315,21 +1368,9 @@
                 font-size: 0.62rem;
             }
 
-            .profile-description {
-                font-size: 0.72rem;
-                padding: 0.26rem 0.45rem;
-                min-height: 0;
-                line-height: 1.15;
-            }
-
-            .profile-report-btn {
-                top: 8px;
-                right: 8px;
-                bottom: auto;
-                padding: 0.2rem 0.3rem;
-                min-width: 22px;
-                min-height: 22px;
-                opacity: 0.58;
+            .profile-subbanner .profile-description {
+                font-size: 0.78rem;
+                padding: 0.4rem 0.55rem;
             }
         }
 
@@ -1398,23 +1439,6 @@
         }
 
         /* Collection publique: utiliser le rendu natif partagé (list.css) */
-
-        #collection-section .mobile-collection-filters-toggle {
-            display: none;
-            width: 100%;
-            margin: 0 0 14px 0;
-            background: #00b894;
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 10px 14px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-        }
 
         /* Harmonisation stricte mobile avec la page profil privée */
         @media (max-width: 768px) {
@@ -1530,13 +1554,8 @@
             .profile-banner-bottom .follow-stat-number { font-size: 1.08rem !important; }
             .profile-banner-bottom .follow-stat-label { font-size: 0.68rem !important; }
 
-            .profile-report-btn {
-                top: 10px !important;
-                right: 10px !important;
-                bottom: auto !important;
-                opacity: 0.84 !important;
-                background: rgba(225, 112, 85, 0.14) !important;
-                border-color: rgba(225, 112, 85, 0.34) !important;
+            .profile-subbanner {
+                margin-bottom: 0.85rem !important;
             }
 
             .banner-mute-btn {
@@ -1562,98 +1581,6 @@
             .profile-tab {
                 padding: 1rem !important;
                 white-space: nowrap !important;
-            }
-
-            #collection-section .mobile-collection-filters-toggle {
-                display: inline-flex;
-            }
-
-            #collection-section:not(.mobile-filters-open) .status-filters,
-            #collection-section:not(.mobile-filters-open) .type-filters {
-                display: none;
-            }
-
-            /* Cartes collection publique un peu plus grandes sur mobile */
-            #collection-section .list-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 8px;
-            }
-
-            #collection-section .item-meta {
-                gap: 4px;
-                margin-bottom: 8px;
-                font-size: 0.64rem;
-                flex-wrap: nowrap;
-                white-space: nowrap;
-            }
-
-            #collection-section .item-meta .episodes-long {
-                font-size: 0.58rem;
-                letter-spacing: -0.15px;
-            }
-
-            #collection-section .item-type {
-                font-size: 0.7rem;
-                padding: 2px 6px;
-                border-radius: 8px;
-            }
-
-            #collection-section .item-status {
-                font-size: 0.68rem;
-                padding: 4px 8px;
-                border-radius: 12px;
-            }
-
-            #collection-section .change-status-btn {
-                padding: 5px 9px !important;
-                font-size: 0.68rem !important;
-                border-radius: 12px !important;
-                gap: 4px !important;
-            }
-
-            #collection-section {
-                padding-left: 0 !important;
-                padding-right: 0 !important;
-                margin-left: -8px !important;
-                margin-right: -8px !important;
-                width: calc(100% + 16px) !important;
-            }
-        }
-
-        @media (max-width: 480px) {
-            #collection-section {
-                margin-left: -10px !important;
-                margin-right: -10px !important;
-                width: calc(100% + 20px) !important;
-            }
-
-            #collection-section .item-meta {
-                gap: 3px;
-                margin-bottom: 6px;
-                font-size: 0.58rem;
-                flex-wrap: nowrap;
-                white-space: nowrap;
-            }
-
-            #collection-section .item-meta .episodes-long {
-                font-size: 0.52rem;
-                letter-spacing: -0.2px;
-            }
-
-            #collection-section .item-type {
-                font-size: 0.66rem;
-                padding: 2px 5px;
-            }
-
-            #collection-section .item-status {
-                font-size: 0.64rem;
-                padding: 3px 7px;
-            }
-
-            #collection-section .change-status-btn {
-                padding: 4px 8px !important;
-                font-size: 0.64rem !important;
-                border-radius: 11px !important;
             }
         }
 
@@ -1725,17 +1652,8 @@
             .profile-banner-bottom .follow-stat-number { font-size: 0.98rem !important; }
             .profile-banner-bottom .follow-stat-label { font-size: 0.62rem !important; }
 
-            .profile-description {
-                font-size: 0.72rem !important;
-                padding: 0.26rem 0.45rem !important;
-                min-height: 0 !important;
-                line-height: 1.15 !important;
-            }
-
-            .profile-report-btn {
-                top: 8px !important;
-                right: 8px !important;
-                opacity: 0.8 !important;
+            .profile-subbanner .profile-description {
+                font-size: 0.76rem !important;
             }
 
             .banner-mute-btn {
@@ -1750,14 +1668,9 @@
             }
         }
 
-        /* Suppression de la description sur le profil public */
-        .profile-description-wrapper,
-        .profile-description {
-            display: none !important;
-            visibility: hidden !important;
+        .profile-banner-bottom {
+            justify-content: flex-end !important;
         }
-
-        /* Forcer un thème sombre du popup statut sur tous navigateurs */
         .status-modal .modal-content {
             background: #121212 !important;
             color: #f5f6fa !important;
@@ -1887,13 +1800,12 @@
                 <img id="banner-image" class="profile-header-banner" alt="Bannière du profil" loading="eager">
                 <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="auto" muted></video>
                 <div class="profile-header-banner-overlay"></div>
-                
-                <!-- Bouton signaler en bas à droite de la bannière -->
-                <button class="profile-report-btn" id="profile-report-btn" style="display: none;" title="Signaler cet utilisateur">
-                    <i class="fas fa-flag"></i>
-                    <span data-i18n="profile.report">Signaler</span>
-                </button>
 
+                <div class="profile-rating-banner-badge" id="profile-rating-banner-badge" style="display: none;" aria-label="Note du profil">
+                    <i class="fas fa-star" aria-hidden="true"></i>
+                    <strong id="profile-rating-average">—</strong><span class="profile-rating-max">/10</span>
+                </div>
+                
                 <button class="banner-mute-btn" id="banner-mute-btn" style="display: none;" title="Couper le son de la bannière" aria-label="Couper le son de la bannière">
                     <i class="fas fa-volume-up"></i>
                 </button>
@@ -1918,11 +1830,6 @@
                 </div>
                 
                 <div class="profile-banner-bottom">
-                    <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: none;">
-                        <div class="profile-description" id="profile-description">
-                            <span id="profile-description-text" data-i18n="profile.no_description">Aucune description</span>
-                        </div>
-                    </div>
                     <div class="profile-follow-section" id="profile-follow-section">
                         <div class="profile-follow-stats" id="profile-follow-stats">
                             <div class="follow-stat-item" id="followers-stat">
@@ -1939,6 +1846,21 @@
                             <span id="follow-btn-text" data-i18n="profile.subscribe">S'abonner</span>
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <div class="profile-subbanner" id="profile-subbanner" aria-label="Description du profil">
+                <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: none;">
+                    <div class="profile-description" id="profile-description">
+                        <span id="profile-description-text" data-i18n="profile.no_description">Aucune description</span>
+                    </div>
+                </div>
+                <div class="profile-subbanner-actions">
+                <div id="profile-rating-vote-slot"></div>
+                <button class="profile-report-btn" id="profile-report-btn" style="display: none;" title="Signaler cet utilisateur" type="button">
+                    <i class="fas fa-flag"></i>
+                    <span data-i18n="profile.report">Signaler</span>
+                </button>
                 </div>
             </div>
             
@@ -1964,17 +1886,14 @@
             <div class="profile-content">
                 <!-- Section Collection -->
                 <div class="profile-section collection-section" id="collection-section" style="display: none;">
+                    <div class="collection-inner container">
                     <button id="mobile-collection-filters-toggle-public" class="mobile-collection-filters-toggle" type="button" aria-expanded="false">
                         <i class="fas fa-sliders-h" aria-hidden="true"></i>
                         <span data-i18n="filters">Filtres</span>
                     </button>
                     <!-- Filtres par statut -->
                     <div class="status-filters">
-                        <button class="status-filter active" data-status="all">
-                            <i class="fas fa-list"></i>
-                            <span data-i18n="collection.filter.all">Tous</span>
-                        </button>
-                        <button class="status-filter" data-status="watching">
+                        <button class="status-filter active" data-status="watching">
                             <i class="fas fa-play"></i>
                             <span data-i18n="collection.filter.watching">En cours</span>
                         </button>
@@ -1998,13 +1917,29 @@
 
                     <!-- Filtres par type d'œuvre -->
                     <div class="type-filters">
+                        <button class="type-filter active" data-type="all">
+                            <i class="fas fa-th-large"></i>
+                            <span data-i18n="collection.type.all">Tous les types</span>
+                        </button>
                         <button class="type-filter" data-type="anime">
                             <i class="fas fa-tv"></i>
                             <span data-i18n="collection.type.anime">Anime</span>
                         </button>
-                        <button class="type-filter active" data-type="manga">
+                        <button class="type-filter" data-type="manga">
                             <i class="fas fa-book"></i>
                             <span data-i18n="collection.type.manga">Manga</span>
+                        </button>
+                        <button class="type-filter" data-type="roman">
+                            <i class="fas fa-scroll"></i>
+                            <span data-i18n="collection.type.roman">Roman</span>
+                        </button>
+                        <button class="type-filter" data-type="manhwa">
+                            <i class="fas fa-book-open"></i>
+                            <span data-i18n="collection.type.manhwa">Manhwa</span>
+                        </button>
+                        <button class="type-filter" data-type="manhua">
+                            <i class="fas fa-bookmark"></i>
+                            <span data-i18n="collection.type.manhua">Manhua</span>
                         </button>
                         <button class="type-filter" data-type="film">
                             <i class="fas fa-film"></i>
@@ -2065,6 +2000,20 @@
                     <div class="list-content">
                         <div id="collection-items" class="list-grid"></div>
 
+                        <div id="collection-pagination-container" class="pagination-container" style="display: none;">
+                            <div class="pagination collection-pagination">
+                                <button id="collection-prev-page" type="button" class="pagination-btn" disabled aria-label="Page précédente">
+                                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    <span class="pagination-btn-label" data-i18n="collection.pagination.previous">Précédent</span>
+                                </button>
+                                <div class="page-numbers" id="collection-page-numbers"></div>
+                                <button id="collection-next-page" type="button" class="pagination-btn" aria-label="Page suivante">
+                                    <span class="pagination-btn-label" data-i18n="collection.pagination.next">Suivant</span>
+                                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Message si la liste est vide -->
                         <div id="empty-collection" class="empty-list" style="display: none; max-width: 2000px; margin: 0 auto; padding: 20px; width: 100%; box-sizing: border-box;">
                             <div class="empty-icon">
@@ -2073,6 +2022,7 @@
                             <h3 data-i18n="user_profile.empty_title">Aucun élément dans cette collection</h3>
                             <p data-i18n="user_profile.empty_text">Commencez à ajouter des animes et mangas à votre collection !</p>
                         </div>
+                    </div>
                     </div>
                 </div>
 
@@ -2100,8 +2050,8 @@
     </main>
 
     <script src="/js/fake-users-generator.js"></script>
-    <script src="/js/profile-anime-cards.js?v=2.22"></script>
-    <script src="/js/user-profile.js?v=2.12"></script>
+    <script src="/js/profile-anime-cards.js?v=2.23"></script>
+    <script src="/js/user-profile.js?v=2.19"></script>
     <script src="/js/search.js"></script>
     <script src="../js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>

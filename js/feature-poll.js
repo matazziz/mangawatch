@@ -9,13 +9,17 @@ import {
     getDocs,
     setDoc,
     addDoc,
+    deleteDoc,
     runTransaction,
     serverTimestamp,
     query,
-    orderBy
+    orderBy,
+    where,
+    limit
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const COUNTS_DOC_ID = 'counts';
+const RETIRED_DOC_ID = 'retired';
 const PROPOSALS_COL = 'feature_poll_proposals';
 const LOCAL_VOTES_KEY = 'mw_feature_poll_votes';
 const LOCAL_SCORES_KEY = 'mw_feature_poll_scores';
@@ -47,12 +51,24 @@ const SEED_PROPOSALS = [
     { id: 'notifications', titleKey: 'home.feature_poll_opt_notifications', descKey: 'home.feature_poll_opt_notifications_desc', theme: 'notifications', icon: 'fa-bell', official: true }
 ];
 
-/** Propositions retirées du sondage (masquées même si encore dans Firestore). */
+/** Propositions retirées localement (legacy) + liste Firestore `feature_poll/retired`. */
 const RETIRED_PROPOSAL_IDS = ['offline'];
+let retiredIdsCache = RETIRED_PROPOSAL_IDS.slice();
+
+async function loadRetiredProposalIds() {
+    try {
+        const snap = await getDoc(doc(db, 'feature_poll', RETIRED_DOC_ID));
+        const remote = snap.exists() ? (snap.data().ids || []) : [];
+        retiredIdsCache = [...new Set(RETIRED_PROPOSAL_IDS.concat(remote))];
+    } catch (e) {
+        retiredIdsCache = RETIRED_PROPOSAL_IDS.slice();
+    }
+    return retiredIdsCache;
+}
 
 function withoutRetiredProposals(list) {
     return (list || []).filter(function (p) {
-        return RETIRED_PROPOSAL_IDS.indexOf(p.id) === -1;
+        return retiredIdsCache.indexOf(p.id) === -1;
     });
 }
 
@@ -63,8 +79,27 @@ const state = {
     search: '',
     themeFilter: '',
     page: 1,
-    isLoggedIn: false
+    isLoggedIn: false,
+    canModerateProposals: false
 };
+
+function isMatazzizModerator(user) {
+    if (!user) return false;
+    const username = String(user.username || user.name || user.pseudo || '').trim().toLowerCase();
+    if (username === 'matazziz') return true;
+    const email = String(user.email || '').trim().toLowerCase();
+    if (email && email.split('@')[0] === 'matazziz') return true;
+    try {
+        const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        for (let i = 0; i < accounts.length; i++) {
+            const acc = accounts[i];
+            if (!acc || normalizeProfileEmail(acc.email) !== normalizeProfileEmail(user.email)) continue;
+            const accName = String(acc.username || acc.name || acc.pseudo || '').trim().toLowerCase();
+            if (accName === 'matazziz') return true;
+        }
+    } catch (e) { /* ignore */ }
+    return false;
+}
 
 function tr(key, fallback) {
     if (typeof window.t === 'function') {
@@ -94,15 +129,234 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-function defaultAvatar() {
-    return '/images/logo.png';
+function defaultAvatar(name, email) {
+    return initialsAvatarUrl(name, email);
+}
+
+function initialsAvatarUrl(name, email) {
+    const raw = String(name || (email && email.split('@')[0]) || 'U').trim();
+    const label = raw.substring(0, 2) || 'U';
+    return 'https://ui-avatars.com/api/?name=' + encodeURIComponent(label) +
+        '&background=00b894&color=fff&size=400&bold=true';
+}
+
+function normalizeProfileEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
+const STALE_AVATAR_HINTS = ['/images/logo.png', 'logo.png', '/images/default'];
+
+function isValidAvatarUrl(url) {
+    if (!url || typeof url !== 'string') return false;
+    if (url === 'null' || url === 'undefined') return false;
+    if (url.startsWith('blob:') || url.startsWith('data:')) return false;
+    const lower = url.toLowerCase();
+    for (let i = 0; i < STALE_AVATAR_HINTS.length; i++) {
+        if (lower === STALE_AVATAR_HINTS[i] || lower.endsWith(STALE_AVATAR_HINTS[i])) return false;
+    }
+    return url.startsWith('http') || url.startsWith('/');
+}
+
+function enhanceAvatarUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (url.includes('googleusercontent.com')) {
+        if (/=s\d+(-c)?/.test(url)) {
+            return url.replace(/=s\d+(-c)?/g, '=s400-c');
+        }
+        return url + '=s400-c';
+    }
+    if (url.includes('ui-avatars.com') && !url.includes('size=')) {
+        return url + (url.includes('?') ? '&' : '?') + 'size=400';
+    }
+    return url;
+}
+
+let firebaseServicesCache = null;
+async function getFirebaseServices() {
+    if (firebaseServicesCache) return firebaseServicesCache;
+    try {
+        const mod = await import('./firebase-service.js?v=6febe22');
+        firebaseServicesCache = {
+            avatarService: mod.avatarService || null,
+            profileAdminService: mod.profileAdminService || null
+        };
+    } catch (e) {
+        firebaseServicesCache = {
+            avatarService: window.avatarService || null,
+            profileAdminService: null
+        };
+    }
+    return firebaseServicesCache;
+}
+
+async function buildProfileAvatarLookup() {
+    const map = new Map();
+
+    function put(email, data) {
+        const norm = normalizeProfileEmail(email);
+        if (!norm) return;
+        const prev = map.get(norm) || {};
+        const avatar = data.avatar || prev.avatar || null;
+        map.set(norm, {
+            username: data.username || data.name || prev.username || null,
+            avatar: isValidAvatarUrl(avatar) ? avatar : (prev.avatar || null),
+            verified: data.verified === true || prev.verified === true
+        });
+    }
+
+    try {
+        const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        for (let i = 0; i < accounts.length; i++) {
+            const acc = accounts[i];
+            if (!acc || !acc.email) continue;
+            put(acc.email, {
+                username: acc.username || acc.name,
+                avatar: acc.customAvatar || acc.avatar || acc.originalAvatar || acc.picture,
+                verified: acc.verified
+            });
+        }
+    } catch (e) { /* ignore */ }
+
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key || !key.startsWith('profile_') || key.startsWith('profile_description_') || key.startsWith('profile_banner_')) continue;
+            try {
+                const p = JSON.parse(localStorage.getItem(key) || '{}');
+                put(p.email || key.replace('profile_', ''), {
+                    username: p.username || p.pseudo,
+                    avatar: p.customAvatar || p.avatar || p.picture || p.photoURL
+                });
+            } catch (e) { /* ignore */ }
+        }
+    } catch (e) { /* ignore */ }
+
+    try {
+        for (let k = 0; k < localStorage.length; k++) {
+            const lk = localStorage.key(k);
+            if (lk && lk.startsWith('avatar_')) {
+                const em = lk.slice(7);
+                const url = localStorage.getItem(lk);
+                if (isValidAvatarUrl(url)) put(em, { avatar: url });
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    try {
+        const services = await getFirebaseServices();
+        if (services.profileAdminService && typeof services.profileAdminService.listAllUserProfiles === 'function') {
+            const remoteUsers = await services.profileAdminService.listAllUserProfiles();
+            if (Array.isArray(remoteUsers)) {
+                remoteUsers.forEach(function (u) {
+                    put(u.email, {
+                        username: u.username || u.name,
+                        avatar: u.avatar,
+                        verified: u.verified
+                    });
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[FeaturePoll] Profils Firestore:', e);
+    }
+
+    return map;
+}
+
+function resolveAuthorAvatarFromLocal(email) {
+    const norm = normalizeProfileEmail(email);
+    if (!norm) return null;
+    try {
+        const fromKey = localStorage.getItem('avatar_' + norm);
+        if (isValidAvatarUrl(fromKey)) return fromKey;
+    } catch (e) { /* ignore */ }
+    try {
+        const prof = JSON.parse(localStorage.getItem('profile_' + norm) || '{}');
+        const fromProf = prof.customAvatar || prof.avatar || prof.picture || prof.photoURL;
+        if (isValidAvatarUrl(fromProf)) return fromProf;
+    } catch (e) { /* ignore */ }
+    try {
+        const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
+        for (let i = 0; i < accounts.length; i++) {
+            const acc = accounts[i];
+            if (acc && normalizeProfileEmail(acc.email) === norm) {
+                const url = acc.customAvatar || acc.avatar || acc.originalAvatar || acc.picture;
+                if (isValidAvatarUrl(url)) return url;
+            }
+        }
+    } catch (e) { /* ignore */ }
+    return null;
 }
 
 function resolveAuthorAvatar(user, profile) {
-    if (profile && profile.avatar) return profile.avatar;
-    if (!user) return defaultAvatar();
-    const key = user.email ? 'avatar_' + user.email : '';
-    return user.customAvatar || user.avatar || user.picture || (key ? localStorage.getItem(key) : null) || defaultAvatar();
+    if (profile) {
+        const fromProfile = profile.avatar || profile.customAvatar || profile.photoURL || profile.picture;
+        if (isValidAvatarUrl(fromProfile)) return enhanceAvatarUrl(fromProfile);
+    }
+    if (!user) return null;
+    const norm = normalizeProfileEmail(user.email);
+    const fromLocal = resolveAuthorAvatarFromLocal(norm);
+    if (fromLocal) return enhanceAvatarUrl(fromLocal);
+    const fromStorage = norm ? localStorage.getItem('avatar_' + norm) : null;
+    const url = user.customAvatar || user.avatar || user.originalAvatar || user.picture || fromStorage;
+    if (isValidAvatarUrl(url)) return enhanceAvatarUrl(url);
+    return null;
+}
+
+async function resolveProposalAvatar(p, lookup, avatarService) {
+    if (!p.author_email || p.official) return p;
+
+    const norm = normalizeProfileEmail(p.author_email);
+    const fromLookup = lookup.get(norm);
+    const current = getCurrentUser();
+    const sameUser = current && normalizeProfileEmail(current.email) === norm;
+    const pseudoUser = sameUser ? current : { email: p.author_email };
+    const displayName = (fromLookup && fromLookup.username) || p.author_username;
+
+    let avatar = null;
+
+    if (fromLookup && isValidAvatarUrl(fromLookup.avatar)) {
+        avatar = fromLookup.avatar;
+    }
+
+    if (!avatar) {
+        avatar = resolveAuthorAvatar(pseudoUser, fromLookup);
+    }
+
+    if (!avatar) {
+        avatar = resolveAuthorAvatarFromLocal(p.author_email);
+    }
+
+    if (!avatar && avatarService && typeof avatarService.getAvatar === 'function') {
+        try {
+            const remote = await avatarService.getAvatar(p.author_email);
+            if (isValidAvatarUrl(remote)) avatar = remote;
+        } catch (e) { /* ignore */ }
+    }
+
+    if (!avatar && isValidAvatarUrl(p.author_avatar)) {
+        avatar = p.author_avatar;
+    }
+
+    if (!avatar) {
+        avatar = initialsAvatarUrl(displayName, p.author_email);
+    }
+
+    return {
+        ...p,
+        author_avatar: enhanceAvatarUrl(avatar),
+        author_username: displayName || p.author_username,
+        author_verified: p.author_verified || (fromLookup && fromLookup.verified === true)
+    };
+}
+
+async function enrichProposalAvatars(proposals) {
+    const list = proposals || [];
+    const services = await getFirebaseServices();
+    const lookup = await buildProfileAvatarLookup();
+    return Promise.all(list.map(function (p) {
+        return resolveProposalAvatar(p, lookup, services.avatarService);
+    }));
 }
 
 function isUserVerified(email) {
@@ -116,17 +370,48 @@ function isUserVerified(email) {
 
 async function loadAuthorProfile(email) {
     if (!email) return null;
-    try {
-        const snap = await getDoc(doc(db, 'user_profiles', email));
-        if (snap.exists()) {
-            const d = snap.data();
-            return {
-                username: d.username || d.pseudo || d.displayName || null,
-                avatar: d.avatar || d.photoURL || d.picture || null,
-                verified: d.verified === true
-            };
-        }
-    } catch (e) { /* ignore */ }
+    const raw = String(email).trim();
+    const variants = [];
+    const norm = normalizeProfileEmail(raw);
+    if (norm) variants.push(norm);
+    if (raw && raw !== norm) variants.push(raw);
+
+    for (let i = 0; i < variants.length; i++) {
+        try {
+            const snap = await getDoc(doc(db, 'user_profiles', variants[i]));
+            if (snap.exists()) {
+                const d = snap.data();
+                return {
+                    username: d.username || d.pseudo || d.displayName || null,
+                    avatar: d.avatar || d.customAvatar || d.photoURL || d.picture || null,
+                    verified: d.verified === true
+                };
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    for (let j = 0; j < variants.length; j++) {
+        try {
+            const res = await getDocs(query(
+                collection(db, 'user_profiles'),
+                where('email', '==', variants[j]),
+                limit(1)
+            ));
+            if (!res.empty) {
+                const d = res.docs[0].data();
+                return {
+                    username: d.username || d.pseudo || d.displayName || null,
+                    avatar: d.avatar || d.customAvatar || d.photoURL || d.picture || null,
+                    verified: d.verified === true
+                };
+            }
+        } catch (e) { /* ignore */ }
+    }
+
+    const local = resolveAuthorAvatarFromLocal(email);
+    if (local) {
+        return { username: null, avatar: local, verified: false };
+    }
     return null;
 }
 
@@ -162,7 +447,7 @@ export async function addFeatureProposal(info) {
         icon: icon,
         author_email: user.email,
         author_username: username,
-        author_avatar: resolveAuthorAvatar(user, profile),
+        author_avatar: resolveAuthorAvatar(user, profile) || initialsAvatarUrl(username, user.email),
         author_verified: verified,
         official: false,
         created_at: serverTimestamp()
@@ -292,7 +577,7 @@ function mapProposalDoc(d) {
         icon: data.icon || 'fa-lightbulb',
         author_email: data.author_email,
         author_username: data.author_username || tr('home.feature_poll_author_official', 'MangaWatch'),
-        author_avatar: data.author_avatar || defaultAvatar(),
+        author_avatar: isValidAvatarUrl(data.author_avatar) ? data.author_avatar : null,
         author_verified: data.author_verified === true || data.official === true,
         official: data.official === true,
         created_at: data.created_at && data.created_at.toMillis ? data.created_at.toMillis() : Date.now()
@@ -453,13 +738,16 @@ function authorProfileUrl(p) {
 }
 
 function renderAuthor(p) {
-    const av = escapeHtml(p.author_avatar || defaultAvatar());
-    const name = escapeHtml(p.author_username || '—');
+    const displayName = p.author_username || '—';
+    const avatarSrc = enhanceAvatarUrl(p.author_avatar || initialsAvatarUrl(displayName, p.author_email));
+    const av = escapeHtml(avatarSrc);
+    const name = escapeHtml(displayName);
     const ver = p.author_verified
         ? '<span class="feature-poll-verified" title="Compte certifié"><i class="fas fa-check"></i></span>'
         : '';
     const profileUrl = authorProfileUrl(p);
-    const avatarHtml = '<img class="feature-poll-author-avatar" src="' + av + '" alt="" loading="lazy" onerror="this.src=\'' + defaultAvatar() + '\'">';
+    const fallback = escapeHtml(initialsAvatarUrl(displayName, p.author_email));
+    const avatarHtml = '<img class="feature-poll-author-avatar" src="' + av + '" alt="" width="52" height="52" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'' + fallback + '\'">';
     const nameHtml = name + ver;
 
     if (profileUrl) {
@@ -496,6 +784,17 @@ function renderVoteControls(optionId, userVote) {
     );
 }
 
+function renderDeleteButton(proposalId) {
+    if (!state.canModerateProposals) return '';
+    return (
+        '<button type="button" class="feature-poll-delete-btn" data-delete-proposal="' + escapeHtml(proposalId) + '"' +
+            ' title="' + escapeHtml(tr('home.feature_poll_delete', 'Supprimer cette idée')) + '"' +
+            ' aria-label="' + escapeHtml(tr('home.feature_poll_delete', 'Supprimer cette idée')) + '">' +
+            '<i class="fas fa-trash-alt" aria-hidden="true"></i>' +
+        '</button>'
+    );
+}
+
 function renderPodium(top3) {
     const el = document.getElementById('featurePollPodium');
     if (!el) return;
@@ -511,7 +810,8 @@ function renderPodium(top3) {
                 '<span class="feature-poll-podium-place">' + escapeHtml(placeLabel) + '</span></div>';
         }
         return (
-            '<div class="feature-poll-podium-slot ' + heightClass + '">' +
+            '<div class="feature-poll-podium-slot ' + heightClass + '" data-option-id="' + escapeHtml(p.id) + '">' +
+                renderDeleteButton(p.id) +
                 '<span class="feature-poll-podium-medal" aria-hidden="true">' + medal + '</span>' +
                 '<span class="feature-poll-podium-place">' + escapeHtml(placeLabel) + '</span>' +
                 '<div class="feature-poll-podium-icon"><i class="fas ' + p.icon + '"></i></div>' +
@@ -535,7 +835,10 @@ function renderCard(p, rank) {
             '<div class="feature-poll-card-main">' +
                 '<div class="feature-poll-card-top">' +
                     renderAuthor(p) +
-                    '<div class="feature-poll-badges">' + renderThemeBadge(p.theme) + '</div>' +
+                    '<div class="feature-poll-badges">' +
+                        renderThemeBadge(p.theme) +
+                        renderDeleteButton(p.id) +
+                    '</div>' +
                 '</div>' +
                 '<h3 class="feature-poll-name">' + escapeHtml(proposalTitle(p)) + '</h3>' +
                 '<p class="feature-poll-desc">' + escapeHtml(proposalDesc(p)) + '</p>' +
@@ -610,6 +913,17 @@ function renderAll() {
     listEl.querySelectorAll('.feature-poll-vote-btn:not([disabled])').forEach(function (btn) {
         btn.addEventListener('click', onVoteClick);
     });
+
+    listEl.querySelectorAll('.feature-poll-delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', onDeleteClick);
+    });
+
+    const podiumEl = document.getElementById('featurePollPodium');
+    if (podiumEl) {
+        podiumEl.querySelectorAll('.feature-poll-delete-btn').forEach(function (btn) {
+            btn.addEventListener('click', onDeleteClick);
+        });
+    }
 }
 
 function populateThemeSelects() {
@@ -631,11 +945,44 @@ function populateThemeSelects() {
 async function refresh() {
     const user = getCurrentUser();
     state.isLoggedIn = !!(user && user.email);
-    state.proposals = await fetchProposals();
+    state.canModerateProposals = isMatazzizModerator(user);
+    await loadRetiredProposalIds();
+    state.proposals = await enrichProposalAvatars(await fetchProposals());
     const ids = state.proposals.map(function (p) { return p.id; });
     state.scores = await fetchScores(ids);
     state.userVotes = await fetchUserVotes(user && user.email);
     renderAll();
+}
+
+async function onDeleteClick(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (!state.canModerateProposals) return;
+
+    const btn = ev.currentTarget;
+    const proposalId = btn.getAttribute('data-delete-proposal');
+    if (!proposalId) return;
+
+    const proposal = state.proposals.find(function (p) { return p.id === proposalId; });
+    const title = proposal ? proposalTitle(proposal) : proposalId;
+    const msg = tr('home.feature_poll_delete_confirm', 'Supprimer « {title} » pour tous les utilisateurs ?')
+        .replace('{title}', title);
+
+    if (!window.confirm(msg)) return;
+
+    btn.disabled = true;
+    try {
+        await retireFeatureProposal(proposalId);
+        state.page = 1;
+        if (typeof window.showElegantPopup === 'function') {
+            window.showElegantPopup('✓', tr('home.feature_poll_delete_success', 'Idée supprimée.'), '✓');
+        }
+        await refresh();
+    } catch (err) {
+        console.error('[FeaturePoll] delete:', err);
+        alert(tr('home.feature_poll_delete_error', 'Impossible de supprimer cette idée.'));
+        btn.disabled = false;
+    }
 }
 
 async function onVoteClick(ev) {
@@ -750,3 +1097,66 @@ if (document.readyState === 'loading') {
 } else {
     init();
 }
+
+/**
+ * Supprime une idée du sondage pour tous les utilisateurs (admin).
+ * — Ajoute l'id à feature_poll/retired
+ * — Retire les scores agrégés
+ * — Supprime le document proposition si possible
+ */
+export async function retireFeatureProposal(proposalId) {
+    const id = String(proposalId || '').trim();
+    if (!id) throw new Error('missing_id');
+
+    const retiredRef = doc(db, 'feature_poll', RETIRED_DOC_ID);
+    const countsRef = doc(db, 'feature_poll', COUNTS_DOC_ID);
+    const proposalRef = doc(db, PROPOSALS_COL, id);
+
+    await runTransaction(db, async function (transaction) {
+        const retiredSnap = await transaction.get(retiredRef);
+        const ids = retiredSnap.exists() ? (retiredSnap.data().ids || []).slice() : [];
+        if (ids.indexOf(id) === -1) ids.push(id);
+        transaction.set(retiredRef, { ids: ids, updated_at: serverTimestamp() }, { merge: true });
+
+        const countsSnap = await transaction.get(countsRef);
+        if (countsSnap.exists()) {
+            const scores = Object.assign({}, countsSnap.data().scores || countsSnap.data().votes || {});
+            delete scores[id];
+            transaction.set(countsRef, { scores: scores, updated_at: serverTimestamp() }, { merge: true });
+        }
+    });
+
+    try {
+        await deleteDoc(proposalRef);
+    } catch (e) {
+        console.warn('[FeaturePoll] retireFeatureProposal deleteDoc:', e);
+    }
+
+    if (retiredIdsCache.indexOf(id) === -1) retiredIdsCache.push(id);
+}
+
+/** Liste complète pour l'admin (y compris idées déjà retirées côté affichage public). */
+export async function listFeaturePollProposalsForAdmin() {
+    await loadRetiredProposalIds();
+    let snap;
+    try {
+        snap = await getDocs(query(collection(db, PROPOSALS_COL), orderBy('created_at', 'desc')));
+    } catch (e) {
+        snap = await getDocs(collection(db, PROPOSALS_COL));
+    }
+    const proposals = snap.docs.map(mapProposalDoc);
+    const ids = proposals.map(function (p) { return p.id; });
+    const scores = await fetchScores(ids);
+    return proposals.map(function (p) {
+        const s = scores[p.id] || { up: 0, down: 0 };
+        const net = (Number(s.up) || 0) - (Number(s.down) || 0);
+        return Object.assign({}, p, {
+            scores: s,
+            netScore: net,
+            isRetired: retiredIdsCache.indexOf(p.id) !== -1
+        });
+    });
+}
+
+window.retireFeatureProposal = retireFeatureProposal;
+window.listFeaturePollProposalsForAdmin = listFeaturePollProposalsForAdmin;

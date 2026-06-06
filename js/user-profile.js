@@ -496,6 +496,26 @@ async function loadUserProfile(userEmail) {
     loadUserAnimeNotes();
 }
 
+function updateProfileSubbannerVisibility() {
+    const subbanner = document.getElementById('profile-subbanner');
+    const wrapper = document.getElementById('profile-description-wrapper');
+    const description = document.getElementById('profile-description');
+    const reportBtn = document.getElementById('profile-report-btn');
+    const rateBtn = document.getElementById('profile-rating-open-btn');
+    if (!subbanner) return;
+
+    const hasDescription = !!(wrapper && wrapper.style.display !== 'none' && description && !description.classList.contains('empty'));
+    const hasReport = !!(reportBtn && reportBtn.style.display === 'inline-flex');
+    const hasVote = !!(rateBtn && rateBtn.style.display !== 'none');
+
+    subbanner.classList.toggle('visible', hasDescription || hasReport || hasVote);
+    subbanner.classList.toggle('report-only', hasReport && !hasDescription && !hasVote);
+}
+
+if (typeof window !== 'undefined') {
+    window.updateProfileSubbannerVisibility = updateProfileSubbannerVisibility;
+}
+
 function displayProfileInfo(user, userEmail) {
     const profileAvatar = document.getElementById('profile-avatar');
     const userName = document.getElementById('user-name');
@@ -629,6 +649,12 @@ function displayProfileInfo(user, userEmail) {
     if (reportBtn && currentUser && currentUser.email !== userEmail) {
         reportBtn.style.display = 'inline-flex';
     }
+
+    updateProfileSubbannerVisibility();
+
+    if (typeof window.initProfileRatingUI === 'function') {
+        window.initProfileRatingUI({ profileEmail: userEmail, allowVote: true });
+    }
 }
 
 // Applique les données bannière (image ou vidéo) aux éléments DOM (profil public / top 10 utilisateur)
@@ -754,51 +780,11 @@ function initBannerMuteButton() {
 }
 
 function setupTabs() {
-    // Afficher ou masquer la bannière selon l'onglet : masquée sur Collection, visible sur Anime & Manga / Tierlist
-    function setBannerVisibility(visible) {
-        const header = document.querySelector('.profile-header');
-        if (header) header.style.display = visible ? '' : 'none';
-    }
-
-    // Restaurer l'onglet sauvegardé après un rafraîchissement (quand on quitte Anime)
-    const savedActiveTab = localStorage.getItem('activeProfileTabPublic');
-    if (savedActiveTab) {
-        const savedTab = document.querySelector(`.profile-tab[data-tab="${savedActiveTab}"]`);
-        if (savedTab) {
-            document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-            savedTab.classList.add('active');
-            document.querySelectorAll('.profile-section').forEach(section => {
-                section.style.display = 'none';
-                section.classList.remove('active');
-            });
-            const savedSection = document.getElementById(`${savedActiveTab}-section`);
-            if (savedSection) {
-                savedSection.style.display = 'block';
-                savedSection.classList.add('active');
-                setBannerVisibility(savedActiveTab !== 'collection');
-                if (savedActiveTab === 'collection') {
-                    loadUserCollection('all', 'anime');
-                } else if (savedActiveTab === 'reviews') {
-                    loadUserAnimeNotes();
-                } else if (savedActiveTab === 'tierlist') {
-                    loadUserTierLists();
-                }
-            }
-        }
-        localStorage.removeItem('activeProfileTabPublic');
-    }
-
     const tabs = document.querySelectorAll('.profile-tab');
     tabs.forEach(tab => {
         tab.addEventListener('click', function() {
             const targetTabName = this.dataset.tab;
-            const wasOnReviews = document.querySelector('.profile-tab.active')?.dataset?.tab === 'reviews';
-            // En quittant Anime (reviews) vers un autre onglet, rafraîchir la page pour éviter les bugs
-            if (wasOnReviews && targetTabName !== 'reviews') {
-                localStorage.setItem('activeProfileTabPublic', targetTabName);
-                location.reload();
-                return;
-            }
+            if (this.classList.contains('active')) return;
 
             tabs.forEach(t => t.classList.remove('active'));
             this.classList.add('active');
@@ -806,18 +792,19 @@ function setupTabs() {
                 section.classList.remove('active');
                 section.style.display = 'none';
             });
+
             const section = document.getElementById(`${targetTabName}-section`);
-            if (section) {
-                section.style.display = 'block';
-                section.classList.add('active');
-                setBannerVisibility(targetTabName !== 'collection');
-                if (targetTabName === 'collection') {
-                    loadUserCollection('all', 'anime');
-                } else if (targetTabName === 'reviews') {
-                    loadUserAnimeNotes();
-                } else if (targetTabName === 'tierlist') {
-                    loadUserTierLists();
-                }
+            if (!section) return;
+
+            section.style.display = 'block';
+            section.classList.add('active');
+
+            if (targetTabName === 'collection') {
+                loadUserCollection(currentStatusFilter || 'watching', currentTypeFilter || 'all');
+            } else if (targetTabName === 'reviews') {
+                loadUserAnimeNotes();
+            } else if (targetTabName === 'tierlist') {
+                loadUserTierLists();
             }
         });
     });
@@ -870,10 +857,183 @@ function setupCollectionFilters() {
             loadUserCollection(currentStatusFilter, currentTypeFilter);
         });
     });
+    setupPublicCollectionPagination();
 }
 
-let currentStatusFilter = 'all';
-let currentTypeFilter = 'anime';
+const COLLECTION_ITEMS_PER_PAGE = 50;
+let collectionFilteredItems = [];
+let collectionCurrentPage = 1;
+
+function scrollToPublicCollectionTop() {
+    if (typeof window.matchMedia === 'function' && !window.matchMedia('(max-width: 768px)').matches) return;
+    const listTop = document.getElementById('collection-items');
+    if (!listTop) return;
+    const headerOffset = window.matchMedia('(max-width: 480px)').matches ? 76 : 82;
+    const top = listTop.getBoundingClientRect().top + window.scrollY - headerOffset;
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+}
+
+function setupPublicCollectionPagination() {
+    const prevBtn = document.getElementById('collection-prev-page');
+    const nextBtn = document.getElementById('collection-next-page');
+    if (!prevBtn || !nextBtn) return;
+
+    prevBtn.addEventListener('click', function () {
+        if (collectionCurrentPage > 1) {
+            collectionCurrentPage--;
+            renderPublicCollectionPage();
+            scrollToPublicCollectionTop();
+        }
+    });
+
+    nextBtn.addEventListener('click', function () {
+        const totalPages = Math.ceil(collectionFilteredItems.length / COLLECTION_ITEMS_PER_PAGE);
+        if (collectionCurrentPage < totalPages) {
+            collectionCurrentPage++;
+            renderPublicCollectionPage();
+            scrollToPublicCollectionTop();
+        }
+    });
+}
+
+function appendPublicPageButton(container, page) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'page-number' + (page === collectionCurrentPage ? ' active' : '');
+    btn.textContent = String(page);
+    btn.addEventListener('click', function () {
+        collectionCurrentPage = page;
+        renderPublicCollectionPage();
+        scrollToPublicCollectionTop();
+    });
+    container.appendChild(btn);
+}
+
+function appendPublicPageEllipsis(container) {
+    const ellipsis = document.createElement('span');
+    ellipsis.className = 'page-ellipsis';
+    ellipsis.textContent = '…';
+    container.appendChild(ellipsis);
+}
+
+function generatePublicCollectionPageNumbers(totalPages) {
+    const pageNumbersContainer = document.getElementById('collection-page-numbers');
+    if (!pageNumbersContainer) return;
+    pageNumbersContainer.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+    if (isMobile) {
+        const pagesToDisplay = new Set([1, collectionCurrentPage - 1, collectionCurrentPage, collectionCurrentPage + 1]);
+        if (totalPages > 1) pagesToDisplay.add(totalPages);
+        const sortedPages = Array.from(pagesToDisplay)
+            .filter(function (page) { return page >= 1 && page <= totalPages; })
+            .sort(function (a, b) { return a - b; });
+
+        let previousRenderedPage = 0;
+        sortedPages.forEach(function (page) {
+            if (previousRenderedPage && page - previousRenderedPage > 1) {
+                appendPublicPageEllipsis(pageNumbersContainer);
+            }
+            appendPublicPageButton(pageNumbersContainer, page);
+            previousRenderedPage = page;
+        });
+        return;
+    }
+
+    let startPage = Math.max(1, collectionCurrentPage - 2);
+    let endPage = Math.min(totalPages, collectionCurrentPage + 2);
+    if (endPage - startPage < 4) {
+        if (startPage === 1) endPage = Math.min(totalPages, startPage + 4);
+        else startPage = Math.max(1, endPage - 4);
+    }
+
+    if (startPage > 1) {
+        appendPublicPageButton(pageNumbersContainer, 1);
+        if (startPage > 2) appendPublicPageEllipsis(pageNumbersContainer);
+    }
+    for (let page = startPage; page <= endPage; page++) {
+        appendPublicPageButton(pageNumbersContainer, page);
+    }
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) appendPublicPageEllipsis(pageNumbersContainer);
+        appendPublicPageButton(pageNumbersContainer, totalPages);
+    }
+}
+
+function updatePublicCollectionPagination(totalItems) {
+    const paginationContainer = document.getElementById('collection-pagination-container');
+    const prevBtn = document.getElementById('collection-prev-page');
+    const nextBtn = document.getElementById('collection-next-page');
+    if (!paginationContainer) return;
+
+    const totalPages = Math.ceil(totalItems / COLLECTION_ITEMS_PER_PAGE) || 1;
+
+    if (prevBtn) prevBtn.disabled = collectionCurrentPage <= 1;
+    if (nextBtn) nextBtn.disabled = collectionCurrentPage >= totalPages;
+
+    generatePublicCollectionPageNumbers(totalPages);
+
+    paginationContainer.style.display = totalItems > COLLECTION_ITEMS_PER_PAGE ? 'flex' : 'none';
+}
+
+function renderPublicCollectionPage() {
+    const collectionContainer = document.getElementById('collection-items');
+    const emptyMessage = document.getElementById('empty-collection');
+    if (!collectionContainer) return;
+
+    const totalItems = collectionFilteredItems.length;
+    if (totalItems === 0) {
+        collectionContainer.innerHTML = '';
+        collectionContainer.style.display = 'none';
+        if (emptyMessage) emptyMessage.style.display = 'block';
+        updatePublicCollectionPagination(0);
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / COLLECTION_ITEMS_PER_PAGE) || 1;
+    if (collectionCurrentPage > totalPages) collectionCurrentPage = totalPages;
+    if (collectionCurrentPage < 1) collectionCurrentPage = 1;
+
+    const startIndex = (collectionCurrentPage - 1) * COLLECTION_ITEMS_PER_PAGE;
+    const pageItems = collectionFilteredItems.slice(startIndex, startIndex + COLLECTION_ITEMS_PER_PAGE);
+
+    collectionContainer.innerHTML = '';
+    if (emptyMessage) emptyMessage.style.display = 'none';
+    collectionContainer.className = 'list-grid';
+
+    const imagePromises = [];
+    pageItems.forEach(function (item, index) {
+        const itemElement = createPublicListItem(item);
+        collectionContainer.appendChild(itemElement);
+        const delay = index * 150;
+        imagePromises.push(new Promise(function (resolve) {
+            setTimeout(function () {
+                fetchAndUpdateItemImage(item, itemElement).then(resolve).catch(resolve);
+            }, delay);
+        }));
+    });
+
+    updatePublicCollectionPagination(totalItems);
+
+    Promise.all(imagePromises).then(function () {
+        const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
+        if (window.translateCollectionPage) {
+            window.translateCollectionPage(currentLanguage);
+        } else if (window.translateEntireSiteAutomatically) {
+            window.translateEntireSiteAutomatically();
+        }
+    }).catch(function () {
+        const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
+        if (window.translateCollectionPage) {
+            window.translateCollectionPage(currentLanguage);
+        }
+    });
+}
+
+let currentStatusFilter = 'watching';
+let currentTypeFilter = 'all';
 
 /** Filtre type collection (profil public) : roman/novel, film/movie, anime/TV… */
 function collectionItemMatchesTypeFilterPublic(item, typeFilter) {
@@ -885,9 +1045,10 @@ function collectionItemMatchesTypeFilterPublic(item, typeFilter) {
         const v = String(value || '').toLowerCase().trim();
         if (!v) return '';
         if (['tv', 'ova', 'ona', 'special', 'music', 'anime'].includes(v)) return 'anime';
-        if (['movie', 'film'].includes(v)) return 'film';
-        if (['manga', 'doujin', 'doujinshi', 'manhwa', 'manhua', 'one shot', 'one_shot'].includes(v)) return 'manga';
+        if (['movie', 'film'].includes(v)) return v === 'movie' ? 'anime' : 'film';
         if (['roman', 'novel', 'light novel', 'light_novel'].includes(v)) return 'roman';
+        if (['manga', 'doujin', 'doujinshi', 'one shot', 'one_shot'].includes(v)) return 'manga';
+        if (['manhwa', 'manhua'].includes(v)) return v;
         return v;
     };
 
@@ -921,18 +1082,16 @@ function resolvePublicNoteContentType(note) {
 
 // Fonction pour charger et afficher la collection avec la même structure que list.js
 // Charge depuis Firebase (comme list.html) avec fallback localStorage pour cohérence
-async function loadUserCollection(statusFilter = 'all', typeFilter = 'manga') {
-    const collectionSection = document.getElementById('collection-section');
+async function loadUserCollection(statusFilter = 'watching', typeFilter = 'all') {
     const collectionContainer = document.getElementById('collection-items');
     const emptyMessage = document.getElementById('empty-collection');
     
     if (!collectionContainer) return;
     
-    // Sauvegarder les filtres actuels
     currentStatusFilter = statusFilter;
     currentTypeFilter = typeFilter;
+    collectionCurrentPage = 1;
     
-    // Charger depuis Firebase (comme list.html) pour cohérence - fallback localStorage
     let userList = [];
     try {
         const { collectionService } = await import('/js/firebase-service.js?v=6febe20');
@@ -943,79 +1102,18 @@ async function loadUserCollection(statusFilter = 'all', typeFilter = 'manga') {
         userList = JSON.parse(localStorage.getItem(userListKey) || '[]');
     }
     
-    // Filtrer selon le statut
     let filteredList = userList;
     if (statusFilter !== 'all') {
         filteredList = filteredList.filter(item => item.status === statusFilter);
     }
     
-    // Filtrer selon le type (aligné sur list.js : novel/roman, Movie/film, etc.)
     if (typeFilter !== 'all') {
         filteredList = filteredList.filter(item => collectionItemMatchesTypeFilterPublic(item, typeFilter));
     }
     
-    // Vider le conteneur
-    collectionContainer.innerHTML = '';
-    
-    // Mettre à jour les statistiques
+    collectionFilteredItems = filteredList;
     updateCollectionStats(userList);
-    
-    if (filteredList.length === 0) {
-        collectionContainer.style.display = 'none';
-        emptyMessage.style.display = 'block';
-        return;
-    }
-    
-    emptyMessage.style.display = 'none';
-    collectionContainer.style.display = 'grid';
-    
-    // Ne pas forcer les styles, laisser le CSS gérer via la classe list-grid
-    collectionContainer.className = 'list-grid';
-    
-    // Afficher les items de la collection avec la même structure que list.js
-    // Récupérer les images depuis l'API Jikan pour chaque item
-    // Utiliser une boucle for...of avec await pour attendre que toutes les images soient chargées
-    const imagePromises = [];
-    filteredList.forEach((item, index) => {
-        const itemElement = createPublicListItem(item);
-        collectionContainer.appendChild(itemElement);
-        
-        // Récupérer l'image de qualité depuis l'API Jikan avec un délai progressif pour éviter les mélanges
-        // Chaque requête attend un peu plus longtemps pour éviter les conflits
-        const delay = index * 150; // 150ms entre chaque requête
-        const promise = new Promise(resolve => {
-            setTimeout(() => {
-                fetchAndUpdateItemImage(item, itemElement).then(resolve).catch(resolve);
-            }, delay);
-        });
-        imagePromises.push(promise);
-    });
-    
-    // S'assurer que tous les éléments sont visibles (comme dans list.js)
-    const allItemElements = collectionContainer.querySelectorAll('.list-item');
-    allItemElements.forEach(item => {
-        item.style.display = 'flex';
-    });
-    
-    // Attendre que toutes les images soient chargées avant de traduire
-    Promise.all(imagePromises).then(() => {
-        // Traduire automatiquement les synopsis après création des cartes et chargement des images
-        const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
-        if (window.translateCollectionPage) {
-            window.translateCollectionPage(currentLanguage);
-        } else if (window.translateEntireSiteAutomatically) {
-            window.translateEntireSiteAutomatically();
-        }
-    }).catch(error => {
-        console.error('Erreur lors du chargement des images:', error);
-        // Traduire quand même même si certaines images ont échoué
-        const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
-        if (window.translateCollectionPage) {
-            window.translateCollectionPage(currentLanguage);
-        } else if (window.translateEntireSiteAutomatically) {
-            window.translateEntireSiteAutomatically();
-        }
-    });
+    renderPublicCollectionPage();
 }
 
 // Mettre à jour les statistiques de la collection
@@ -1142,6 +1240,21 @@ function createPublicListItem(item) {
     // Créer l'élément content séparément
     const contentDiv = document.createElement('div');
     contentDiv.className = 'item-content';
+    contentDiv.style.cssText = `
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: blur(10px);
+        border-radius: 0 0 12px 12px;
+        display: flex !important;
+        flex-direction: column !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        min-height: 200px;
+        flex: 1;
+        position: relative;
+        z-index: 1;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    `;
     
     const itemId = item.mal_id || item.id;
     const itemType = item.type || 'anime';
@@ -1157,7 +1270,7 @@ function createPublicListItem(item) {
             <span>•</span>
             <span class="item-year">${yearText}</span>
         </div>
-        <p class="item-synopsis profile-card-synopsis">${synopsisText}</p>
+        <p class="item-synopsis">${synopsisText}</p>
     `;
     
     // Ajouter l'élément content à l'item
@@ -4171,7 +4284,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Soumettre le signalement
     if (reportSubmitBtn) {
-        reportSubmitBtn.addEventListener('click', function() {
+        reportSubmitBtn.addEventListener('click', async function() {
             const selectedReason = document.querySelector('input[name="report-reason"]:checked');
             if (!selectedReason) {
                 alert('Veuillez sélectionner une raison');
@@ -4190,8 +4303,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Sauvegarder le signalement
-            const reports = JSON.parse(localStorage.getItem('user_reports') || '[]');
             const report = {
                 reportedBy: currentUser.email,
                 reportedUser: reportedUserEmail,
@@ -4199,9 +4310,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 comment: reportCommentText ? reportCommentText.value.trim() : '',
                 date: new Date().toISOString()
             };
-            
-            reports.push(report);
-            localStorage.setItem('user_reports', JSON.stringify(reports));
+
+            reportSubmitBtn.disabled = true;
+            try {
+                if (window.userReportService && typeof window.userReportService.submitReport === 'function') {
+                    await window.userReportService.submitReport(report);
+                } else {
+                    const mod = await import('/js/firebase-service.js?v=6febe24');
+                    await mod.userReportService.submitReport(report);
+                }
+            } catch (err) {
+                console.error('[Signalement]', err);
+                const msg = (err && err.message) || String(err || '');
+                if (msg.includes('SESSION_FIREBASE_REQUISE') || (err && err.code === 'auth/not-authenticated')) {
+                    alert('Session expirée. Déconnectez-vous puis reconnectez-vous pour envoyer un signalement.');
+                } else {
+                    alert('Erreur lors de l\'envoi du signalement. Vérifiez votre connexion et réessayez.');
+                }
+                reportSubmitBtn.disabled = false;
+                return;
+            } finally {
+                reportSubmitBtn.disabled = false;
+            }
+
+            try {
+                const reports = JSON.parse(localStorage.getItem('user_reports') || '[]');
+                reports.push(report);
+                localStorage.setItem('user_reports', JSON.stringify(reports));
+            } catch (e) { /* cache local optionnel */ }
             
             // Fermer le modal
             if (reportModal) {

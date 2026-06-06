@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+        (function () {
+            if (window.location.pathname.indexOf('/pages/acceuil.html') === -1) {
+                window.location.replace('/pages/acceuil.html' + window.location.search + window.location.hash);
+            }
+        })();
+    </script>
     <title>MangaWatch - Accueil</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
@@ -71,6 +78,7 @@
             }
         })();
     </script>
+    <script src="/js/header-avatar.js?v=1"></script>
     
     <style>
         /* Modals d'authentification - Erreur et Succès */

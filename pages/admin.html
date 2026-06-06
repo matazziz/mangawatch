@@ -1776,6 +1776,82 @@
             margin-bottom: 1rem;
         }
 
+        /* —— Sondage nouveautés (accueil) —— */
+        .feature-poll-admin-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .feature-poll-admin-item {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.15rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+
+        .feature-poll-admin-item-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .feature-poll-admin-item-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 0 0 0.35rem;
+        }
+
+        .feature-poll-admin-item-meta {
+            font-size: 0.82rem;
+            color: #999;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-poll-admin-item-desc {
+            font-size: 0.88rem;
+            color: #bbb;
+            margin: 0;
+            line-height: 1.45;
+        }
+
+        .feature-poll-admin-score {
+            font-size: 0.85rem;
+            color: #00ffb0;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .feature-poll-admin-delete {
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            padding: 0.55rem 0.9rem;
+            border: 1px solid rgba(231, 76, 60, 0.45);
+            border-radius: 8px;
+            background: rgba(231, 76, 60, 0.12);
+            color: #ff6b6b;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .feature-poll-admin-delete:hover {
+            background: rgba(231, 76, 60, 0.25);
+            border-color: rgba(231, 76, 60, 0.7);
+        }
+
+        .feature-poll-admin-delete:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         @media (max-width: 1024px) {
             .admin-hamburger-btn {
                 display: inline-flex;
@@ -1880,6 +1956,23 @@
                 max-width: none;
                 margin: 1rem;
             }
+
+            .feature-poll-admin-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.75rem;
+                padding: 1rem;
+            }
+
+            .feature-poll-admin-delete {
+                width: 100%;
+                min-height: 44px;
+                font-size: 0.9rem;
+            }
+
+            .feature-poll-admin-item-desc {
+                word-break: break-word;
+            }
         }
 
         @media (max-width: 480px) {
@@ -1887,6 +1980,26 @@
             .boutique-stats-table td {
                 padding: 0.65rem 0.5rem;
                 font-size: 0.8rem;
+            }
+
+            .feature-poll-admin-item {
+                padding: 0.85rem;
+            }
+
+            .feature-poll-admin-item-title {
+                font-size: 0.92rem;
+            }
+
+            .feature-poll-admin-item-meta {
+                font-size: 0.78rem;
+            }
+
+            .feature-poll-admin-item-desc {
+                font-size: 0.82rem;
+            }
+
+            .admin-sidebar-menu-link {
+                padding: 0.75rem 1rem;
             }
         }
     </style>
@@ -1997,6 +2110,12 @@
                 <a href="#" class="admin-sidebar-menu-link" data-section="boutique">
                     <i class="fas fa-store"></i>
                     <span>Boutique partenaires</span>
+                </a>
+            </li>
+            <li class="admin-sidebar-menu-item">
+                <a href="#" class="admin-sidebar-menu-link" data-section="feature-poll">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Nouveautés MangaWatch</span>
                 </a>
             </li>
         </ul>
@@ -2190,6 +2309,20 @@
                             <tr><td colspan="3">Chargement…</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Sondage nouveautés (accueil) -->
+        <div class="admin-section" id="section-feature-poll" style="display: none;">
+            <h2><i class="fas fa-lightbulb"></i> Quelle nouveauté pour MangaWatch ?</h2>
+            <p style="color: #888; margin-bottom: 1.25rem;">
+                Supprimez une idée du sondage de l'accueil. La suppression s'applique à <strong>tous les utilisateurs</strong> (votes et affichage).
+            </p>
+            <div class="feature-poll-admin-list" id="feature-poll-admin-list">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Chargement des idées...</p>
                 </div>
             </div>
         </div>
@@ -2959,9 +3092,31 @@
             displayUsers(filteredUsers);
         }
         
-        // Récupérer tous les signalements
+        // Récupérer tous les signalements (cache Firestore + repli localStorage)
+        let __adminReportsCache = null;
+
         function getAllReports() {
+            if (Array.isArray(__adminReportsCache)) return __adminReportsCache;
             return JSON.parse(localStorage.getItem('user_reports') || '[]');
+        }
+
+        async function loadReportsFromFirestore() {
+            const reportsList = document.getElementById('reports-list');
+            if (reportsList) {
+                reportsList.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement des signalements...</p></div>';
+            }
+            try {
+                const { userReportService } = await import('/js/firebase-service.js?v=6febe24');
+                if (userReportService && typeof userReportService.getAllReportsForAdmin === 'function') {
+                    __adminReportsCache = await userReportService.getAllReportsForAdmin();
+                } else {
+                    __adminReportsCache = JSON.parse(localStorage.getItem('user_reports') || '[]');
+                }
+            } catch (e) {
+                console.warn('[Admin] Signalements Firestore:', e);
+                __adminReportsCache = JSON.parse(localStorage.getItem('user_reports') || '[]');
+            }
+            displayReports();
         }
         
         // Récupérer les utilisateurs bannis
@@ -3538,9 +3693,24 @@
         });
         
         // Gérer l'ignorance d'un signalement
-        function handleIgnoreReport(userEmail) {
-            const reports = getAllReports();
-            const filteredReports = reports.filter(r => r.reportedUser !== userEmail);
+        async function handleIgnoreReport(userEmail) {
+            try {
+                const { userReportService } = await import('/js/firebase-service.js?v=6febe24');
+                if (userReportService && typeof userReportService.deleteReportsForUser === 'function') {
+                    await userReportService.deleteReportsForUser(userEmail);
+                }
+            } catch (e) {
+                console.warn('[Admin] Suppression signalements Firestore:', e);
+            }
+            const norm = normalizeEmail(userEmail);
+            if (Array.isArray(__adminReportsCache)) {
+                __adminReportsCache = __adminReportsCache.filter(function (r) {
+                    return normalizeEmail(r.reportedUser) !== norm;
+                });
+            }
+            const filteredReports = getAllReports().filter(function (r) {
+                return normalizeEmail(r.reportedUser) !== norm;
+            });
             localStorage.setItem('user_reports', JSON.stringify(filteredReports));
             displayReports();
         }
@@ -4041,6 +4211,10 @@
                 if (boutiqueSection) {
                     boutiqueSection.style.display = 'none';
                 }
+                const featurePollSection = document.getElementById('section-feature-poll');
+                if (featurePollSection) {
+                    featurePollSection.style.display = 'none';
+                }
                 
                 // Afficher la section sélectionnée
                 const section = document.getElementById(sectionId);
@@ -4055,6 +4229,9 @@
                     }
                     if (sectionId === 'section-boutique') {
                         loadBoutiqueAdmin();
+                    }
+                    if (sectionId === 'section-feature-poll') {
+                        loadFeaturePollAdmin();
                     }
                 }
                 
@@ -4386,6 +4563,65 @@
                 await Promise.all([loadBoutiquePartners(), loadBoutiqueStats()]);
             }
 
+            async function loadFeaturePollAdmin() {
+                const listEl = document.getElementById('feature-poll-admin-list');
+                if (!listEl) return;
+                listEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement des idées...</p></div>';
+                try {
+                    const mod = await import('/js/feature-poll.js');
+                    const items = await mod.listFeaturePollProposalsForAdmin();
+                    const active = items.filter(function (p) { return !p.isRetired; });
+                    if (!active.length) {
+                        listEl.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>Aucune idée active dans le sondage.</p></div>';
+                        return;
+                    }
+                    listEl.innerHTML = active.map(function (p) {
+                        const title = (p.title || p.id || 'Sans titre').replace(/</g, '&lt;');
+                        const desc = (p.description || '').replace(/</g, '&lt;');
+                        const author = (p.author_username || '—').replace(/</g, '&lt;');
+                        const official = p.official ? ' · Officielle MangaWatch' : '';
+                        const net = p.netScore || 0;
+                        return (
+                            '<article class="feature-poll-admin-item" data-proposal-id="' + p.id.replace(/"/g, '&quot;') + '">' +
+                                '<div class="feature-poll-admin-item-main">' +
+                                    '<h3 class="feature-poll-admin-item-title">' + title + '</h3>' +
+                                    '<p class="feature-poll-admin-item-meta">Par ' + author + official + ' · Score net : <span class="feature-poll-admin-score">' + net + '</span></p>' +
+                                    '<p class="feature-poll-admin-item-desc">' + desc + '</p>' +
+                                '</div>' +
+                                '<button type="button" class="feature-poll-admin-delete" data-delete-proposal="' + p.id.replace(/"/g, '&quot;') + '" title="Supprimer pour tous">' +
+                                    '<i class="fas fa-trash-alt"></i> Supprimer' +
+                                '</button>' +
+                            '</article>'
+                        );
+                    }).join('');
+
+                    listEl.querySelectorAll('[data-delete-proposal]').forEach(function (btn) {
+                        btn.addEventListener('click', async function () {
+                            const proposalId = btn.getAttribute('data-delete-proposal');
+                            const row = btn.closest('.feature-poll-admin-item');
+                            const titleEl = row && row.querySelector('.feature-poll-admin-item-title');
+                            const titleText = titleEl ? titleEl.textContent : proposalId;
+                            if (!confirm('Supprimer l\'idée « ' + titleText + ' » du sondage pour tous les utilisateurs ?')) return;
+                            btn.disabled = true;
+                            try {
+                                await mod.retireFeatureProposal(proposalId);
+                                if (row) row.remove();
+                                if (!listEl.querySelector('.feature-poll-admin-item')) {
+                                    listEl.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>Idée supprimée. Aucune autre idée active.</p></div>';
+                                }
+                            } catch (err) {
+                                console.error('Suppression idée sondage:', err);
+                                alert('Impossible de supprimer cette idée. Vérifiez la connexion Firebase.');
+                                btn.disabled = false;
+                            }
+                        });
+                    });
+                } catch (err) {
+                    console.error('Chargement sondage nouveautés:', err);
+                    listEl.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Erreur de chargement. Réessayez.</p></div>';
+                }
+            }
+
             function openTicketReplyModal(ticket) {
                 currentTicketForReply = ticket;
                 const overlay = document.getElementById('ticket-reply-modal-overlay');
@@ -4615,7 +4851,7 @@
             // Initialisation
             loadUsers();
             updateStats();
-            displayReports();
+            loadReportsFromFirestore();
             initMessagingForm();
             
             (async function refreshAdminUsersFromFirestore() {

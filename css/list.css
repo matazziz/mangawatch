@@ -346,22 +346,109 @@ body {
     }
 }
 
-/* Pagination */
+/* Pagination collection (alignée sur manga-database) */
 .pagination-container {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
-    gap: 15px;
-    margin-top: 40px;
-    padding: 20px 0;
+    gap: 12px;
+    margin-top: 32px;
+    padding: 16px 0;
+    width: 100%;
 }
 
 .pagination-info {
     color: var(--light-gray);
     font-size: 0.9rem;
     font-weight: 500;
+    text-align: center;
 }
 
+.pagination-container .collection-pagination,
+.pagination-container .pagination.collection-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin: 0;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+}
+
+.pagination-container .pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--dark-light, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--dark-gray, rgba(255, 255, 255, 0.2));
+    border-radius: var(--border-radius, 8px);
+    color: var(--light);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    min-height: 40px;
+}
+
+.pagination-container .pagination-btn:hover:not(:disabled) {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.pagination-container .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination-container .page-numbers {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px;
+}
+
+.pagination-container .page-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 10px;
+    background: var(--dark-light, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--dark-gray, rgba(255, 255, 255, 0.2));
+    border-radius: var(--border-radius, 8px);
+    color: var(--light);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.pagination-container .page-number:hover:not(.disabled) {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.pagination-container .page-number.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.pagination-container .page-ellipsis {
+    color: var(--gray, #999);
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+/* Legacy aliases */
 .pagination-controls {
     display: flex;
     gap: 10px;
@@ -377,50 +464,22 @@ body {
     font-weight: 600;
     cursor: pointer;
     transition: var(--transition);
-    backdrop-filter: blur(10px);
 }
 
 .pagination-btn:hover {
     background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
 }
 
 .pagination-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
 }
 
-.pagination-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
-}
-
-.page-numbers {
-    display: flex;
-    gap: 5px;
-}
-
-.page-number {
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    color: var(--light);
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    min-width: 35px;
-    text-align: center;
-}
-
-.page-number:hover {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.page-number.active {
-    background: var(--primary);
-    border-color: var(--primary);
+.page-number.disabled {
+    cursor: default;
+    pointer-events: none;
+    background: transparent;
+    border: none;
 }
 
 .page-number.disabled {
@@ -1058,18 +1117,72 @@ body {
     }
     
     .pagination-container {
-        flex-direction: column;
-        gap: 20px;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 10px 0;
     }
-    
-    .pagination-controls {
-        flex-wrap: wrap;
-        justify-content: center;
+
+    .pagination-info {
+        font-size: 0.78rem;
+        line-height: 1.35;
     }
-    
-    .page-numbers {
-        flex-wrap: wrap;
-        justify-content: center;
+
+    .pagination-container .collection-pagination {
+        gap: 4px;
+        flex-wrap: nowrap;
+        padding: 0 4px;
+        box-sizing: border-box;
+    }
+
+    .pagination-container .page-numbers {
+        gap: 1px;
+        margin: 0 1px;
+        max-width: calc(100vw - 96px);
+        min-width: 0;
+        flex: 1 1 auto;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        justify-content: flex-start;
+    }
+
+    .pagination-container .page-numbers .page-number,
+    .pagination-container .page-numbers .page-ellipsis {
+        flex-shrink: 0;
+    }
+
+    .pagination-container .page-number {
+        width: 22px;
+        height: 22px;
+        min-width: 22px;
+        padding: 0;
+        font-size: 0.65rem;
+        border-radius: 4px;
+    }
+
+    .pagination-container .pagination-btn {
+        min-width: 42px;
+        width: auto;
+        height: 22px;
+        min-height: 22px;
+        padding: 0 3px;
+        font-size: 0.58rem;
+        gap: 0;
+        border-radius: 4px;
+    }
+
+    .pagination-container .pagination-btn .pagination-btn-label {
+        display: none;
+    }
+
+    .pagination-container .pagination-btn i {
+        font-size: 0.65rem;
+    }
+
+    .pagination-container .page-ellipsis {
+        padding: 0 2px;
+        font-size: 0.72rem;
     }
 }
 
@@ -1334,4 +1447,165 @@ body .footer-unified .footer-container {
     max-width: 100%;
     margin: 0 auto;
     width: 100%;
-} 
+}
+
+/* Collection publique (user-profile) — mêmes cartes/filtres que list.html */
+#collection-section {
+    padding-left: 0;
+    padding-right: 0;
+    box-sizing: border-box;
+}
+
+#collection-section .collection-inner.container {
+    max-width: 2000px;
+    margin: 0 auto;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (min-width: 769px) {
+    #collection-section {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    #collection-section .collection-inner.container {
+        padding: 20px;
+        max-width: 100%;
+    }
+
+    #collection-section .list-content {
+        margin-left: 0;
+        margin-right: 0;
+        width: 100%;
+        padding: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    #collection-section {
+        margin-left: -12px;
+        margin-right: -12px;
+        width: calc(100% + 24px);
+        box-sizing: border-box;
+    }
+
+    #collection-section .collection-inner.container {
+        max-width: none;
+        padding: 0 12px 12px;
+    }
+
+    /* Mobile uniquement : cartes plus larges, filtres/stats inchangés */
+    #collection-section .list-content {
+        margin-left: -12px;
+        margin-right: -12px;
+        width: calc(100% + 24px);
+        padding: 0 4px;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 480px) {
+    #collection-section .collection-inner.container {
+        padding: 0 12px 10px;
+    }
+
+    #collection-section .list-content {
+        padding: 0 3px;
+    }
+}
+
+#collection-section .mobile-collection-filters-toggle {
+    display: none;
+    width: 100%;
+    margin: 0 0 14px 0;
+    background: #00b894;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    #collection-section .mobile-collection-filters-toggle {
+        display: inline-flex;
+    }
+
+    #collection-section:not(.mobile-filters-open) .status-filters,
+    #collection-section:not(.mobile-filters-open) .type-filters {
+        display: none;
+    }
+}
+
+/* Cartes collection publique — dimensions identiques à list.html */
+@media (min-width: 769px) {
+    #collection-section .list-grid {
+        grid-template-columns: repeat(auto-fit, minmax(270px, 320px));
+        justify-content: center;
+        gap: 22px;
+    }
+
+    #collection-section .list-item {
+        width: 100%;
+        max-width: 320px;
+        min-width: 270px;
+        justify-self: center;
+        min-height: 460px;
+    }
+
+    #collection-section .item-image {
+        height: 310px;
+    }
+}
+
+#collection-section .list-item .item-content::after {
+    content: '';
+    display: block;
+    min-height: 38px;
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    #collection-section .list-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 32px;
+    }
+
+    #collection-section .item-image {
+        height: 205px;
+    }
+
+    #collection-section .list-grid .list-item {
+        min-height: 375px;
+    }
+
+    #collection-section .list-item .item-content::after {
+        min-height: 34px;
+    }
+}
+
+@media (max-width: 480px) {
+    #collection-section .list-grid {
+        gap: 8px;
+    }
+
+    #collection-section .item-image {
+        height: 178px;
+    }
+
+    #collection-section .list-grid .list-item {
+        min-height: 348px;
+    }
+}

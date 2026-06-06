@@ -9,18 +9,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
-    <link rel="stylesheet" href="/css/profile.css">
+    <link rel="stylesheet" href="/css/profile.css?v=2.2">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
     <link rel="stylesheet" href="/css/messaging.css">
-    <link rel="stylesheet" href="/css/list.css">
+    <link rel="stylesheet" href="/css/list.css?v=20260604-cards9">
+    <link rel="stylesheet" href="/css/profile-rating.css?v=4">
     <script src="/js/localization.js"></script>
     <!-- Import Firebase Service pour charger la bannière (image/vidéo) sur le profil public -->
     <script type="module">
-        import { bannerService, profileSettingsService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe20';
+        import { bannerService, profileSettingsService, syncRemoteProfileMedia, userReportService } from '/js/firebase-service.js?v=6febe24';
+        import { initProfileRatingUI } from '/js/profile-rating-ui.js?v=4';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.syncRemoteProfileMedia = syncRemoteProfileMedia;
+        window.userReportService = userReportService;
+        window.initProfileRatingUI = initProfileRatingUI;
         window.dispatchEvent(new CustomEvent('bannerServiceReady'));
     </script>
     <style>
@@ -41,6 +45,13 @@
             border-radius: 10px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             box-sizing: border-box;
+        }
+
+        @media (max-width: 768px) {
+            .profile-container {
+                margin: 0.35rem auto 1.25rem;
+                padding: 0.45rem 12px 1.25rem;
+            }
         }
         
         #profile-content {
@@ -190,27 +201,70 @@
             opacity: 0.9;
         }
         
-        /* Description du profil dans la bannière */
+        /* Barre sous la bannière : description + signaler */
+        .profile-subbanner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            margin: 0 0 1rem 0;
+            padding: 0.7rem 1.15rem;
+            background: rgba(12, 14, 20, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            box-sizing: border-box;
+        }
+
+        .profile-subbanner.visible {
+            display: flex;
+        }
+
+        .profile-subbanner.report-only {
+            justify-content: flex-end;
+        }
+
+        .profile-subbanner .profile-description-wrapper {
+            position: static;
+            flex: 1 1 auto;
+            min-width: 0;
+            max-width: none;
+            width: auto;
+            margin: 0;
+            pointer-events: auto;
+        }
+
+        .profile-subbanner .profile-description {
+            font-style: normal;
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        @media (max-width: 768px) {
+            .profile-subbanner {
+                flex-wrap: wrap;
+                padding: 0.6rem 0.75rem;
+            }
+
+            .profile-subbanner .profile-description-wrapper {
+                flex: 1 1 100%;
+            }
+
+            .profile-subbanner .profile-report-btn {
+                margin-left: auto;
+            }
+        }
+
+        /* Description du profil (legacy — sous-barre) */
         .profile-description-wrapper {
-            position: absolute;
-            bottom: 1.5rem;
-            left: 2rem;
-            width: calc(100% - 4rem);
-            max-width: 600px;
-            z-index: 4;
-            pointer-events: none;
+            position: static;
+            width: auto;
+            max-width: none;
+            margin: 0;
+            pointer-events: auto;
         }
         
         .profile-description-wrapper > * {
             pointer-events: auto;
-        }
-        
-        @media (max-width: 768px) {
-            .profile-description-wrapper {
-                left: 1rem;
-                right: 1rem;
-                bottom: 1rem;
-            }
         }
         
         .profile-description {
@@ -411,23 +465,20 @@
         
         /* Bouton de signalement */
         .profile-report-btn {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
+            position: static;
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            padding: 0.35rem 0.75rem;
+            padding: 0.4rem 0.8rem;
             background: linear-gradient(135deg, rgba(225, 112, 85, 0.15) 0%, rgba(225, 112, 85, 0.1) 100%);
             border: 1px solid rgba(225, 112, 85, 0.35);
             border-radius: 18px;
             color: #e17055;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: blur(12px);
-            z-index: 5;
+            flex-shrink: 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
         
@@ -1050,62 +1101,8 @@
             color: #ff6b6b;
         }
 
-        /* Même taille et disposition que la collection perso (list.css / list.html) */
-        .collection-section {
-            padding: 20px;
-            max-width: 2000px;
-            margin: 0 auto;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        
-        .collection-section .list-grid {
-            grid-template-columns: repeat(4, 1fr);
-            gap: 25px;
-            margin-bottom: 40px;
-            align-items: stretch;
-        }
-        
-        .collection-section .list-item {
-            min-height: 450px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .collection-section .item-image {
-            width: 100%;
-            height: 300px;
-            flex-shrink: 0;
-        }
-        
-        .collection-section .item-content {
-            padding: 20px;
-            min-height: 200px;
-            flex: 1;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-        
-        .collection-section .item-synopsis {
-            flex: 1;
-            min-height: 60px;
-        }
-        
-        @media (max-width: 1100px) {
-            .collection-section .list-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .collection-section .list-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-        }
+        /* Collection publique : cartes via list.css (identique à list.html) */
 
-        /* Annuler les overrides de list.css pour le footer - même placement que profil perso */
         body .footer-unified {
             margin-bottom: 1rem;
             padding-bottom: 2rem;
@@ -1200,12 +1197,11 @@
                 <img id="banner-image" class="profile-header-banner" alt="Bannière du profil" loading="eager">
                 <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="auto" muted></video>
                 <div class="profile-header-banner-overlay"></div>
-                
-                <!-- Bouton signaler en bas à droite de la bannière -->
-                <button class="profile-report-btn" id="profile-report-btn" style="display: none;" title="Signaler cet utilisateur">
-                    <i class="fas fa-flag"></i>
-                    <span data-i18n="profile.report">Signaler</span>
-                </button>
+
+                <div class="profile-rating-banner-badge" id="profile-rating-banner-badge" style="display: none;" aria-label="Note du profil">
+                    <i class="fas fa-star" aria-hidden="true"></i>
+                    <strong id="profile-rating-average">—</strong><span class="profile-rating-max">/10</span>
+                </div>
                 
                 <!-- Contenu du header (avatar et pseudo) -->
                 <div class="profile-header-content">
@@ -1242,12 +1238,20 @@
                         </button>
                     </div>
                 </div>
-                
-                <!-- Description en bas de la bannière -->
-                <div class="profile-description-wrapper" id="profile-description-wrapper">
+            </div>
+
+            <div class="profile-subbanner" id="profile-subbanner" aria-label="Description du profil">
+                <div class="profile-description-wrapper" id="profile-description-wrapper" style="display: none;">
                     <div class="profile-description" id="profile-description">
-                        <span id="profile-description-text">Aucune description</span>
+                        <span id="profile-description-text" data-i18n="profile.no_description">Aucune description</span>
                     </div>
+                </div>
+                <div class="profile-subbanner-actions">
+                <div id="profile-rating-vote-slot"></div>
+                <button class="profile-report-btn" id="profile-report-btn" style="display: none;" title="Signaler cet utilisateur" type="button">
+                    <i class="fas fa-flag"></i>
+                    <span data-i18n="profile.report">Signaler</span>
+                </button>
                 </div>
             </div>
             
@@ -1273,13 +1277,14 @@
             <div class="profile-content">
                 <!-- Section Collection -->
                 <div class="profile-section collection-section" id="collection-section" style="display: none;">
+                    <div class="collection-inner container">
+                    <button id="mobile-collection-filters-toggle-public" class="mobile-collection-filters-toggle" type="button" aria-expanded="false">
+                        <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                        <span data-i18n="filters">Filtres</span>
+                    </button>
                     <!-- Filtres par statut -->
                     <div class="status-filters">
-                        <button class="status-filter active" data-status="all">
-                            <i class="fas fa-list"></i>
-                            <span>Tous</span>
-                        </button>
-                        <button class="status-filter" data-status="watching">
+                        <button class="status-filter active" data-status="watching">
                             <i class="fas fa-play"></i>
                             <span>En cours</span>
                         </button>
@@ -1303,13 +1308,29 @@
 
                     <!-- Filtres par type d'œuvre -->
                     <div class="type-filters">
+                        <button class="type-filter active" data-type="all">
+                            <i class="fas fa-th-large"></i>
+                            <span>Tous les types</span>
+                        </button>
                         <button class="type-filter" data-type="anime">
                             <i class="fas fa-tv"></i>
                             <span>Anime</span>
                         </button>
-                        <button class="type-filter active" data-type="manga">
+                        <button class="type-filter" data-type="manga">
                             <i class="fas fa-book"></i>
                             <span>Manga</span>
+                        </button>
+                        <button class="type-filter" data-type="roman">
+                            <i class="fas fa-scroll"></i>
+                            <span>Roman</span>
+                        </button>
+                        <button class="type-filter" data-type="manhwa">
+                            <i class="fas fa-book-open"></i>
+                            <span>Manhwa</span>
+                        </button>
+                        <button class="type-filter" data-type="manhua">
+                            <i class="fas fa-bookmark"></i>
+                            <span>Manhua</span>
                         </button>
                         <button class="type-filter" data-type="film">
                             <i class="fas fa-film"></i>
@@ -1370,6 +1391,20 @@
                     <div class="list-content">
                         <div id="collection-items" class="list-grid"></div>
 
+                        <div id="collection-pagination-container" class="pagination-container" style="display: none;">
+                            <div class="pagination collection-pagination">
+                                <button id="collection-prev-page" type="button" class="pagination-btn" disabled aria-label="Page précédente">
+                                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                                    <span class="pagination-btn-label">Précédent</span>
+                                </button>
+                                <div class="page-numbers" id="collection-page-numbers"></div>
+                                <button id="collection-next-page" type="button" class="pagination-btn" aria-label="Page suivante">
+                                    <span class="pagination-btn-label">Suivant</span>
+                                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Message si la liste est vide -->
                         <div id="empty-collection" class="empty-list" style="display: none; max-width: 2000px; margin: 0 auto; padding: 20px; width: 100%; box-sizing: border-box;">
                             <div class="empty-icon">
@@ -1378,6 +1413,7 @@
                             <h3>Aucun élément dans cette collection</h3>
                             <p>Commencez à ajouter des animes et mangas à votre collection !</p>
                         </div>
+                    </div>
                     </div>
                 </div>
 
@@ -1404,8 +1440,8 @@
         </div>
     </main>
 
-    <script src="/js/profile-anime-cards.js?v=2.22"></script>
-    <script src="/js/user-profile.js?v=2.12"></script>
+    <script src="/js/profile-anime-cards.js?v=2.23"></script>
+    <script src="/js/user-profile.js?v=2.19"></script>
     <script src="/js/search.js"></script>
     <script src="/js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>

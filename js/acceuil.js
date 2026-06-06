@@ -368,22 +368,23 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
     applyAvatarFromUser();
-    try {
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        if (user && user.email) {
-            const { avatarService } = await import('./firebase-service.js?v=6febe22');
-            const avatarUrl = await avatarService.getAvatar(user.email);
-            if (avatarUrl) {
-                user.customAvatar = avatarUrl;
-                user.avatar = avatarUrl;
-                localStorage.setItem('user', JSON.stringify(user));
-                localStorage.setItem('avatar_' + user.email, avatarUrl);
-                applyAvatarFromUser();
-                // Réappliquer après un délai au cas où un autre script aurait écrasé
-                setTimeout(applyAvatarFromUser, 800);
+    void (async function loadHeaderAvatarFromFirebase() {
+        try {
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            if (user && user.email) {
+                const { avatarService } = await import('./firebase-service.js?v=6febe22');
+                const avatarUrl = await avatarService.getAvatar(user.email);
+                if (avatarUrl) {
+                    user.customAvatar = avatarUrl;
+                    user.avatar = avatarUrl;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    localStorage.setItem('avatar_' + user.email, avatarUrl);
+                    applyAvatarFromUser();
+                    setTimeout(applyAvatarFromUser, 800);
+                }
             }
-        }
-    } catch (e) { /* ignore */ }
+        } catch (e) { /* ignore */ }
+    })();
 
     // --- LOGIQUE D'AFFICHAGE DU POPUP D'AUTHENTIFICATION ---
     // Afficher le popup seulement si l'utilisateur n'est pas connecté
@@ -417,6 +418,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Placeholders + chargement des sections (sans attendre le popup auth)
     showHomeSectionPlaceholders();
+
+    function scheduleHomeSectionsLoad() {
+        setTimeout(function () {
+            initHomeDynamicSections().catch(function (err) {
+                console.error('❌ initHomeDynamicSections:', err);
+            });
+        }, 0);
+    }
 
     // --- POP-UP CONNEXION/INSCRIPTION AU PREMIER ACCÈS ---
     let isPopupOpening = false; // Flag pour éviter les appels multiples
@@ -2005,7 +2014,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     ${translatedWorks.map(oeuvre => `
                         <div class="work-card">
                             <div class="work-image-container">
-                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyYTIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udCZhbXA7ZmFtaWx5PSJBcmlhbCIgZm9udCZhbXA7c2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg==" alt="${oeuvre.titre}" class="work-image" data-manga-title="${oeuvre.titre}">
+                                <img src="${(oeuvre.image && oeuvre.image.startsWith('http') && !oeuvre.image.includes('placeholder')) ? oeuvre.image : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMmEyYTIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udCZhbXA7ZmFtaWx5PSJBcmlhbCIgZm9udCZhbXA7c2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg=='}" alt="${oeuvre.titre}" class="work-image" data-manga-title="${oeuvre.titre}" data-static-image="${(oeuvre.image && oeuvre.image.startsWith('http')) ? oeuvre.image : ''}">
                                 <div class="work-image-placeholder" style="display: none;">${oeuvre.titre}</div>
                         </div>
                         <div class="work-info">
@@ -2032,6 +2041,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const mangaTitle = image?.dataset?.mangaTitle;
                     
                     if (mangaTitle && image && placeholder) {
+                        const staticImage = image.dataset.staticImage;
+                        const hasStaticCover = !!(staticImage && staticImage.startsWith('http'));
+                        if (hasStaticCover) {
+                            image.src = staticImage;
+                            image.style.display = 'block';
+                            placeholder.style.display = 'none';
+                        }
+
+                        if (!hasStaticCover) {
                         // Vérifier d'abord le cache pour l'URL de l'image
                         const cacheKey = `manga_image_${mangaTitle.toLowerCase().trim()}`;
                         const cachedImageUrl = localStorage.getItem(cacheKey);
@@ -2120,6 +2138,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                             placeholder.style.display = 'flex';
                         }
                         }
+                        }
                     } else if (placeholder) {
                         // Si pas de titre, afficher quand même le placeholder
                         if (image) image.style.display = 'none';
@@ -2175,8 +2194,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
             }
-            
-                } catch (error) {
+        } catch (error) {
             console.error('Erreur lors du chargement de l\'auteur de la semaine:', error);
             // Afficher un message d'erreur ou un auteur par défaut
             const container = document.getElementById('authorOfWeekContainer');
@@ -2234,19 +2252,24 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.loadAuthorOfWeek = loadAuthorOfWeek;
 
         // Fonction pour récupérer l'image d'un manga depuis l'API Jikan
-    async function fetchMangaImage(mangaTitle) {
+        async function fetchMangaImage(mangaTitle) {
         try {
-            // Ajouter un délai entre les requêtes pour éviter le rate limiting de l'API Jikan
             await new Promise(resolve => setTimeout(resolve, 300));
             
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // Timeout de 8 secondes
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
             
-            const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(mangaTitle)}&limit=1`, {
+            const proxyUrl = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
+            proxyUrl.searchParams.set('action', 'list');
+            proxyUrl.searchParams.set('mediaType', 'manga');
+            proxyUrl.searchParams.set('q', mangaTitle);
+            proxyUrl.searchParams.set('limit', '5');
+            proxyUrl.searchParams.set('sfw', 'true');
+            
+            const fetchFn = window.MW_API_CONFIG?.fetchWithRetry || fetch;
+            const response = await fetchFn(proxyUrl.toString(), {
                 method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                },
+                headers: { Accept: 'application/json' },
                 signal: controller.signal
             });
             
@@ -2265,8 +2288,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             const data = await response.json();
             
             if (data.data && data.data.length > 0) {
-                const manga = data.data[0];
-                // Essayer plusieurs formats d'images dans l'ordre de préférence
+                const q = mangaTitle.toLowerCase().trim();
+                const manga = data.data.find(function (m) {
+                    const t = (m.title || '').toLowerCase();
+                    const te = (m.title_english || '').toLowerCase();
+                    return t === q || te === q || t.includes(q) || q.includes(t);
+                }) || data.data[0];
                 const imageUrl = manga.images?.jpg?.large_image_url || 
                        manga.images?.jpg?.image_url || 
                        manga.images?.webp?.large_image_url || 
@@ -2921,6 +2948,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Exposer la fonction globalement
     window.loadDailyQuiz = loadDailyQuiz;
+    scheduleHomeSectionsLoad();
     
     document.addEventListener('languageChanged', async function() {
         console.log('🔄 Langue changée, rechargement de toutes les sections...');
@@ -2996,10 +3024,4 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (typeof showAuthPopup === 'function') showAuthPopup();
     };
 
-    // Charger les sections dès que les fonctions sont définies dans ce handler
-    setTimeout(function() {
-        initHomeDynamicSections().catch(function(err) {
-            console.error('❌ initHomeDynamicSections:', err);
-        });
-    }, 0);
 }); 

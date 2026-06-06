@@ -3,6 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <script>
+        (function () {
+            if (window.location.pathname.indexOf('/pages/admin.html') === -1) {
+                window.location.replace('/pages/admin.html' + window.location.search + window.location.hash);
+            }
+        })();
+    </script>
     <title>Administration - Gestion des badges certifiés</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
@@ -1240,9 +1248,31 @@
             displayUsers(filteredUsers);
         }
         
-        // Récupérer tous les signalements
+        // Récupérer tous les signalements (cache Firestore + repli localStorage)
+        let __adminReportsCache = null;
+
         function getAllReports() {
+            if (Array.isArray(__adminReportsCache)) return __adminReportsCache;
             return JSON.parse(localStorage.getItem('user_reports') || '[]');
+        }
+
+        async function loadReportsFromFirestore() {
+            const reportsList = document.getElementById('reports-list');
+            if (reportsList) {
+                reportsList.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement des signalements...</p></div>';
+            }
+            try {
+                const { userReportService } = await import('/js/firebase-service.js?v=6febe24');
+                if (userReportService && typeof userReportService.getAllReportsForAdmin === 'function') {
+                    __adminReportsCache = await userReportService.getAllReportsForAdmin();
+                } else {
+                    __adminReportsCache = JSON.parse(localStorage.getItem('user_reports') || '[]');
+                }
+            } catch (e) {
+                console.warn('[Admin] Signalements Firestore:', e);
+                __adminReportsCache = JSON.parse(localStorage.getItem('user_reports') || '[]');
+            }
+            displayReports();
         }
         
         // Récupérer les utilisateurs bannis
@@ -1685,9 +1715,24 @@
         });
         
         // Gérer l'ignorance d'un signalement
-        function handleIgnoreReport(userEmail) {
-            const reports = getAllReports();
-            const filteredReports = reports.filter(r => r.reportedUser !== userEmail);
+        async function handleIgnoreReport(userEmail) {
+            try {
+                const { userReportService } = await import('/js/firebase-service.js?v=6febe24');
+                if (userReportService && typeof userReportService.deleteReportsForUser === 'function') {
+                    await userReportService.deleteReportsForUser(userEmail);
+                }
+            } catch (e) {
+                console.warn('[Admin] Suppression signalements Firestore:', e);
+            }
+            const norm = String(userEmail || '').trim().toLowerCase();
+            if (Array.isArray(__adminReportsCache)) {
+                __adminReportsCache = __adminReportsCache.filter(function (r) {
+                    return String(r.reportedUser || '').trim().toLowerCase() !== norm;
+                });
+            }
+            const filteredReports = getAllReports().filter(function (r) {
+                return String(r.reportedUser || '').trim().toLowerCase() !== norm;
+            });
             localStorage.setItem('user_reports', JSON.stringify(filteredReports));
             displayReports();
         }
@@ -2048,7 +2093,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadUsers();
             updateStats();
-            displayReports();
+            loadReportsFromFirestore();
             initMessagingForm();
             
             (async function refreshAdminUsersFromFirestore() {

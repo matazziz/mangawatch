@@ -318,7 +318,10 @@ export const COLLECTIONS = {
   USER_PROFILES: 'user_profiles',
   USER_LIST: 'user_list',
   SUPPORT_TICKETS: 'support_tickets',
-  BOUTIQUE_STATS: 'boutique_stats'
+  BOUTIQUE_STATS: 'boutique_stats',
+  PROFILE_RATING_VOTES: 'profile_rating_votes',
+  PROFILE_RATING_STATS: 'profile_rating_stats',
+  USER_REPORTS: 'user_reports'
 };
 
 // ============================================
@@ -687,6 +690,25 @@ export const authService = {
 // SERVICE BANNIÈRES
 // ============================================
 
+const bannerSaveQueues = new Map();
+const avatarSaveQueues = new Map();
+
+function runQueuedProfileMediaSave(queues, userEmail, task) {
+  const key = normalizeProfileEmail(userEmail) || '_';
+  const prev = queues.get(key) || Promise.resolve();
+  const next = prev.catch(function () {}).then(task);
+  queues.set(key, next);
+  return next;
+}
+
+function runQueuedBannerSave(userEmail, task) {
+  return runQueuedProfileMediaSave(bannerSaveQueues, userEmail, task);
+}
+
+function runQueuedAvatarSave(userEmail, task) {
+  return runQueuedProfileMediaSave(avatarSaveQueues, userEmail, task);
+}
+
 export const bannerService = {
   /**
    * Sauvegarde une bannière (image ou vidéo) dans Firebase Storage et Firestore
@@ -697,6 +719,10 @@ export const bannerService = {
    * @returns {Promise<Object>} Données de la bannière sauvegardée
    */
   async saveBanner(userEmail, type, source, volume = 0) {
+    return runQueuedBannerSave(userEmail, () => this._saveBannerImpl(userEmail, type, source, volume));
+  },
+
+  async _saveBannerImpl(userEmail, type, source, volume = 0) {
     try {
       const currentUser = await ensureAuthenticatedForStorage(userEmail);
       console.log('[Firebase Banner] Utilisateur authentifié:', currentUser.email);
@@ -1027,6 +1053,10 @@ export const avatarService = {
    * @returns {Promise<string>} URL de l'avatar sauvegardé
    */
   async saveAvatar(userEmail, file) {
+    return runQueuedAvatarSave(userEmail, () => this._saveAvatarImpl(userEmail, file));
+  },
+
+  async _saveAvatarImpl(userEmail, file) {
     try {
       const currentUser = await ensureAuthenticatedForStorage(userEmail);
       console.log('[Firebase Avatar] Utilisateur authentifié:', currentUser.email);
@@ -1446,13 +1476,108 @@ export const profileAdminService = {
           (typeof data.username === 'string' && data.username.trim()) ||
           (typeof data.pseudo === 'string' && data.pseudo.trim()) ||
           null,
-        avatar: data.avatar || data.photoURL || data.picture || null,
+        avatar: data.avatar || data.customAvatar || data.photoURL || data.picture || null,
         verified: data.verified === true,
         country: data.country || data.continent || null,
         created_at: timestampToMs(data.created_at || data.createdAt || data.createdAtMs),
         updated_at: timestampToMs(data.updated_at || data.updatedAt || data.updatedAtMs)
       };
     });
+  }
+};
+
+// ============================================
+// SERVICE NOTATION PROFIL UTILISATEUR
+// ============================================
+
+function profileRatingVoteId(voterEmail, profileEmail) {
+  const voter = normalizeProfileEmail(voterEmail);
+  const profile = normalizeProfileEmail(profileEmail);
+  return voter + '__' + profile;
+}
+
+export const profileRatingService = {
+  async getStats(profileEmail) {
+    const profile = normalizeProfileEmail(profileEmail);
+    if (!profile) return { average: 0, count: 0, sum: 0 };
+    try {
+      const snap = await getDoc(doc(db, COLLECTIONS.PROFILE_RATING_STATS, profile));
+      if (!snap.exists()) return { average: 0, count: 0, sum: 0 };
+      const data = snap.data() || {};
+      return {
+        average: typeof data.average === 'number' ? data.average : 0,
+        count: typeof data.count === 'number' ? data.count : 0,
+        sum: typeof data.sum === 'number' ? data.sum : 0
+      };
+    } catch (e) {
+      console.warn('[ProfileRating] getStats:', e);
+      return { average: 0, count: 0, sum: 0 };
+    }
+  },
+
+  async getStatsBulk(profileEmails) {
+    const out = {};
+    const emails = [...new Set((profileEmails || []).map(normalizeProfileEmail).filter(Boolean))];
+    await Promise.all(emails.map(async (email) => {
+      out[email] = await this.getStats(email);
+    }));
+    return out;
+  },
+
+  async getMyVote(profileEmail, voterEmail) {
+    const voter = normalizeProfileEmail(voterEmail);
+    const profile = normalizeProfileEmail(profileEmail);
+    if (!voter || !profile) return null;
+    try {
+      const snap = await getDoc(doc(db, COLLECTIONS.PROFILE_RATING_VOTES, profileRatingVoteId(voter, profile)));
+      if (!snap.exists()) return null;
+      const score = Number(snap.data().score);
+      return Number.isFinite(score) ? score : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async setRating(profileEmail, voterEmail, score) {
+    const voter = normalizeProfileEmail(voterEmail);
+    const profile = normalizeProfileEmail(profileEmail);
+    if (!voter || !profile || voter === profile) {
+      throw new Error('Notation invalide');
+    }
+    const normalizedScore = Math.max(1, Math.min(10, Math.round(Number(score))));
+    const voteRef = doc(db, COLLECTIONS.PROFILE_RATING_VOTES, profileRatingVoteId(voter, profile));
+    const statsRef = doc(db, COLLECTIONS.PROFILE_RATING_STATS, profile);
+    const oldVoteSnap = await getDoc(voteRef);
+    const oldScore = oldVoteSnap.exists() ? Number(oldVoteSnap.data().score) || 0 : 0;
+    const isNew = !oldVoteSnap.exists();
+
+    await setDoc(voteRef, {
+      voter_email: voter,
+      profile_email: profile,
+      score: normalizedScore,
+      updated_at: serverTimestamp()
+    });
+
+    const statsSnap = await getDoc(statsRef);
+    let sum = normalizedScore;
+    let count = 1;
+    if (statsSnap.exists()) {
+      const d = statsSnap.data() || {};
+      const prevSum = Number(d.sum) || 0;
+      const prevCount = Number(d.count) || 0;
+      sum = prevSum - (isNew ? 0 : oldScore) + normalizedScore;
+      count = isNew ? prevCount + 1 : prevCount;
+    }
+    const average = count > 0 ? Math.round((sum / count) * 10) / 10 : 0;
+    await setDoc(statsRef, {
+      profile_email: profile,
+      sum,
+      count,
+      average,
+      updated_at: serverTimestamp()
+    }, { merge: true });
+
+    return { average, count, sum, myScore: normalizedScore };
   }
 };
 
@@ -1952,6 +2077,74 @@ export const collectionService = {
 };
 
 // ============================================
+// SERVICE SIGNALEMENTS UTILISATEUR
+// ============================================
+
+function normalizeUserReportDoc(d) {
+  const data = d.data();
+  const created = data.created_at;
+  let dateIso = data.date || null;
+  if (created && typeof created.toDate === 'function') {
+    dateIso = created.toDate().toISOString();
+  } else if (created && typeof created === 'string') {
+    dateIso = created;
+  }
+  return {
+    id: d.id,
+    reportedBy: data.reported_by || data.reportedBy || '',
+    reportedUser: data.reported_user || data.reportedUser || '',
+    reason: data.reason || 'other',
+    comment: data.comment || '',
+    date: dateIso || new Date().toISOString()
+  };
+}
+
+export const userReportService = {
+  /**
+   * Enregistre un signalement (Firestore — visible par l'admin sur tous les appareils).
+   */
+  async submitReport(report) {
+    const reporter = normalizeProfileEmail(report.reportedBy || report.reported_by);
+    const reported = normalizeProfileEmail(report.reportedUser || report.reported_user);
+    if (!reporter || !reported) {
+      throw new Error('Emails de signalement invalides');
+    }
+    if (reporter === reported) {
+      throw new Error('Impossible de se signaler soi-même');
+    }
+
+    await ensureAuthenticatedForStorage(reporter);
+
+    const reportsRef = collection(db, COLLECTIONS.USER_REPORTS);
+    await addDoc(reportsRef, {
+      reported_by: reporter,
+      reported_user: reported,
+      reason: String(report.reason || 'other').slice(0, 64),
+      comment: String(report.comment || '').slice(0, 500),
+      created_at: serverTimestamp()
+    });
+  },
+
+  /** Liste tous les signalements (admin connecté avec le compte site). */
+  async getAllReportsForAdmin() {
+    const reportsRef = collection(db, COLLECTIONS.USER_REPORTS);
+    const q = query(reportsRef, orderBy('created_at', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(normalizeUserReportDoc);
+  },
+
+  /** Supprime tous les signalements concernant un utilisateur (action admin « ignorer »). */
+  async deleteReportsForUser(reportedUserEmail) {
+    const reported = normalizeProfileEmail(reportedUserEmail);
+    if (!reported) return;
+    const reportsRef = collection(db, COLLECTIONS.USER_REPORTS);
+    const q = query(reportsRef, where('reported_user', '==', reported));
+    const snap = await getDocs(q);
+    await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
+  }
+};
+
+// ============================================
 // SERVICE SUPPORT TICKETS (Aide)
 // ============================================
 const ADMIN_EMAIL = 'mangawatch.off@gmail.com';
@@ -2151,6 +2344,8 @@ if (typeof window !== 'undefined') {
   window.collectionService = collectionService;
   window.supportTicketService = supportTicketService;
   window.boutiqueStatsService = boutiqueStatsService;
+  window.profileRatingService = profileRatingService;
+  window.userReportService = userReportService;
   window.FIREBASE_COLLECTIONS = COLLECTIONS;
   window.MANGAWATCH_ADMIN_EMAIL = ADMIN_EMAIL;
 }

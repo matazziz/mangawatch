@@ -413,6 +413,15 @@ class SearchManager {
         // Limiter à 4 résultats
         const limitedUsers = users.slice(0, this.maxResults);
         
+        // Notes de profil
+        let ratingsMap = {};
+        try {
+            const ratingMod = await import('./profile-rating-ui.js?v=4');
+            ratingsMap = await ratingMod.fetchProfileRatingsForSearch(limitedUsers.map(function (u) { return u.email; }));
+        } catch (e) {
+            console.warn('Notes profil indisponibles', e);
+        }
+        
         // Récupérer les utilisateurs vérifiés
         const verifiedUsers = JSON.parse(localStorage.getItem('verified_users') || '[]');
         
@@ -452,6 +461,13 @@ class SearchManager {
             }
             var countryLabel = (countryCode && typeof window.getCountryName === 'function') ? window.getCountryName(countryCode) : (countryCode ? countryCode.toUpperCase() : '');
             const countryDisplay = countryLabel ? `<span class="continent-badge-search country-badge-search" title="${countryLabel}">${countryCode ? countryCode.toUpperCase() : ''}</span>` : '';
+            const emailKey = String(user.email || '').toLowerCase();
+            const ratingStats = ratingsMap[emailKey] || { average: 0, count: 0 };
+            let ratingDisplay = '';
+            if (ratingStats.average > 0) {
+                const rText = Number(ratingStats.average).toFixed(1).replace(/\.0$/, '');
+                ratingDisplay = `<span class="profile-rating-badge-search" title="${rText}/10"><i class="fas fa-star" aria-hidden="true"></i>${rText}</span>`;
+            }
             
             item.innerHTML = `
                 <img src="${avatarUrl}" alt="${user.name || user.email}" class="user-search-avatar" onerror="this.src=''">
@@ -461,7 +477,10 @@ class SearchManager {
                         ${verifiedBadge}
                     </div>
                 </div>
-                ${countryDisplay}
+                <div class="result-badges">
+                    ${countryDisplay}
+                    ${ratingDisplay}
+                </div>
             `;
             
             this.searchResults.appendChild(item);

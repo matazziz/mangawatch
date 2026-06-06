@@ -17,7 +17,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/header-unified-new.css">
-    <link rel="stylesheet" href="../css/home-deathnote.css">
+    <link rel="stylesheet" href="../css/home-deathnote.css?v=20260605">
     <link rel="stylesheet" href="../css/footer-unified.css">
     <link rel="stylesheet" href="../css/messaging.css">
     <link rel="stylesheet" href="../css/firebase-popup-fix.css">
@@ -80,6 +80,7 @@
             } catch (e) {}
         })();
     </script>
+    <script src="/js/header-avatar.js?v=1"></script>
     
     <style>
         /* Modals d'authentification - Erreur et Succès */
@@ -593,6 +594,7 @@
 
     <!-- Scripts -->
     <script src="../js/session.js"></script>
+    <script type="module" src="../js/daily-vote-shared.js"></script>
     <script>
         // Fonction de traduction (utilise le système de localisation)
         // Note: La fonction t() globale est définie dans localization.js
@@ -821,18 +823,19 @@
             return dayOfYear % 2 === 0 ? 'anime' : 'manga';
         }
 
-        // Déterminer le genre pour un jour donné
+        // Déterminer le genre pour un jour donné (aligné sur daily-vote-shared.js)
         function getGenreForDay(dateString) {
+            if (window.MWDailyVote && window.MWDailyVote.getGenreForDay) {
+                return window.MWDailyVote.getGenreForDay(dateString);
+            }
             const date = new Date(dateString);
             const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
-            
             const genres = [
-                'action', 'adventure', 'comedy', 'drama', 'fantasy', 'horror', 
-                'mystery', 'romance', 'sci-fi', 'slice of life', 'sports', 'supernatural'
+                'action', 'adventure', 'comedy', 'drama', 'fantasy', 'horror',
+                'mystery', 'romance', 'sci-fi', 'slice of life', 'sports', 'supernatural',
+                'thriller', 'psychological', 'isekai'
             ];
-            
-            // Changer de genre tous les 3 jours
-            const genreIndex = Math.floor(dayOfYear / 3) % genres.length;
+            const genreIndex = Math.floor(dayOfYear / 2) % genres.length;
             return genres[genreIndex];
         }
 
@@ -860,6 +863,60 @@
             return true;
         }
         
+        async function waitForDailyVoteModule() {
+            for (let i = 0; i < 80 && !window.MWDailyVote; i++) {
+                await new Promise(function (r) { setTimeout(r, 50); });
+            }
+            return window.MWDailyVote || null;
+        }
+
+        async function finishVoteOptionsLoad(dayPayload) {
+            voteOptions = (dayPayload.content || []).slice(0, 3);
+            currentDayContent = dayPayload;
+            voteOptions.forEach(function (content) {
+                if (!currentVotes.hasOwnProperty(content.id)) currentVotes[content.id] = 0;
+            });
+            if (dayPayload.votes) {
+                Object.keys(dayPayload.votes).forEach(function (id) {
+                    currentVotes[parseInt(id, 10)] = dayPayload.votes[id] || 0;
+                });
+            }
+            if (window.MWDailyVote) window.MWDailyVote.writeLocalDayContent(dayPayload);
+            loadSavedVotes();
+            await renderVoteOptions();
+            document.getElementById('voteLoading').style.display = 'none';
+            document.getElementById('voteOptions').style.display = 'grid';
+            if (userHasVoted) showVoteResults();
+            startFakeVotes();
+        }
+
+        function setupDailyVoteFirestoreWatch(DV, dayKey) {
+            if (window.__mangawatchDailyVoteWatch) return;
+            window.__mangawatchDailyVoteWatch = DV.watchSharedDay(dayKey, function (data) {
+                if (!data || !data.votes) return;
+                let changed = false;
+                Object.keys(data.votes).forEach(function (id) {
+                    const n = parseInt(id, 10);
+                    const v = data.votes[id] || 0;
+                    if ((currentVotes[n] || 0) < v) {
+                        currentVotes[n] = v;
+                        changed = true;
+                    }
+                });
+                if (changed) {
+                    updateVoteDisplay();
+                    if (userHasVoted) showVoteResults();
+                }
+            });
+        }
+
+        async function persistDailyVotesToCloud() {
+            const DV = window.MWDailyVote;
+            if (!DV || !currentDayContent) return;
+            const dayKey = currentDayContent.dayKey || DV.getDayKey(currentDayContent.date || new Date().toDateString());
+            await DV.saveSharedDay(dayKey, Object.assign({}, currentDayContent, { votes: currentVotes }));
+        }
+
         // Charger les options de vote depuis l'API
         async function loadVoteOptions() {
             try {
@@ -867,13 +924,42 @@
                 document.getElementById('voteLoading').style.display = 'block';
                 document.getElementById('voteOptions').style.display = 'none';
                 
+                const DV = await waitForDailyVoteModule();
                 const today = new Date().toDateString();
-                const savedContent = localStorage.getItem('dailyVoteContent');
+                const contentType = DV ? DV.getContentTypeForDay(today) : getContentTypeForDay(today);
+                const genre = DV ? DV.getGenreForDay(today) : getGenreForDay(today);
+                const seed = DV ? DV.getVoteSeed(today, contentType, genre) : (today + '_' + contentType + '_' + genre);
+                const dayKey = DV ? DV.getDayKey(today) : today;
+
+                if (DV) {
+                    const shared = await DV.loadSharedDay(dayKey);
+                    if (shared && shared.seed === seed && shared.content && shared.content.length >= 3) {
+                        await finishVoteOptionsLoad(Object.assign({ date: today, dayKey: dayKey, seed: seed }, shared));
+                        setupDailyVoteFirestoreWatch(DV, dayKey);
+                        return;
+                    }
+                    const localCached = DV.readLocalDayContent(today, seed);
+                    if (localCached && localCached.content && localCached.content.length >= 3) {
+                        await finishVoteOptionsLoad(localCached);
+                        await DV.saveSharedDay(dayKey, localCached);
+                        setupDailyVoteFirestoreWatch(DV, dayKey);
+                        return;
+                    }
+                    const built = await DV.buildDailyVoteContent(today, contentType, genre, seed);
+                    if (built && built.content && built.content.length >= 3) {
+                        await DV.saveSharedDay(dayKey, built);
+                        await finishVoteOptionsLoad(built);
+                        setupDailyVoteFirestoreWatch(DV, dayKey);
+                        return;
+                    }
+                }
+
+                const savedContent = localStorage.getItem('dailyVoteContent_v3') || localStorage.getItem('dailyVoteContent');
                 
                 // Vérifier si on a déjà des contenus pour aujourd'hui
                 if (savedContent) {
                     const saved = JSON.parse(savedContent);
-                    if (saved.date === today) {
+                    if (saved.date === today && (!saved.seed || saved.seed === seed)) {
                         console.log('✅ Utilisation des contenus sauvegardés pour aujourd\'hui');
                         
                         // Filtrer et valider les contenus sauvegardés
@@ -949,11 +1035,15 @@
                             // Sauvegarder les données vérifiées
                             currentDayContent = {
                                 date: today,
+                                dayKey: dayKey,
+                                seed: seed,
                                 contentType: saved.contentType,
                                 genre: saved.genre,
                                 content: voteOptions
                             };
-                            localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+                            if (window.MWDailyVote) window.MWDailyVote.writeLocalDayContent(currentDayContent);
+                            else localStorage.setItem('dailyVoteContent_v3', JSON.stringify(currentDayContent));
+                            persistDailyVotesToCloud();
                             
                             // Initialiser les votes
                             voteOptions.forEach(content => {
@@ -984,9 +1074,6 @@
                 // Nouveau jour, charger de nouveaux contenus
                 console.log('🔄 Nouveau jour, chargement de nouveaux contenus');
                 
-                const contentType = getContentTypeForDay(today);
-                const genre = getGenreForDay(today);
-                
                 // Récupérer des contenus par genre
                 let response, data;
                 
@@ -995,7 +1082,7 @@
                     if (response.ok) {
                         data = await response.json();
                         if (data.data && data.data.length > 0) {
-                            data.data = data.data.sort(() => Math.random() - 0.5);
+                            data.data = DV ? DV.seededShuffle(data.data, seed + '_genre') : data.data;
                         }
                     } else {
                         throw new Error('Genre non trouvé');
@@ -1008,7 +1095,7 @@
                     }
                     data = await response.json();
                     if (data.data && data.data.length > 0) {
-                        data.data = data.data.sort(() => Math.random() - 0.5);
+                        data.data = DV ? DV.seededShuffle(data.data, seed + '_top') : data.data;
                     }
                 }
                 
@@ -1072,14 +1159,23 @@
                     return content;
                 });
                 
-                // Sauvegarder les contenus du jour
+                // Sauvegarder les contenus du jour (identiques pour tous via seed + Firestore)
                 currentDayContent = {
                     date: today,
+                    dayKey: dayKey,
+                    seed: seed,
                     contentType: contentType,
                     genre: genre,
-                    content: voteOptions
+                    content: voteOptions,
+                    votes: {}
                 };
-                localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+                if (window.MWDailyVote) {
+                    await window.MWDailyVote.saveSharedDay(dayKey, currentDayContent);
+                    window.MWDailyVote.writeLocalDayContent(currentDayContent);
+                    setupDailyVoteFirestoreWatch(window.MWDailyVote, dayKey);
+                } else {
+                    localStorage.setItem('dailyVoteContent_v3', JSON.stringify(currentDayContent));
+                }
                 
                 // Initialiser les votes
                 voteOptions.forEach(content => {
@@ -1175,13 +1271,25 @@
                 return content;
             });
             
+            const DVfb = window.MWDailyVote;
+            const seedFb = DVfb ? DVfb.getVoteSeed(today, contentType, genre) : (today + '_' + contentType + '_' + genre);
+            const dayKeyFb = DVfb ? DVfb.getDayKey(today) : today;
             currentDayContent = {
                 date: today,
+                dayKey: dayKeyFb,
+                seed: seedFb,
                 contentType: contentType,
                 genre: genre,
-                content: voteOptions
+                content: voteOptions,
+                votes: {}
             };
-            localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+            if (DVfb) {
+                await DVfb.saveSharedDay(dayKeyFb, currentDayContent);
+                DVfb.writeLocalDayContent(currentDayContent);
+                setupDailyVoteFirestoreWatch(DVfb, dayKeyFb);
+            } else {
+                localStorage.setItem('dailyVoteContent_v3', JSON.stringify(currentDayContent));
+            }
             
             voteOptions.forEach(content => {
                 currentVotes[content.id] = 0;
@@ -1363,6 +1471,7 @@
             localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
             localStorage.setItem('lastVoteDate', new Date().toDateString());
             localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            persistDailyVotesToCloud();
             
             // Mettre à jour l'affichage
             updateVoteDisplay();
@@ -1906,21 +2015,15 @@
             }
         };
 
-        // Charger les options de vote au chargement de la page
+        // Vote du jour : initialisé une seule fois (voir DOMContentLoaded principal)
         document.addEventListener('DOMContentLoaded', function() {
-            loadVoteOptions();
-            
             // Écouter les changements de langue pour retraduire les genres
             document.addEventListener('languageChanged', async function() {
                 console.log('🔄 Langue changée, retraduction des genres du vote...');
-                // Re-rendre les options de vote avec les genres traduits
                 if (voteOptions && voteOptions.length > 0) {
                     await renderVoteOptions();
                 }
             });
-            
-            // Démarrer la synchronisation des votes en temps réel
-            startVoteSync();
             
             // Event listeners pour le popup élégant
             document.getElementById('popupClose').addEventListener('click', hideElegantPopup);
@@ -2144,11 +2247,10 @@
                 }
             }
             
-            // Mélanger les contenus pour éviter la répétition
-            fallbackContents.sort(() => Math.random() - 0.5);
-            
-            // Prendre les 3 premiers
-            voteOptions = fallbackContents.slice(0, 3);
+            const DV2 = window.MWDailyVote;
+            const seedFb2 = DV2 ? DV2.getVoteSeed(today, contentType, genre) : (today + '_' + contentType + '_' + genre);
+            const orderedFallback = DV2 ? DV2.seededShuffle(fallbackContents, seedFb2 + '_fallback') : fallbackContents;
+            voteOptions = orderedFallback.slice(0, 3);
             
             // Vérifier que tous les contenus ont une image valide
             voteOptions = voteOptions.map(content => {
@@ -2176,16 +2278,24 @@
                 console.log(`  - ${content.title}: ${content.image ? `Image: ${content.image}` : 'Pas d\'image'}`);
             });
             
-            // Sauvegarder les contenus du jour (fallback)
+            const dayKeyFb2 = DV2 ? DV2.getDayKey(today) : today;
             currentDayContent = {
                 date: today,
+                dayKey: dayKeyFb2,
+                seed: seedFb2,
                 contentType: contentType,
                 genre: genre,
-                content: voteOptions
+                content: voteOptions,
+                votes: {}
             };
-            localStorage.setItem('dailyVoteContent', JSON.stringify(currentDayContent));
+            if (DV2) {
+                await DV2.saveSharedDay(dayKeyFb2, currentDayContent);
+                DV2.writeLocalDayContent(currentDayContent);
+                setupDailyVoteFirestoreWatch(DV2, dayKeyFb2);
+            } else {
+                localStorage.setItem('dailyVoteContent_v3', JSON.stringify(currentDayContent));
+            }
             
-            // Initialiser les votes
             voteOptions.forEach(content => {
                 currentVotes[content.id] = 0;
             });
@@ -2196,7 +2306,6 @@
             document.getElementById('voteLoading').style.display = 'none';
             document.getElementById('voteOptions').style.display = 'grid';
             
-            // Démarrer les faux votes automatiques (une seule fois par jour)
             startFakeVotes();
         }
         
@@ -3178,21 +3287,15 @@
             }
         };
 
-        // Charger les options de vote au chargement de la page
+        // Vote du jour : initialisé une seule fois (voir DOMContentLoaded principal)
         document.addEventListener('DOMContentLoaded', function() {
-            loadVoteOptions();
-            
             // Écouter les changements de langue pour retraduire les genres
             document.addEventListener('languageChanged', async function() {
                 console.log('🔄 Langue changée, retraduction des genres du vote...');
-                // Re-rendre les options de vote avec les genres traduits
                 if (voteOptions && voteOptions.length > 0) {
                     await renderVoteOptions();
                 }
             });
-            
-            // Démarrer la synchronisation des votes en temps réel
-            startVoteSync();
             
             // Event listeners pour le popup élégant
             document.getElementById('popupClose').addEventListener('click', hideElegantPopup);
@@ -3240,7 +3343,7 @@
     <!-- Système de messagerie -->
     <script src="../js/messaging.js" type="module"></script>
     <script src="../js/auth.js?v=6febe22" type="module"></script>
-    <script type="module" src="../js/feature-poll.js"></script>
+    <script type="module" src="../js/feature-poll.js?v=20260605"></script>
     <script src="../js/help-ticket.js"></script>
     <!-- TEST : Forcer l'affichage du popup après chargement -->
     <!-- Le popup s'affiche automatiquement via js/acceuil.js si nécessaire -->

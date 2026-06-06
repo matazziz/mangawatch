@@ -2,6 +2,7 @@
 export class AuteurService {
     constructor() {
         this.apiBaseUrl = 'https://api.jikan.moe/v4';
+        this.jikanProxyPath = '/.netlify/functions/jikan-proxy';
         this.auteurs = [
             {
                 nom: "Naoki Urasawa",
@@ -236,12 +237,8 @@ export class AuteurService {
         const auteurStorageKey = 'mangawatch_auteur_semaine_' + year + '-' + week;
         let auteurIndex = localStorage.getItem(auteurStorageKey);
         
-        if (auteurIndex === null) {
-            auteurIndex = week % this.auteurs.length;
-            localStorage.setItem(auteurStorageKey, auteurIndex);
-        }
-        
-        auteurIndex = parseInt(auteurIndex, 10);
+        auteurIndex = week % this.auteurs.length;
+        localStorage.setItem(auteurStorageKey, String(auteurIndex));
         return this.auteurs[auteurIndex];
     }
 
@@ -265,17 +262,37 @@ export class AuteurService {
     }
 
     // Récupérer les vraies images depuis l'API Jikan
+    isUsableCoverUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        if (!url.startsWith('http')) return false;
+        if (url.includes('placeholder') || url.includes('via.placeholder')) return false;
+        return true;
+    }
+
     async fetchMangaImages(mangaTitle) {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/manga?q=${encodeURIComponent(mangaTitle)}&limit=1`);
+            const proxyUrl = new URL(this.jikanProxyPath, window.location.origin);
+            proxyUrl.searchParams.set('action', 'list');
+            proxyUrl.searchParams.set('mediaType', 'manga');
+            proxyUrl.searchParams.set('q', mangaTitle);
+            proxyUrl.searchParams.set('limit', '5');
+            proxyUrl.searchParams.set('sfw', 'true');
+
+            const fetchFn = window.MW_API_CONFIG?.fetchWithRetry || fetch;
+            const response = await fetchFn(proxyUrl.toString(), { headers: { Accept: 'application/json' } });
+            if (!response.ok) return null;
+
             const data = await response.json();
-            
             if (data.data && data.data.length > 0) {
-                const manga = data.data[0];
-                // Essayer plusieurs formats d'images
-                return manga.images?.jpg?.large_image_url || 
-                       manga.images?.jpg?.image_url || 
-                       manga.images?.webp?.large_image_url || 
+                const q = mangaTitle.toLowerCase().trim();
+                const manga = data.data.find(function (m) {
+                    const t = (m.title || '').toLowerCase();
+                    const te = (m.title_english || '').toLowerCase();
+                    return t === q || te === q || t.includes(q) || q.includes(t);
+                }) || data.data[0];
+                return manga.images?.jpg?.large_image_url ||
+                       manga.images?.jpg?.image_url ||
+                       manga.images?.webp?.large_image_url ||
                        manga.images?.webp?.image_url;
             }
         } catch (error) {
@@ -456,8 +473,14 @@ export class AuteurService {
                 border: 2px solid #444;
             `;
             
-            // Charger l'image depuis l'API
-            const realImage = await this.fetchMangaImages(oeuvre.titre);
+            if (this.isUsableCoverUrl(oeuvre.image)) {
+                oeuvreImage.src = oeuvre.image;
+                oeuvreImage.style.display = 'block';
+            }
+
+            const realImage = this.isUsableCoverUrl(oeuvre.image)
+                ? oeuvre.image
+                : await this.fetchMangaImages(oeuvre.titre);
             if (realImage) {
                 oeuvreImage.src = realImage;
                 
