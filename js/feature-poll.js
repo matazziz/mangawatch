@@ -83,20 +83,51 @@ const state = {
     canModerateProposals: false
 };
 
+const MODERATOR_USERNAMES = ['matazziz'];
+const MODERATOR_EMAILS = ['mangawatch.off@gmail.com'];
+const MODERATOR_EMAIL_PREFIXES = ['matazziz', 'mathieubroyer'];
+
+function isModeratorEmail(email) {
+    const norm = normalizeProfileEmail(email);
+    if (!norm) return false;
+    if (MODERATOR_EMAILS.indexOf(norm) !== -1) return true;
+    const local = norm.split('@')[0];
+    return MODERATOR_EMAIL_PREFIXES.indexOf(local) !== -1;
+}
+
+function isModeratorUsername(name) {
+    const n = String(name || '').trim().toLowerCase();
+    return MODERATOR_USERNAMES.indexOf(n) !== -1;
+}
+
 function isMatazzizModerator(user) {
     if (!user) return false;
-    const username = String(user.username || user.name || user.pseudo || '').trim().toLowerCase();
-    if (username === 'matazziz') return true;
-    const email = String(user.email || '').trim().toLowerCase();
-    if (email && email.split('@')[0] === 'matazziz') return true;
+    if (isModeratorUsername(user.username || user.name || user.pseudo)) return true;
+    const email = normalizeProfileEmail(user.email);
+    if (isModeratorEmail(email)) return true;
     try {
         const accounts = JSON.parse(localStorage.getItem('accounts') || '[]');
         for (let i = 0; i < accounts.length; i++) {
             const acc = accounts[i];
-            if (!acc || normalizeProfileEmail(acc.email) !== normalizeProfileEmail(user.email)) continue;
-            const accName = String(acc.username || acc.name || acc.pseudo || '').trim().toLowerCase();
-            if (accName === 'matazziz') return true;
+            if (!acc || normalizeProfileEmail(acc.email) !== email) continue;
+            if (isModeratorUsername(acc.username || acc.name || acc.pseudo)) return true;
         }
+    } catch (e) { /* ignore */ }
+    if (email) {
+        try {
+            const prof = JSON.parse(localStorage.getItem('profile_' + email) || '{}');
+            if (isModeratorUsername(prof.username || prof.pseudo || prof.displayName)) return true;
+        } catch (e) { /* ignore */ }
+    }
+    return false;
+}
+
+async function resolveMatazzizModerator(user) {
+    if (isMatazzizModerator(user)) return true;
+    if (!user || !user.email) return false;
+    try {
+        const profile = await loadAuthorProfile(user.email);
+        if (profile && isModeratorUsername(profile.username)) return true;
     } catch (e) { /* ignore */ }
     return false;
 }
@@ -945,7 +976,7 @@ function populateThemeSelects() {
 async function refresh() {
     const user = getCurrentUser();
     state.isLoggedIn = !!(user && user.email);
-    state.canModerateProposals = isMatazzizModerator(user);
+    state.canModerateProposals = await resolveMatazzizModerator(user);
     await loadRetiredProposalIds();
     state.proposals = await enrichProposalAvatars(await fetchProposals());
     const ids = state.proposals.map(function (p) { return p.id; });
@@ -1138,19 +1169,25 @@ export async function retireFeatureProposal(proposalId) {
 /** Liste complète pour l'admin (y compris idées déjà retirées côté affichage public). */
 export async function listFeaturePollProposalsForAdmin() {
     await loadRetiredProposalIds();
+    await seedDefaultProposalsIfEmpty();
     let snap;
     try {
         snap = await getDocs(query(collection(db, PROPOSALS_COL), orderBy('created_at', 'desc')));
     } catch (e) {
         snap = await getDocs(collection(db, PROPOSALS_COL));
     }
-    const proposals = snap.docs.map(mapProposalDoc);
+    let proposals = snap.docs.map(mapProposalDoc);
+    if (!proposals.length) {
+        proposals = fallbackProposals();
+    }
     const ids = proposals.map(function (p) { return p.id; });
     const scores = await fetchScores(ids);
     return proposals.map(function (p) {
         const s = scores[p.id] || { up: 0, down: 0 };
         const net = (Number(s.up) || 0) - (Number(s.down) || 0);
         return Object.assign({}, p, {
+            title: p.title || proposalTitle(p),
+            description: p.description || proposalDesc(p),
             scores: s,
             netScore: net,
             isRetired: retiredIdsCache.indexOf(p.id) !== -1

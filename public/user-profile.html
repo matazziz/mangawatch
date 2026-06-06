@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="/css/anime-card.css?v=2.36">
     <link rel="stylesheet" href="/css/messaging.css">
     <link rel="stylesheet" href="/css/list.css?v=20260604-cards9">
-    <link rel="stylesheet" href="/css/profile-rating.css?v=4">
+    <link rel="stylesheet" href="/css/profile-rating.css?v=7">
     <script src="/js/localization.js"></script>
     <!-- Import Firebase Service pour charger la bannière (image/vidéo) sur le profil public -->
     <script type="module">
@@ -116,6 +116,22 @@
         
         .profile-header-banner.active {
             display: block;
+            opacity: 1;
+            transition: opacity 0.35s ease;
+        }
+
+        .profile-header.banner-loading .profile-header-banner.active {
+            opacity: 0;
+        }
+
+        .profile-header.banner-loading::before {
+            opacity: 1;
+            animation: profile-banner-pulse 1.4s ease-in-out infinite;
+        }
+
+        @keyframes profile-banner-pulse {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 1; }
         }
         
         .profile-header-banner-overlay {
@@ -1195,7 +1211,7 @@
             <div class="profile-header">
                 <!-- Bannière en arrière-plan -->
                 <img id="banner-image" class="profile-header-banner" alt="Bannière du profil" loading="eager">
-                <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="auto" muted></video>
+                <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="metadata" muted></video>
                 <div class="profile-header-banner-overlay"></div>
 
                 <div class="profile-rating-banner-badge" id="profile-rating-banner-badge" style="display: none;" aria-label="Note du profil">
@@ -1441,7 +1457,7 @@
     </main>
 
     <script src="/js/profile-anime-cards.js?v=2.23"></script>
-    <script src="/js/user-profile.js?v=2.19"></script>
+    <script src="/js/user-profile.js?v=2.20"></script>
     <script src="/js/search.js"></script>
     <script src="/js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>

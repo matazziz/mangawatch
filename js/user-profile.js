@@ -473,7 +473,7 @@ async function loadUserProfile(userEmail) {
     // Afficher les informations du profil
     displayProfileInfo(user, normalizedEmail);
 
-    // Synchroniser avatar / bannière depuis Firebase (affichage à jour PC ↔ téléphone)
+    // Synchroniser avatar depuis Firebase (bannière gérée par loadUserBanner)
     if (typeof window.syncRemoteProfileMedia === 'function') {
         void window.syncRemoteProfileMedia(normalizedEmail).then(function(remote) {
             if (remote && remote.avatar && /^https?:\/\//i.test(remote.avatar)) {
@@ -483,13 +483,9 @@ async function loadUserProfile(userEmail) {
                     : remote.avatar;
                 if (profileAvatar) profileAvatar.src = dispUrl;
             }
-            if (remote && remote.banner && remote.banner.url) {
-                loadUserBanner(normalizedEmail);
-            }
         }).catch(function() { /* ignore */ });
     }
     
-    // Charger la bannière de l'utilisateur
     loadUserBanner(normalizedEmail);
     
     // Charger Anime & Manga par défaut (onglet affiché en premier sur le profil utilisateur)
@@ -657,106 +653,188 @@ function displayProfileInfo(user, userEmail) {
     }
 }
 
+function normalizeBannerEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
+function setProfileBannerLoading(loading) {
+    var header = document.querySelector('.profile-header');
+    if (header) header.classList.toggle('banner-loading', !!loading);
+}
+
+function bannerMediaUrl(url, bustCache) {
+    if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
+    if (!bustCache) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+}
+
+function cacheUserBanner(email, banner) {
+    if (!banner || !banner.url) return;
+    try {
+        localStorage.setItem('profile_banner_' + normalizeBannerEmail(email), JSON.stringify({
+            type: banner.type || 'image',
+            url: banner.url,
+            volume: banner.volume !== undefined ? banner.volume : 35
+        }));
+    } catch (e) { /* ignore */ }
+}
+
 // Applique les données bannière (image ou vidéo) aux éléments DOM (profil public / top 10 utilisateur)
-function applyBannerToDom(banner, bannerImage, bannerVideo) {
+function applyBannerToDom(banner, bannerImage, bannerVideo, options) {
+    options = options || {};
     if (!banner || !banner.url || !bannerImage || !bannerVideo) return;
     var muteBtn = document.getElementById('banner-mute-btn');
     var type = (banner.type || '').toLowerCase();
+    var displayUrl = bannerMediaUrl(banner.url, options.bustCache === true);
+
     if (type === 'image') {
         bannerVideo.pause();
         bannerVideo.removeAttribute('src');
         bannerVideo.currentTime = 0;
         bannerVideo.classList.remove('active');
-        bannerImage.src = banner.url;
-        bannerImage.classList.add('active');
+        bannerImage.classList.remove('active');
+        setProfileBannerLoading(true);
+        bannerImage.onload = function() {
+            bannerImage.classList.add('active');
+            setProfileBannerLoading(false);
+        };
+        bannerImage.onerror = function() {
+            setProfileBannerLoading(false);
+        };
+        bannerImage.src = displayUrl;
         if (muteBtn) muteBtn.style.display = 'none';
         return;
     }
     if (type === 'video') {
         bannerImage.removeAttribute('src');
         bannerImage.classList.remove('active');
-        bannerVideo.src = banner.url;
-        bannerVideo.classList.add('active');
-        bannerVideo.load();
-        bannerVideo.addEventListener('loadedmetadata', function() {}, { once: true });
-        bannerVideo.addEventListener('timeupdate', function() {
+        bannerVideo.classList.remove('active');
+        setProfileBannerLoading(true);
+        bannerVideo.preload = 'auto';
+        bannerVideo.onloadeddata = function() {
+            bannerVideo.classList.add('active');
+            setProfileBannerLoading(false);
+        };
+        bannerVideo.onerror = function() {
+            setProfileBannerLoading(false);
+        };
+        bannerVideo.ontimeupdate = function() {
             if (bannerVideo.currentTime >= 45) bannerVideo.currentTime = 0;
-        });
+        };
         var savedVolume = banner.volume !== undefined ? banner.volume : 35;
         bannerVideo.volume = Math.max(0.1, Math.min(1, savedVolume / 100));
-        bannerVideo.muted = false;
+        bannerVideo.muted = true;
         bannerVideo.playsInline = true;
         if (muteBtn) {
             muteBtn.style.display = 'inline-flex';
-            muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-            muteBtn.title = 'Couper le son de la bannière';
-            muteBtn.setAttribute('aria-label', 'Couper le son de la bannière');
+            muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            muteBtn.title = 'Activer le son de la bannière';
+            muteBtn.setAttribute('aria-label', 'Activer le son de la bannière');
         }
+        bannerVideo.src = displayUrl;
+        bannerVideo.load();
         bannerVideo.play().then(function() {
-            setTimeout(function() {
-                bannerVideo.muted = false;
-            }, 100);
-        }).catch(function(e) {
-            // Fallback autoplay mobile/desktop: garder la vidéo animée en muet si nécessaire
+            bannerVideo.muted = false;
+            if (muteBtn) {
+                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                muteBtn.title = 'Couper le son de la bannière';
+                muteBtn.setAttribute('aria-label', 'Couper le son de la bannière');
+            }
+        }).catch(function() {
             bannerVideo.muted = true;
             bannerVideo.play().catch(function() {});
         });
-        bannerVideo.addEventListener('error', function onVideoError() {
-            console.warn('Bannière vidéo non chargée (profil public)', banner.url && banner.url.substring(0, 50));
-        }, { once: true });
     }
 }
 
-// Fonction pour charger la bannière de l'utilisateur (localStorage puis Firebase)
+var userBannerFetchTokens = {};
+
+// Fonction pour charger la bannière de l'utilisateur (cache local puis Firebase)
 function loadUserBanner(userEmail, retryCount) {
     retryCount = retryCount || 0;
-    var maxRetries = 15; // Attendre jusqu'à ~3 secondes pour que le module Firebase charge
+    var maxRetries = 15;
+    var normEmail = normalizeBannerEmail(userEmail);
     var bannerImage = document.getElementById('banner-image');
     var bannerVideo = document.getElementById('banner-video');
     if (!bannerImage || !bannerVideo) return;
-    
-    function tryApply(banner) {
-        if (banner && banner.url) applyBannerToDom(banner, bannerImage, bannerVideo);
+
+    var fetchToken = (userBannerFetchTokens[normEmail] || 0) + 1;
+    userBannerFetchTokens[normEmail] = fetchToken;
+
+    function tryApply(banner, opts) {
+        if (fetchToken !== userBannerFetchTokens[normEmail]) return;
+        if (banner && banner.url) applyBannerToDom(banner, bannerImage, bannerVideo, opts || {});
     }
-    
-    // 1. D'abord essayer localStorage (affichage immédiat si disponible)
-    var bannerData = localStorage.getItem('profile_banner_' + userEmail);
-    if (bannerData) {
+
+    var cachedRaw = localStorage.getItem('profile_banner_' + normEmail);
+    if (cachedRaw) {
         try {
-            tryApply(JSON.parse(bannerData));
+            tryApply(JSON.parse(cachedRaw), { bustCache: false });
         } catch (e) {
             console.error('Erreur parsing bannière localStorage:', e);
         }
+    } else {
+        setProfileBannerLoading(true);
     }
-    
-    // 2. Charger depuis Firebase pour avoir la source à jour (même si localStorage avait des données)
-    function fetchFromFirebase() {
-        if (window.bannerService && typeof window.bannerService.getBanner === 'function') {
-            window.bannerService.getBanner(userEmail).then(function(banner) {
-                if (banner && banner.url) {
-                    tryApply(banner);
-                    try { localStorage.setItem('profile_banner_' + userEmail, JSON.stringify({ type: banner.type, url: banner.url, volume: banner.volume !== undefined ? banner.volume : 35 })); } catch (e) {}
-                }
-            }).catch(function() {});
-            return true;
+
+    function fetchFromFirebase(forceServer) {
+        if (!window.bannerService || typeof window.bannerService.getBanner !== 'function') {
+            return Promise.resolve(null);
         }
-        return false;
+        return window.bannerService.getBanner(normEmail, forceServer ? { forceServer: true } : undefined)
+            .then(function(banner) {
+                if (fetchToken !== userBannerFetchTokens[normEmail]) return null;
+                if (banner && banner.url) {
+                    tryApply(banner, { bustCache: !!forceServer });
+                    cacheUserBanner(normEmail, banner);
+                } else if (!cachedRaw) {
+                    setProfileBannerLoading(false);
+                }
+                return banner;
+            })
+            .catch(function() {
+                if (fetchToken === userBannerFetchTokens[normEmail] && !cachedRaw) {
+                    setProfileBannerLoading(false);
+                }
+                return null;
+            });
     }
-    
-    if (fetchFromFirebase()) {
+
+    function startRemoteLoad() {
+        fetchFromFirebase(false).then(function(banner) {
+            if (fetchToken !== userBannerFetchTokens[normEmail]) return;
+            if (!banner || !banner.url) {
+                void fetchFromFirebase(true);
+                return;
+            }
+            var firstUrl = banner.url;
+            void fetchFromFirebase(true).then(function(serverBanner) {
+                if (fetchToken !== userBannerFetchTokens[normEmail]) return;
+                if (serverBanner && serverBanner.url && serverBanner.url !== firstUrl) {
+                    tryApply(serverBanner, { bustCache: true });
+                    cacheUserBanner(normEmail, serverBanner);
+                }
+            });
+        });
+    }
+
+    if (window.bannerService && typeof window.bannerService.getBanner === 'function') {
+        startRemoteLoad();
         return;
     }
-    // Module pas encore chargé : attendre l'événement ou réessayer
+
     if (retryCount < maxRetries) {
         var handler = function() {
             window.removeEventListener('bannerServiceReady', handler);
-            loadUserBanner(userEmail, 0); // Réessayer maintenant que le service est prêt
+            loadUserBanner(userEmail, 0);
         };
         window.addEventListener('bannerServiceReady', handler);
         setTimeout(function() {
             window.removeEventListener('bannerServiceReady', handler);
             if (retryCount < maxRetries) loadUserBanner(userEmail, retryCount + 1);
         }, 200);
+    } else if (!cachedRaw) {
+        setProfileBannerLoading(false);
     }
 }
 

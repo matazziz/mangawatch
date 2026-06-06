@@ -907,20 +907,24 @@ export const bannerService = {
    * @param {string} userEmail - Email de l'utilisateur
    * @returns {Promise<Object|null>} Données de la bannière ou null
    */
-  async getBanner(userEmail) {
+  async getBanner(userEmail, options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const forceServer = opts.forceServer === true;
     try {
       console.log('[Firebase Banner] getBanner appelé pour:', userEmail);
       const resolved = await getUserProfileDocSnapshot(userEmail);
       const profileRef = resolved.snap && resolved.snap.exists()
         ? doc(db, COLLECTIONS.USER_PROFILES, resolved.snap.id)
         : doc(db, COLLECTIONS.USER_PROFILES, normalizeProfileEmail(userEmail));
-      // Utiliser getDocFromServer pour forcer une lecture fraîche (éviter le cache Firestore qui renverrait l'ancienne bannière)
       let profileDoc;
-      try {
-        profileDoc = await getDocFromServer(profileRef);
-      } catch (serverErr) {
-        // En cas d'erreur réseau, fallback vers getDoc (cache)
-        console.warn('[Firebase Banner] Lecture serveur échouée, fallback cache:', serverErr?.message);
+      if (forceServer) {
+        try {
+          profileDoc = await getDocFromServer(profileRef);
+        } catch (serverErr) {
+          console.warn('[Firebase Banner] Lecture serveur échouée, fallback cache:', serverErr?.message);
+          profileDoc = await getDoc(profileRef);
+        }
+      } else {
         profileDoc = await getDoc(profileRef);
       }
       if (!profileDoc.exists() && resolved.snap && resolved.snap.exists()) {

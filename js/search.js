@@ -478,8 +478,8 @@ class SearchManager {
                     </div>
                 </div>
                 <div class="result-badges">
-                    ${countryDisplay}
                     ${ratingDisplay}
+                    ${countryDisplay}
                 </div>
             `;
             
