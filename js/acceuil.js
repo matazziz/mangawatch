@@ -233,7 +233,7 @@ function showHomeSectionPlaceholders() {
     ensureHomeSkeletonStyles();
     const loadingText = (typeof window.t === 'function' ? window.t('common.loading') : null) || 'Chargement...';
     const skeleton = getHomeSkeletonHtml(loadingText);
-    ['authorOfWeekContainer', 'quizContainer', 'newUsersContainer'].forEach(function(id) {
+    ['authorOfWeekContainer', 'quizContainer', 'newUsersContainer', 'personalizedRecsContainer'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.children.length === 0) {
             el.innerHTML = skeleton;
@@ -260,6 +260,9 @@ async function loadAllDynamicSections() {
             await window.loadNewUsers();
         } else {
             console.error('❌ loadNewUsers n\'est pas disponible');
+        }
+        if (typeof window.loadPersonalizedRecommendations === 'function') {
+            await window.loadPersonalizedRecommendations();
         }
         console.log('✅ Toutes les sections dynamiques ont été chargées');
     } catch (error) {
@@ -3000,6 +3003,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                 console.log('✅ Nouveaux utilisateurs rechargés');
             } else {
                 console.error('❌ loadNewUsers n\'est pas disponible');
+            }
+
+            if (typeof window.loadPersonalizedRecommendations === 'function') {
+                console.log('📚 Chargement des recommandations personnalisées...');
+                await window.loadPersonalizedRecommendations();
+                console.log('✅ Recommandations personnalisées rechargées');
             }
             
             console.log('✅ Toutes les sections dynamiques ont été rechargées');

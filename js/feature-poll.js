@@ -23,6 +23,7 @@ const RETIRED_DOC_ID = 'retired';
 const PROPOSALS_COL = 'feature_poll_proposals';
 const LOCAL_VOTES_KEY = 'mw_feature_poll_votes';
 const LOCAL_SCORES_KEY = 'mw_feature_poll_scores';
+const LOCAL_RETIRED_KEY = 'mw_feature_poll_retired';
 const PAGE_SIZE = 10;
 const PODIUM_LAYOUT = [1, 0, 2]; // colonnes : 2e | 1er | 3e
 const PODIUM_HEIGHT_BY_RANK = [
@@ -55,13 +56,36 @@ const SEED_PROPOSALS = [
 const RETIRED_PROPOSAL_IDS = ['offline'];
 let retiredIdsCache = RETIRED_PROPOSAL_IDS.slice();
 
+function loadLocalRetiredIds() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(LOCAL_RETIRED_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveLocalRetiredIds(ids) {
+    try {
+        localStorage.setItem(LOCAL_RETIRED_KEY, JSON.stringify(ids || []));
+    } catch (e) { /* ignore */ }
+}
+
+function mergeRetiredIds(remoteIds, localIds) {
+    return [...new Set(RETIRED_PROPOSAL_IDS.concat(remoteIds || [], localIds || [], retiredIdsCache || []))];
+}
+
 async function loadRetiredProposalIds() {
+    const local = loadLocalRetiredIds();
     try {
         const snap = await getDoc(doc(db, 'feature_poll', RETIRED_DOC_ID));
         const remote = snap.exists() ? (snap.data().ids || []) : [];
-        retiredIdsCache = [...new Set(RETIRED_PROPOSAL_IDS.concat(remote))];
+        retiredIdsCache = mergeRetiredIds(remote, local);
+        saveLocalRetiredIds(retiredIdsCache.filter(function (id) {
+            return RETIRED_PROPOSAL_IDS.indexOf(id) === -1;
+        }));
     } catch (e) {
-        retiredIdsCache = RETIRED_PROPOSAL_IDS.slice();
+        retiredIdsCache = mergeRetiredIds([], local);
     }
     return retiredIdsCache;
 }
@@ -122,13 +146,45 @@ function isMatazzizModerator(user) {
     return false;
 }
 
-async function resolveMatazzizModerator(user) {
-    if (isMatazzizModerator(user)) return true;
-    if (!user || !user.email) return false;
+function hasAdminSessionAccess() {
     try {
-        const profile = await loadAuthorProfile(user.email);
-        if (profile && isModeratorUsername(profile.username)) return true;
+        return sessionStorage.getItem('admin_authenticated') === 'true';
+    } catch (e) {
+        return false;
+    }
+}
+
+async function resolveMatazzizModerator(user) {
+    if (hasAdminSessionAccess()) return true;
+    if (isMatazzizModerator(user)) return true;
+
+    const emailsToCheck = [];
+    if (user && user.email) emailsToCheck.push(user.email);
+
+    try {
+        const { auth } = await import('./firebase-config.js');
+        if (auth && auth.currentUser && auth.currentUser.email) {
+            emailsToCheck.push(auth.currentUser.email);
+        }
     } catch (e) { /* ignore */ }
+
+    for (let i = 0; i < emailsToCheck.length; i++) {
+        const email = emailsToCheck[i];
+        if (isModeratorEmail(email)) return true;
+        try {
+            const profile = await loadAuthorProfile(email);
+            if (profile && isModeratorUsername(profile.username || profile.pseudo || profile.displayName)) return true;
+        } catch (e) { /* ignore */ }
+    }
+
+    try {
+        const { profileAccountService } = await import('./firebase-service.js?v=6febe25');
+        for (let j = 0; j < emailsToCheck.length; j++) {
+            const info = await profileAccountService.getProfileAccountInfo(emailsToCheck[j]);
+            if (info && isModeratorUsername(info.username || info.name)) return true;
+        }
+    } catch (e) { /* ignore */ }
+
     return false;
 }
 
@@ -572,10 +628,12 @@ function getSorted(list) {
 
 async function seedDefaultProposalsIfEmpty() {
     try {
+        await loadRetiredProposalIds();
         const snap = await getDocs(collection(db, PROPOSALS_COL));
         if (!snap.empty) return;
 
         for (const seed of SEED_PROPOSALS) {
+            if (retiredIdsCache.indexOf(seed.id) !== -1) continue;
             await setDoc(doc(db, PROPOSALS_COL, seed.id), {
                 title: tr(seed.titleKey, seed.id),
                 description: tr(seed.descKey, ''),
@@ -1109,17 +1167,43 @@ function bindToolbar() {
     }
 }
 
+function hookUserSessionRefresh() {
+    let lastUserSnapshot = localStorage.getItem('user');
+    const syncIfUserChanged = function () {
+        const current = localStorage.getItem('user');
+        if (current === lastUserSnapshot) return;
+        lastUserSnapshot = current;
+        refresh();
+    };
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') syncIfUserChanged();
+    });
+    window.addEventListener('focus', syncIfUserChanged);
+    window.addEventListener('mw-user-session-changed', refresh);
+
+    if (typeof window.reloadDynamicSections === 'function' && !window.__featurePollReloadHooked) {
+        window.__featurePollReloadHooked = true;
+        const originalReload = window.reloadDynamicSections;
+        window.reloadDynamicSections = async function () {
+            await originalReload.apply(this, arguments);
+            await refresh();
+        };
+    }
+}
+
 function init() {
     if (!document.getElementById('featurePollSection')) return;
     populateThemeSelects();
     bindToolbar();
+    hookUserSessionRefresh();
     refresh();
     document.addEventListener('languageChanged', function () {
         populateThemeSelects();
         refresh();
     });
     window.addEventListener('storage', function (e) {
-        if (e.key === 'user' || e.key === LOCAL_VOTES_KEY) refresh();
+        if (e.key === 'user' || e.key === LOCAL_VOTES_KEY || e.key === LOCAL_RETIRED_KEY) refresh();
     });
 }
 
@@ -1143,19 +1227,43 @@ export async function retireFeatureProposal(proposalId) {
     const countsRef = doc(db, 'feature_poll', COUNTS_DOC_ID);
     const proposalRef = doc(db, PROPOSALS_COL, id);
 
-    await runTransaction(db, async function (transaction) {
-        const retiredSnap = await transaction.get(retiredRef);
+    async function persistRetiredState() {
+        await runTransaction(db, async function (transaction) {
+            const retiredSnap = await transaction.get(retiredRef);
+            const countsSnap = await transaction.get(countsRef);
+
+            const ids = retiredSnap.exists() ? (retiredSnap.data().ids || []).slice() : [];
+            if (ids.indexOf(id) === -1) ids.push(id);
+            transaction.set(retiredRef, { ids: ids, updated_at: serverTimestamp() }, { merge: true });
+
+            if (countsSnap.exists()) {
+                const scores = Object.assign({}, countsSnap.data().scores || countsSnap.data().votes || {});
+                delete scores[id];
+                transaction.set(countsRef, { scores: scores, updated_at: serverTimestamp() }, { merge: true });
+            }
+        });
+    }
+
+    async function persistRetiredStateFallback() {
+        const retiredSnap = await getDoc(retiredRef);
         const ids = retiredSnap.exists() ? (retiredSnap.data().ids || []).slice() : [];
         if (ids.indexOf(id) === -1) ids.push(id);
-        transaction.set(retiredRef, { ids: ids, updated_at: serverTimestamp() }, { merge: true });
+        await setDoc(retiredRef, { ids: ids, updated_at: serverTimestamp() }, { merge: true });
 
-        const countsSnap = await transaction.get(countsRef);
+        const countsSnap = await getDoc(countsRef);
         if (countsSnap.exists()) {
             const scores = Object.assign({}, countsSnap.data().scores || countsSnap.data().votes || {});
             delete scores[id];
-            transaction.set(countsRef, { scores: scores, updated_at: serverTimestamp() }, { merge: true });
+            await setDoc(countsRef, { scores: scores, updated_at: serverTimestamp() }, { merge: true });
         }
-    });
+    }
+
+    try {
+        await persistRetiredState();
+    } catch (err) {
+        console.warn('[FeaturePoll] retireFeatureProposal transaction:', err);
+        await persistRetiredStateFallback();
+    }
 
     try {
         await deleteDoc(proposalRef);
@@ -1164,6 +1272,9 @@ export async function retireFeatureProposal(proposalId) {
     }
 
     if (retiredIdsCache.indexOf(id) === -1) retiredIdsCache.push(id);
+    saveLocalRetiredIds(retiredIdsCache.filter(function (rid) {
+        return RETIRED_PROPOSAL_IDS.indexOf(rid) === -1;
+    }));
 }
 
 /** Liste complète pour l'admin (y compris idées déjà retirées côté affichage public). */
@@ -1197,3 +1308,4 @@ export async function listFeaturePollProposalsForAdmin() {
 
 window.retireFeatureProposal = retireFeatureProposal;
 window.listFeaturePollProposalsForAdmin = listFeaturePollProposalsForAdmin;
+window.refreshFeaturePoll = refresh;

@@ -196,6 +196,10 @@
                     global.dispatchEvent(new CustomEvent('profileAvatarUpdated', { detail: { url: avatarUrl } }));
                 } catch (e) { /* ignore */ }
 
+                if (typeof global.syncRemoteProfileMedia === 'function') {
+                    void global.syncRemoteProfileMedia(user.email, { forceServer: true }).catch(function() {});
+                }
+
                 if (typeof global.showToast === 'function') {
                     global.showToast('Succès', 'Photo de profil mise à jour !', 'success');
                 } else if (typeof global.showMangaWatchToast === 'function') {
@@ -210,7 +214,7 @@
                 global.avatarSaveInProgress = false;
                 setAvatarInputDisabled(false);
                 if (typeof global.refreshHeaderAvatar === 'function') {
-                    global.refreshHeaderAvatar();
+                    global.refreshHeaderAvatar({ cacheBust: true });
                 }
             }
         });

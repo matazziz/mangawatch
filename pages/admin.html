@@ -4568,7 +4568,7 @@
                 if (!listEl) return;
                 listEl.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Chargement des idées...</p></div>';
                 try {
-                    const mod = await import('/js/feature-poll.js?v=20260607');
+                    const mod = await import('/js/feature-poll.js?v=20260609');
                     const items = await mod.listFeaturePollProposalsForAdmin();
                     const active = items.filter(function (p) { return !p.isRetired; });
                     if (!active.length) {

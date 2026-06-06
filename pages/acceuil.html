@@ -17,7 +17,7 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/header-unified-new.css?v=10">
-    <link rel="stylesheet" href="../css/home-deathnote.css?v=20260605">
+    <link rel="stylesheet" href="../css/home-deathnote.css?v=20260620">
     <link rel="stylesheet" href="../css/footer-unified.css">
     <link rel="stylesheet" href="../css/messaging.css">
     <link rel="stylesheet" href="../css/firebase-popup-fix.css">
@@ -420,6 +420,15 @@
                     <p class="feature-description">Organisez et suivez vos animes et mangas préférés dans votre collection personnelle.</p>
                 </div>
             </div>
+        </section>
+
+        <!-- Recommandations personnalisées -->
+        <section class="section personalized-recs-section" id="personalizedRecsSection" aria-labelledby="personalizedRecsTitle">
+            <h2 class="section-title" id="personalizedRecsTitle" data-i18n="home.personalized_recs_title">Recommandations personnalisées</h2>
+            <p class="personalized-recs-intro" id="personalizedRecsIntro" data-i18n="home.personalized_recs_intro">
+                Répondez à quelques questions pour découvrir des animes et mangas faits pour vous.
+            </p>
+            <div class="personalized-recs-container" id="personalizedRecsContainer" aria-live="polite"></div>
         </section>
 
         <!-- Auteur de la semaine -->
@@ -3343,7 +3352,8 @@
     <!-- Système de messagerie -->
     <script src="../js/messaging.js" type="module"></script>
     <script src="../js/auth.js?v=6febe22" type="module"></script>
-    <script type="module" src="../js/feature-poll.js?v=20260607"></script>
+    <script type="module" src="../js/feature-poll.js?v=20260609"></script>
+    <script type="module" src="../js/personalized-recommendations.js?v=20260621"></script>
     <script src="../js/help-ticket.js"></script>
     <!-- TEST : Forcer l'affichage du popup après chargement -->
     <!-- Le popup s'affiche automatiquement via js/acceuil.js si nécessaire -->

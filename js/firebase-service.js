@@ -239,17 +239,48 @@ async function waitForAuthUser(userEmail, maxWaitMs) {
   });
 }
 
-/** Charge avatar + bannière depuis Firestore et met à jour le cache local (sync PC ↔ téléphone). */
-export async function syncRemoteProfileMedia(userEmail) {
-  const email = normalizeProfileEmail(userEmail);
-  if (!email) return { avatar: null, banner: null };
+function normalizeAvatarUrlForCompare(url) {
+  if (!url) return '';
+  try {
+    const parsed = new URL(String(url));
+    return parsed.origin + parsed.pathname;
+  } catch (_) {
+    return String(url).split('?')[0].split('#')[0];
+  }
+}
 
+function readLocalAvatarUrl(email) {
+  try {
+    const dedicated = localStorage.getItem('avatar_' + email);
+    if (dedicated && String(dedicated).trim()) return String(dedicated).trim();
+  } catch (_) { /* ignore */ }
+  try {
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+      const u = JSON.parse(userRaw);
+      if (u && normalizeProfileEmail(u.email) === email) {
+        const fromUser = u.customAvatar || u.avatar;
+        if (fromUser) return String(fromUser).trim();
+      }
+    }
+  } catch (_) { /* ignore */ }
+  return '';
+}
+
+/** Charge avatar + bannière depuis Firestore et met à jour le cache local (sync PC ↔ téléphone). */
+export async function syncRemoteProfileMedia(userEmail, options) {
+  const opts = (options && typeof options === 'object') ? options : {};
+  const forceServer = opts.forceServer !== false;
+  const email = normalizeProfileEmail(userEmail);
+  if (!email) return { avatar: null, banner: null, avatarChanged: false };
+
+  const localAvatarBefore = readLocalAvatarUrl(email);
   let avatar = null;
   let banner = null;
 
   try {
     if (avatarService && typeof avatarService.getAvatar === 'function') {
-      avatar = await avatarService.getAvatar(email);
+      avatar = await avatarService.getAvatar(email, { forceServer });
     }
   } catch (e) {
     console.warn('[Profile Media] Avatar distant:', e && e.message ? e.message : e);
@@ -257,11 +288,14 @@ export async function syncRemoteProfileMedia(userEmail) {
 
   try {
     if (bannerService && typeof bannerService.getBanner === 'function') {
-      banner = await bannerService.getBanner(email);
+      banner = await bannerService.getBanner(email, forceServer ? { forceServer: true } : undefined);
     }
   } catch (e) {
     console.warn('[Profile Media] Bannière distante:', e && e.message ? e.message : e);
   }
+
+  const avatarChanged = !!(avatar && /^https?:\/\//i.test(avatar) &&
+    normalizeAvatarUrlForCompare(avatar) !== normalizeAvatarUrlForCompare(localAvatarBefore));
 
   if (avatar && /^https?:\/\//i.test(avatar)) {
     try { localStorage.setItem('avatar_' + email, avatar); } catch (_) { /* ignore */ }
@@ -305,7 +339,13 @@ export async function syncRemoteProfileMedia(userEmail) {
     } catch (_) { /* ignore */ }
   }
 
-  return { avatar: avatar || null, banner: banner || null };
+  if (avatarChanged && typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('profileAvatarUpdated', { detail: { url: avatar } }));
+    } catch (_) { /* ignore */ }
+  }
+
+  return { avatar: avatar || null, banner: banner || null, avatarChanged };
 }
 
 // Collections Firestore
@@ -1174,13 +1214,29 @@ export const avatarService = {
    * @param {string} userEmail - Email de l'utilisateur
    * @returns {Promise<string|null>} URL de l'avatar ou null
    */
-  async getAvatar(userEmail) {
+  async getAvatar(userEmail, options) {
+    const opts = (options && typeof options === 'object') ? options : {};
+    const forceServer = opts.forceServer === true;
     try {
-      console.log('[Firebase Avatar] getAvatar appelé pour:', userEmail);
+      console.log('[Firebase Avatar] getAvatar appelé pour:', userEmail, forceServer ? '(serveur)' : '');
       const resolved = await getUserProfileDocSnapshot(userEmail);
-      const profileDoc = resolved.snap && resolved.snap.exists()
-        ? resolved.snap
-        : await getDoc(doc(db, COLLECTIONS.USER_PROFILES, normalizeProfileEmail(userEmail)));
+      const profileRef = resolved.snap && resolved.snap.exists()
+        ? doc(db, COLLECTIONS.USER_PROFILES, resolved.snap.id)
+        : doc(db, COLLECTIONS.USER_PROFILES, normalizeProfileEmail(userEmail));
+      let profileDoc;
+      if (forceServer) {
+        try {
+          profileDoc = await getDocFromServer(profileRef);
+        } catch (serverErr) {
+          console.warn('[Firebase Avatar] Lecture serveur échouée, fallback cache:', serverErr?.message);
+          profileDoc = await getDoc(profileRef);
+        }
+      } else {
+        profileDoc = await getDoc(profileRef);
+      }
+      if (!profileDoc.exists() && resolved.snap && resolved.snap.exists()) {
+        profileDoc = resolved.snap;
+      }
       
       if (profileDoc.exists()) {
         const data = profileDoc.data();

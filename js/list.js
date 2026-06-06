@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('[List] Synchronisation localStorage → Firebase:', localList.length, 'items');
                     for (const item of localList) {
                         try {
-                            const itemId = item.id ?? item.content_id ?? item.mal_id;
+                            const itemId = extractMalIdFromItem(item);
                             if (!itemId) continue;
                             await collectionService.addItem(user.email, {
                                 id: itemId,
@@ -746,6 +746,32 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function extractMalIdFromItem(item) {
+        const candidates = [item?.mal_id, item?.malId, item?.id, item?.content_id, item?.contentId];
+        for (const candidate of candidates) {
+            const raw = String(candidate || '').trim();
+            if (!raw) continue;
+            const digits = raw.replace(/[^\d]/g, '');
+            if (digits) return digits;
+            return raw;
+        }
+        return null;
+    }
+
+    function getCollectionDetailUrl(item) {
+        const malId = extractMalIdFromItem(item);
+        if (!malId) return null;
+        const normalizedType = normalizeItemType(getRawItemType(item) || undefined);
+        const params = new URLSearchParams({ id: String(malId) });
+        if (['manga', 'manhwa', 'manhua', 'roman'].includes(normalizedType)) {
+            params.set('type', 'manga');
+        } else {
+            params.set('type', 'anime');
+            params.set('season', '1');
+        }
+        return `anime-details.html?${params.toString()}`;
+    }
+
     // Créer un élément de liste
     function createListItem(item) {
         const itemDiv = document.createElement('div');
@@ -880,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         contentDiv.innerHTML = `
-            <h3 class="item-title" onclick="window.location.href='anime-details.html?id=${item.id}'" style="cursor: pointer;">${item.title || 'Titre inconnu'}</h3>
+            <h3 class="item-title">${item.title || 'Titre inconnu'}</h3>
             <div class="item-meta">
                 <span class="item-type" data-i18n-type="${normalizedType.toLowerCase()}" data-i18n="collection.type.${getCollectionTypeKey(normalizedType, rawType)}">${typeLabel}</span>
                 <span>•</span>
@@ -900,6 +926,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
         `;
+
+        const titleEl = contentDiv.querySelector('.item-title');
+        const detailUrl = getCollectionDetailUrl(item);
+        if (titleEl && detailUrl) {
+            titleEl.style.cursor = 'pointer';
+            titleEl.addEventListener('click', () => {
+                window.location.href = detailUrl;
+            });
+        }
         
         // Ajouter l'élément content à l'item
         itemDiv.appendChild(contentDiv);

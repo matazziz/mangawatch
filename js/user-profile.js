@@ -475,13 +475,17 @@ async function loadUserProfile(userEmail) {
 
     // Synchroniser avatar depuis Firebase (bannière gérée par loadUserBanner)
     if (typeof window.syncRemoteProfileMedia === 'function') {
-        void window.syncRemoteProfileMedia(normalizedEmail).then(function(remote) {
+        void window.syncRemoteProfileMedia(normalizedEmail, { forceServer: true }).then(function(remote) {
             if (remote && remote.avatar && /^https?:\/\//i.test(remote.avatar)) {
-                const profileAvatar = document.getElementById('profile-avatar');
-                const dispUrl = (typeof window.upgradeProfileAvatarUrl === 'function')
-                    ? window.upgradeProfileAvatarUrl(remote.avatar)
-                    : remote.avatar;
-                if (profileAvatar) profileAvatar.src = dispUrl;
+                if (typeof window.applyProfileAvatars === 'function') {
+                    window.applyProfileAvatars(remote.avatar, { cacheBust: true });
+                } else {
+                    const profileAvatar = document.getElementById('profile-avatar');
+                    const dispUrl = (typeof window.upgradeProfileAvatarUrl === 'function')
+                        ? window.upgradeProfileAvatarUrl(remote.avatar)
+                        : remote.avatar;
+                    if (profileAvatar) profileAvatar.src = dispUrl;
+                }
             }
         }).catch(function() { /* ignore */ });
     }
@@ -1242,6 +1246,32 @@ function normalizeItemTypePublic(type) {
     return lowerType;
 }
 
+function extractMalIdFromCollectionItem(item) {
+    const candidates = [item?.mal_id, item?.malId, item?.id, item?.content_id, item?.contentId];
+    for (const candidate of candidates) {
+        const raw = String(candidate || '').trim();
+        if (!raw) continue;
+        const digits = raw.replace(/[^\d]/g, '');
+        if (digits) return digits;
+        return raw;
+    }
+    return null;
+}
+
+function getPublicCollectionDetailUrl(item) {
+    const malId = extractMalIdFromCollectionItem(item);
+    if (!malId) return null;
+    const normalizedType = normalizeItemTypePublic((item.type || item.content_type || 'anime').toString());
+    const params = new URLSearchParams({ id: String(malId) });
+    if (['manga', 'manhwa', 'manhua', 'roman', 'doujin', 'doujinshi'].includes(normalizedType)) {
+        params.set('type', 'manga');
+    } else {
+        params.set('type', 'anime');
+        params.set('season', '1');
+    }
+    return `anime-details.html?${params.toString()}`;
+}
+
 // Créer un élément de liste pour le profil public (exactement comme list.js mais sans boutons d'édition)
 function createPublicListItem(item) {
     const itemDiv = document.createElement('div');
@@ -1249,8 +1279,8 @@ function createPublicListItem(item) {
     itemDiv.dataset.status = item.status;
     itemDiv.dataset.itemId = item.id;
     // Stocker l'ID MAL pour vérifier la correspondance lors de la mise à jour de l'image
-    const itemMalId = item.mal_id || item.id;
-    itemDiv.dataset.malId = itemMalId;
+    const itemMalId = extractMalIdFromCollectionItem(item);
+    itemDiv.dataset.malId = itemMalId || '';
     
     const statusText = getStatusTextPublic(item.status);
     const statusClass = item.status;
@@ -1350,13 +1380,10 @@ function createPublicListItem(item) {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     `;
     
-    const itemId = item.mal_id || item.id;
-    const itemType = item.type || 'anime';
-    
     // Utiliser exactement la même structure que list.js, mais sans les boutons d'action
     // Le synopsis sera traduit automatiquement après par l'API de traduction
     contentDiv.innerHTML = `
-        <h3 class="item-title" onclick="window.location.href='anime-details.html?id=${itemId}&type=${itemType}'" style="cursor: pointer;">${item.title || item.titleEnglish || 'Titre inconnu'}</h3>
+        <h3 class="item-title">${item.title || item.titleEnglish || 'Titre inconnu'}</h3>
         <div class="item-meta">
             <span class="item-type" data-i18n="collection.type.${typeKey}">${typeLabel}</span>
             <span>•</span>
@@ -1366,6 +1393,15 @@ function createPublicListItem(item) {
         </div>
         <p class="item-synopsis">${synopsisText}</p>
     `;
+
+    const titleEl = contentDiv.querySelector('.item-title');
+    const detailUrl = getPublicCollectionDetailUrl(item);
+    if (titleEl && detailUrl) {
+        titleEl.style.cursor = 'pointer';
+        titleEl.addEventListener('click', () => {
+            window.location.href = detailUrl;
+        });
+    }
     
     // Ajouter l'élément content à l'item
     itemDiv.appendChild(contentDiv);
@@ -1376,7 +1412,7 @@ function createPublicListItem(item) {
 // Fonction pour récupérer l'image depuis l'API Jikan et mettre à jour la carte
 async function fetchAndUpdateItemImage(item, itemElement) {
     try {
-        const itemId = item.mal_id || item.id;
+        const itemId = extractMalIdFromCollectionItem(item);
         if (!itemId) {
             console.warn(`Pas d'ID pour l'item:`, item.title || item.titleEnglish);
             return;

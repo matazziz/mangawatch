@@ -33,6 +33,16 @@ exports.handler = async (event) => {
       };
     }
     upstreamUrl = `${JIKAN_API_BASE}/${mediaType}/${encodeURIComponent(id)}/relations`;
+  } else if (action === "pictures") {
+    const id = qs.id;
+    if (!id) {
+      return {
+        statusCode: 400,
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ error: "Missing id for pictures action" })
+      };
+    }
+    upstreamUrl = `${JIKAN_API_BASE}/${mediaType}/${encodeURIComponent(id)}/pictures`;
   } else {
     const page = Math.max(1, toInt(qs.page, 1));
     const limit = Math.min(25, Math.max(1, toInt(qs.limit, 25)));

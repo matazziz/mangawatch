@@ -17,13 +17,14 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Import Firebase Service pour les bannières et paramètres (confidentialité abonnements) -->
     <script type="module">
-        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia } from '/js/firebase-service.js?v=6febe24';
+        import { bannerService, profileSettingsService, profileAccountService, syncRemoteProfileMedia, avatarService } from '/js/firebase-service.js?v=6febe25';
         import { initProfileRatingUI, requestProfileRatingInit } from '/js/profile-rating-ui.js?v=6';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
         window.profileAccountService = profileAccountService;
         window.syncRemoteProfileMedia = syncRemoteProfileMedia;
+        window.avatarService = avatarService;
         window.initProfileRatingUI = initProfileRatingUI;
         window.requestProfileRatingInit = requestProfileRatingInit;
         window.firebaseNotesService = firebaseNotesService;
@@ -79,7 +80,7 @@
     </script>
     
     <script src="/js/localization.js"></script>
-    <script src="/js/header-avatar.js?v=1"></script>
+    <script src="/js/header-avatar.js?v=2"></script>
     <style>
         body {
             background-color: #181a20;
@@ -2340,8 +2341,8 @@
                 <button type="button" class="volume-icon-btn" id="banner-volume-mute-btn" title="Couper le son">
                     <i class="fas fa-volume-mute"></i>
                 </button>
-                <input type="range" id="banner-volume-slider" min="0" max="100" value="0" class="volume-slider-compact" style="flex: 1; min-width: 0;">
-                <span id="banner-volume-value" class="volume-value-compact">0%</span>
+                <input type="range" id="banner-volume-slider" min="0" max="100" value="35" class="volume-slider-compact" style="flex: 1; min-width: 0;">
+                <span id="banner-volume-value" class="volume-value-compact">35%</span>
             </div>
         </div>
         
@@ -2356,7 +2357,7 @@
     </div>
 
     <input type="file" id="profile-avatar-file-input" class="banner-file-input" accept="image/jpeg,image/png,image/webp,image/*">
-    <script src="/js/profile-avatar-upload.js?v=4"></script>
+    <script src="/js/profile-avatar-upload.js?v=5"></script>
 
     <main class="profile-container">
         <div class="profile-header" id="profile-header">
@@ -2450,9 +2451,9 @@
                                     <i class="fas fa-volume-mute"></i>
                                 </button>
                                 <div style="flex: 1; position: relative; margin: 0 -4px; padding: 0;">
-                                    <input type="range" id="banner-volume-setting-slider" min="0" max="100" value="0" class="volume-slider-compact" style="width: calc(100% + 8px); margin: 0; padding: 0;">
+                                    <input type="range" id="banner-volume-setting-slider" min="0" max="100" value="35" class="volume-slider-compact" style="width: calc(100% + 8px); margin: 0; padding: 0;">
                                 </div>
-                                <span id="banner-volume-setting-value" class="volume-value-compact" style="margin-left: 0.5rem;">0%</span>
+                                <span id="banner-volume-setting-value" class="volume-value-compact" style="margin-left: 0.5rem;">35%</span>
                             </div>
                         </div>
                         <div class="setting-item">
@@ -2826,6 +2827,7 @@
                         
                         // Afficher la section correspondante
                         const tabName = this.getAttribute('data-tab');
+                        localStorage.setItem('activeProfileTab', tabName);
                         console.log('📋 Nom de l\'onglet:', tabName);
                         const targetSection = document.getElementById(`${tabName}-section`);
                         console.log('🎯 Section cible trouvée:', !!targetSection);
@@ -3723,22 +3725,40 @@
                 }
             }
             
-            // 3. Récupérer l'avatar depuis la clé dédiée (priorité sur les autres sources)
-            // Ne PAS écraser si user.avatar ou user.customAvatar est déjà défini
-            // (pour éviter d'écraser une nouvelle photo qui vient d'être uploadée)
-            if (!user.customAvatar && !user.avatar) {
+            // 3. Synchroniser l'avatar depuis Firebase en priorité (source de vérité PC ↔ mobile)
+            if (typeof window.syncRemoteProfileMedia === 'function' && !window.avatarSaveInProgress) {
+                try {
+                    const remoteMedia = await window.syncRemoteProfileMedia(user.email, { forceServer: true });
+                    if (remoteMedia && remoteMedia.avatar && /^https?:\/\//i.test(remoteMedia.avatar)) {
+                        user.avatar = remoteMedia.avatar;
+                        user.customAvatar = remoteMedia.avatar;
+                        console.log('✅ Avatar synchronisé depuis Firebase');
+                    } else if (!user.customAvatar && !user.avatar) {
+                        const avatarKey = 'avatar_' + user.email;
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) {
+                            user.customAvatar = storedAvatar;
+                            user.avatar = storedAvatar;
+                        }
+                    }
+                } catch (syncErr) {
+                    console.warn('⚠️ Sync avatar Firebase:', syncErr);
+                    if (!user.customAvatar && !user.avatar) {
+                        const avatarKey = 'avatar_' + user.email;
+                        const storedAvatar = localStorage.getItem(avatarKey);
+                        if (storedAvatar) {
+                            user.customAvatar = storedAvatar;
+                            user.avatar = storedAvatar;
+                        }
+                    }
+                }
+            } else if (!user.customAvatar && !user.avatar) {
                 const avatarKey = 'avatar_' + user.email;
                 const storedAvatar = localStorage.getItem(avatarKey);
                 if (storedAvatar) {
-                    // Prioriser l'avatar depuis localStorage (le plus récent)
                     user.customAvatar = storedAvatar;
                     user.avatar = storedAvatar;
-                    console.log('✅ Avatar récupéré depuis localStorage:', storedAvatar.substring(0, 50) + '...');
-                } else {
-                    console.log('⚠️ Aucun avatar trouvé dans localStorage ni dans user');
                 }
-            } else {
-                console.log('✅ Avatar déjà défini dans user, conservation:', (user.customAvatar || user.avatar).substring(0, 50) + '...');
             }
             
             // 4. Charger le statut de certification depuis Firestore
@@ -3842,10 +3862,15 @@
                 }
             }, 100);
             
-            // 6. Recharger la bannière depuis Firebase et localStorage
-            // Utiliser un délai pour s'assurer que les éléments DOM sont prêts
+            // 6. Charger la bannière seulement si elle n'est pas déjà affichée (évite le redémarrage vidéo)
             setTimeout(async () => {
-                if (typeof loadBanner === 'function') {
+                const bannerVid = document.getElementById('banner-video');
+                const bannerImg = document.getElementById('banner-image');
+                const bannerAlreadyVisible = !!(
+                    (bannerVid && bannerVid.classList.contains('active') && (bannerVid.currentSrc || bannerVid.src)) ||
+                    (bannerImg && bannerImg.classList.contains('active') && (bannerImg.currentSrc || bannerImg.src))
+                );
+                if (typeof loadBanner === 'function' && !bannerAlreadyVisible) {
                     await loadBanner();
                 }
             }, 300);
@@ -3926,17 +3951,17 @@
                 ? window.resolveProfileAvatarUrl(user)
                 : (user.customAvatar || user.avatar || user.originalAvatar || user.picture || '');
             if (resolvedAvatar) {
-                if (typeof window.refreshHeaderAvatar === 'function') {
-                    window.refreshHeaderAvatar({ cacheBust: false });
-                } else if (typeof window.applyProfileAvatars === 'function') {
-                    window.applyProfileAvatars(resolvedAvatar, { cacheBust: false });
+                if (typeof window.applyProfileAvatars === 'function') {
+                    window.applyProfileAvatars(resolvedAvatar, { cacheBust: true });
+                } else if (typeof window.refreshHeaderAvatar === 'function') {
+                    window.refreshHeaderAvatar({ cacheBust: true });
                 }
             }
 
             if (typeof window.syncRemoteProfileMedia === 'function' && !window.avatarSaveInProgress) {
-                void window.syncRemoteProfileMedia(user.email).then(function() {
+                void window.syncRemoteProfileMedia(user.email, { forceServer: true }).then(function() {
                     if (typeof window.refreshHeaderAvatar === 'function') {
-                        window.refreshHeaderAvatar();
+                        window.refreshHeaderAvatar({ cacheBust: true });
                     }
                 }).catch(function() {});
             }
@@ -4139,12 +4164,6 @@
             }
             
             syncAndLoadUserData();
-            // Charger la bannière après la synchronisation
-            setTimeout(() => {
-                if (typeof loadBanner === 'function') {
-                    loadBanner();
-                }
-            }, 300);
             
             // MÉCANISME DE PERSISTANCE : DÉSACTIVÉ TEMPORAIREMENT pour éviter les logs infinis
             // Réactivé plus tard si nécessaire avec une meilleure gestion
@@ -5107,14 +5126,44 @@
           const bannerImage = document.getElementById('banner-image');
           const bannerVideo = document.getElementById('banner-video');
 
-          async function playBannerVideoSafely(videoEl) {
+          function getSavedBannerVolume(bannerOrVolume) {
+              var volume = bannerOrVolume && typeof bannerOrVolume === 'object'
+                  ? bannerOrVolume.volume
+                  : bannerOrVolume;
+              if (volume === undefined || volume === null) return null;
+              volume = parseInt(volume, 10);
+              if (isNaN(volume)) return null;
+              return Math.max(0, Math.min(100, volume));
+          }
+
+          function getBannerVolumeValue(bannerOrVolume) {
+              var saved = getSavedBannerVolume(bannerOrVolume);
+              if (saved === null || saved <= 0) return 35;
+              return saved;
+          }
+
+          async function playBannerVideoSafely(videoEl, volume) {
               if (!videoEl) return;
+              var saved = typeof volume === 'number' ? volume : getSavedBannerVolume(volume);
+              var vol = saved === null ? 35 : saved;
+              if (vol === 0) {
+                  videoEl.volume = 0;
+                  videoEl.muted = true;
+                  try { await videoEl.play(); } catch (e) {}
+                  return;
+              }
+              videoEl.volume = vol / 100;
               try {
                   await videoEl.play();
+                  videoEl.muted = false;
               } catch (e) {
                   try {
                       videoEl.muted = true;
                       await videoEl.play();
+                      setTimeout(function() {
+                          videoEl.muted = false;
+                          videoEl.volume = vol / 100;
+                      }, 100);
                   } catch (e2) {
                       console.error('Lecture vidéo impossible (même en muet):', e2);
                   }
@@ -5124,6 +5173,7 @@
           let bannerSaveQueue = Promise.resolve();
           let bannerLoadGeneration = 0;
           let bannerPreviewObjectUrl = null;
+          let bannerVolumeBeforeMute = 50;
 
           function revokeBannerPreviewUrl() {
               if (bannerPreviewObjectUrl) {
@@ -5194,7 +5244,7 @@
                       }));
                   }
               } catch (e) {}
-              displayBannerBlock(bannerData);
+              displayBannerBlock(bannerData, { force: true, bustCache: true });
           }
           
           // Fonction pour ouvrir le menu modal
@@ -5484,6 +5534,24 @@
               if (cached) {
                   try {
                       banner = JSON.parse(cached);
+                      if (isSameBannerAlreadyDisplayed(banner)) {
+                          if (window.bannerService) {
+                              window.bannerService.getBanner(user.email).then(function(firebaseBanner) {
+                                  if (loadGen !== bannerLoadGeneration || window.bannerSaveInProgress) return;
+                                  if (!firebaseBanner || !firebaseBanner.url) return;
+                                  if (normalizeBannerMediaUrl(firebaseBanner.url) === normalizeBannerMediaUrl(banner.url)) return;
+                                  try {
+                                      localStorage.setItem('profile_banner_' + user.email, JSON.stringify({
+                                          type: firebaseBanner.type,
+                                          url: firebaseBanner.url,
+                                          volume: firebaseBanner.volume !== undefined ? firebaseBanner.volume : 35
+                                      }));
+                                  } catch (e) {}
+                                  displayBannerBlock(firebaseBanner, { force: true, bustCache: true });
+                              }).catch(function() {});
+                          }
+                          return;
+                      }
                       displayBannerBlock(banner);
                   } catch (e) {}
               }
@@ -5512,9 +5580,68 @@
               }
           }
           
-          function displayBannerBlock(banner) {
+          function normalizeBannerMediaUrl(url) {
+              if (!url) return '';
+              return String(url).split('?')[0].split('#')[0];
+          }
+
+          function syncBannerVolumeUi(volume) {
+              var volumeSetting = document.getElementById('banner-volume-setting');
+              var volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
+              var volumeSettingValue = document.getElementById('banner-volume-setting-value');
+              var volumeSlider = document.getElementById('banner-volume-slider');
+              var volumeValue = document.getElementById('banner-volume-value');
+              if (volumeSetting) volumeSetting.style.display = 'block';
+              if (volumeSettingSlider) volumeSettingSlider.value = volume;
+              if (volumeSettingValue) volumeSettingValue.textContent = volume + '%';
+              if (volumeSlider) volumeSlider.value = volume;
+              if (volumeValue) volumeValue.textContent = volume + '%';
+              if (typeof updateVolumeIcon === 'function') updateVolumeIcon(volume);
+          }
+
+          function applyBannerVideoSound(videoEl, banner) {
+              if (!videoEl) return;
+              var saved = getSavedBannerVolume(banner);
+              var volume = saved === null ? 35 : saved;
+              if (volume === 0) {
+                  videoEl.volume = 0;
+                  videoEl.muted = true;
+              } else {
+                  videoEl.volume = volume / 100;
+                  videoEl.muted = false;
+              }
+              syncBannerVolumeUi(volume);
+              if (videoEl.paused) {
+                  playBannerVideoSafely(videoEl, volume);
+              }
+          }
+
+          function isSameBannerAlreadyDisplayed(banner) {
+              if (!banner || !banner.url) return false;
+              var type = (banner.type || '').toLowerCase();
+              var bannerImgEl = document.getElementById('banner-image');
+              var bannerVidEl = document.getElementById('banner-video');
+              var targetUrl = normalizeBannerMediaUrl(banner.url);
+              if (type === 'video' && bannerVidEl && bannerVidEl.classList.contains('active')) {
+                  var currentVideoUrl = normalizeBannerMediaUrl(bannerVidEl.currentSrc || bannerVidEl.src || '');
+                  if (currentVideoUrl && currentVideoUrl === targetUrl) {
+                      applyBannerVideoSound(bannerVidEl, banner);
+                      if (typeof updateVolumeControlVisibility === 'function') updateVolumeControlVisibility();
+                      return true;
+                  }
+              }
+              if (type === 'image' && bannerImgEl && bannerImgEl.classList.contains('active')) {
+                  var currentImageUrl = normalizeBannerMediaUrl(bannerImgEl.currentSrc || bannerImgEl.src || '');
+                  if (currentImageUrl && currentImageUrl === targetUrl) return true;
+              }
+              return false;
+          }
+
+          function displayBannerBlock(banner, options) {
+              options = options || {};
               if (!banner) return;
-              
+              if (!options.force && isSameBannerAlreadyDisplayed(banner)) return;
+
               console.log('🎨 Affichage de la bannière:', banner.type, banner.url ? 'URL présente' : 'URL manquante');
               try {
                   var type = (banner.type || '').toLowerCase();
@@ -5528,9 +5655,12 @@
                       bannerVidEl.classList.remove('active');
                       bannerVidEl.onerror = null;
                       bannerVidEl.onloadeddata = null;
+                      bannerVidEl.ontimeupdate = null;
                   }
                   var displayUrl = banner.url;
-                  if (displayUrl && !displayUrl.startsWith('data:')) displayUrl = displayUrl + (displayUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                  if (options.bustCache && displayUrl && !displayUrl.startsWith('data:') && !displayUrl.startsWith('blob:')) {
+                      displayUrl = displayUrl + (displayUrl.includes('?') ? '&' : '?') + 'v=' + Date.now();
+                  }
                   if (type === 'image' && banner.url) {
                       if (bannerImgEl) {
                           bannerImgEl.onload = function() { this.classList.add('active'); };
@@ -5543,28 +5673,22 @@
                   } else if (type === 'video' && banner.url) {
                       if (bannerVidEl) {
                           bannerImgEl && bannerImgEl.classList.remove('active');
-                          setTimeout(() => {
-                              bannerVidEl.src = displayUrl;
-                              bannerVidEl.load();
-                              bannerVidEl.classList.add('active');
-                              playBannerVideoSafely(bannerVidEl);
-                          }, 10);
+                          var saved = getSavedBannerVolume(banner);
+                          var savedVolume = saved === null ? 35 : saved;
                           bannerVidEl.onerror = function() {
-                              var u = this.src; setTimeout(() => { if (this.src === u && this.readyState === 0) this.src = displayUrl.split('?')[0] + '?retry=' + Date.now(); }, 1000);
+                              var u = this.src; setTimeout(() => { if (this.src === u && this.readyState === 0) this.src = normalizeBannerMediaUrl(displayUrl) + '?retry=' + Date.now(); }, 1000);
                           };
-                          bannerVidEl.onloadeddata = function() { this.classList.add('active'); };
-                          bannerVidEl.addEventListener('timeupdate', function() { if (this.currentTime >= 45) this.currentTime = 0; });
-                          var savedVolume = banner.volume !== undefined ? banner.volume : 35;
-                          if (!savedVolume || savedVolume <= 0) savedVolume = 35;
-                          bannerVidEl.volume = savedVolume / 100;
-                          bannerVidEl.muted = false;
-                          var volumeSetting = document.getElementById('banner-volume-setting');
-                          var volumeSettingSlider = document.getElementById('banner-volume-setting-slider');
-                          var volumeSettingValue = document.getElementById('banner-volume-setting-value');
-                          if (volumeSetting) volumeSetting.style.display = 'block';
-                          if (volumeSettingSlider) volumeSettingSlider.value = savedVolume;
-                          if (volumeSettingValue) volumeSettingValue.textContent = savedVolume + '%';
-                          if (typeof updateVolumeIcon === 'function') updateVolumeIcon(savedVolume);
+                          bannerVidEl.onloadeddata = function() {
+                              this.classList.add('active');
+                              playBannerVideoSafely(this, savedVolume);
+                          };
+                          bannerVidEl.ontimeupdate = function() { if (this.currentTime >= 45) this.currentTime = 0; };
+                          bannerVidEl.src = displayUrl;
+                          bannerVidEl.load();
+                          bannerVidEl.classList.add('active');
+                          applyBannerVideoSound(bannerVidEl, banner);
+                          syncBannerVolumeUi(savedVolume);
+                          if (typeof updateVolumeControlVisibility === 'function') updateVolumeControlVisibility();
                       }
                   } else {
                       const volumeSetting = document.getElementById('banner-volume-setting');
@@ -5572,10 +5696,6 @@
                   }
               } catch (e) {
                   console.error('Erreur lors du chargement de la bannière:', e);
-              }
-              
-              if (typeof syncAndLoadUserData === 'function') {
-                  syncAndLoadUserData();
               }
           }
           
@@ -6125,36 +6245,24 @@
           
           // Fonction pour mettre à jour le volume
           function updateBannerVolume(volume) {
-              // Sauvegarder l'état de lecture avant de modifier le volume
+              volume = parseInt(volume, 10);
+              if (isNaN(volume)) volume = 35;
               const wasPlaying = !bannerVideo.paused;
-              
-              bannerVideo.volume = volume / 100;
-              bannerVideo.muted = volume === 0;
-              
-              // S'assurer que la vidéo continue de jouer si elle jouait avant
-              if (wasPlaying || volume > 0) {
-                  if (bannerVideo.paused) {
-                      bannerVideo.play().catch(e => {
+
+              if (volume <= 0) {
+                  bannerVideo.volume = 0;
+                  bannerVideo.muted = true;
+                  updateVolumeIcon(0);
+              } else {
+                  bannerVideo.volume = volume / 100;
+                  bannerVideo.muted = false;
+                  if (wasPlaying && bannerVideo.paused) {
+                      bannerVideo.play().catch(function(e) {
                           console.log('Erreur de lecture vidéo:', e);
-                          // Si l'autoplay échoue, essayer avec muted temporairement puis activer le son
-                          if (volume > 0) {
-                              bannerVideo.muted = true;
-                              bannerVideo.play().then(() => {
-                                  // Attendre un peu avant de réactiver le son
-                                  setTimeout(() => {
-                                      bannerVideo.muted = false;
-                                      bannerVideo.volume = volume / 100;
-                                  }, 100);
-                              }).catch(err => {
-                                  console.log('Erreur de lecture vidéo avec muted:', err);
-                              });
-                          }
                       });
                   }
+                  updateVolumeIcon(volume);
               }
-              
-              // Mettre à jour l'icône du bouton mute
-              updateVolumeIcon(volume);
               
               // Sauvegarder le volume
               const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -6229,25 +6337,25 @@
           }
           
           function handleMuteToggle() {
-              var currentVolume = (volumeSlider ? parseInt(volumeSlider.value) : 0) || (volumeSettingSlider ? parseInt(volumeSettingSlider.value) : 0);
-                  if (currentVolume === 0) {
-                      // Activer le son à 50%
-                      const newVolume = 50;
-                      if (volumeSettingSlider) volumeSettingSlider.value = newVolume;
-                      if (volumeSettingValue) volumeSettingValue.textContent = newVolume + '%';
-                      if (volumeSlider) volumeSlider.value = newVolume;
-                      if (volumeValue) volumeValue.textContent = newVolume + '%';
-                      updateBannerVolume(newVolume);
-                      updateVolumeIcon(newVolume);
-                  } else {
-                      // Couper le son
-                      if (volumeSettingSlider) volumeSettingSlider.value = 0;
-                      if (volumeSettingValue) volumeSettingValue.textContent = '0%';
-                      if (volumeSlider) volumeSlider.value = 0;
-                      if (volumeValue) volumeValue.textContent = '0%';
-                      updateBannerVolume(0);
-                      updateVolumeIcon(0);
-                  }
+              var currentVolume = volumeSettingSlider ? parseInt(volumeSettingSlider.value, 10) : NaN;
+              if (isNaN(currentVolume) && volumeSlider) currentVolume = parseInt(volumeSlider.value, 10);
+              if (isNaN(currentVolume)) currentVolume = bannerVideo && bannerVideo.muted ? 0 : 35;
+
+              if (currentVolume === 0 || (bannerVideo && bannerVideo.muted)) {
+                  var newVolume = bannerVolumeBeforeMute > 0 ? bannerVolumeBeforeMute : 50;
+                  if (volumeSettingSlider) volumeSettingSlider.value = newVolume;
+                  if (volumeSettingValue) volumeSettingValue.textContent = newVolume + '%';
+                  if (volumeSlider) volumeSlider.value = newVolume;
+                  if (volumeValue) volumeValue.textContent = newVolume + '%';
+                  updateBannerVolume(newVolume);
+              } else {
+                  bannerVolumeBeforeMute = currentVolume > 0 ? currentVolume : 50;
+                  if (volumeSettingSlider) volumeSettingSlider.value = 0;
+                  if (volumeSettingValue) volumeSettingValue.textContent = '0%';
+                  if (volumeSlider) volumeSlider.value = 0;
+                  if (volumeValue) volumeValue.textContent = '0%';
+                  updateBannerVolume(0);
+              }
           }
           if (volumeMuteBtn) volumeMuteBtn.addEventListener('click', handleMuteToggle);
           var bannerVolumeMuteBtn = document.getElementById('banner-volume-mute-btn');
@@ -6511,8 +6619,15 @@
           
           // Fonction pour charger tout le contenu du profil
           function loadAllProfileContent() {
-              // Charger la bannière
-              loadBanner();
+              const bannerVid = document.getElementById('banner-video');
+              const bannerImg = document.getElementById('banner-image');
+              const bannerAlreadyVisible = !!(
+                  (bannerVid && bannerVid.classList.contains('active') && (bannerVid.currentSrc || bannerVid.src)) ||
+                  (bannerImg && bannerImg.classList.contains('active') && (bannerImg.currentSrc || bannerImg.src))
+              );
+              if (!bannerAlreadyVisible) {
+                  loadBanner();
+              }
               
               // S'assurer que le nom est affiché
               const userNameText = document.getElementById('user-name-text');
@@ -6587,11 +6702,6 @@
           
           // Charger tout le contenu du profil au chargement de la page
           loadAllProfileContent();
-          
-          // Recharger aussi après un court délai pour s'assurer que tout est chargé
-          setTimeout(() => {
-              loadAllProfileContent();
-          }, 100);
           
           // Gestionnaire pour le bouton de révélation de l'email
           const emailRevealBtn = document.getElementById('email-reveal-btn');

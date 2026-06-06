@@ -162,8 +162,33 @@
         if (url) {
             applyProfileAvatars(url, { cacheBust: true });
         } else {
-            refreshHeaderAvatar();
+            refreshHeaderAvatar({ cacheBust: true });
         }
+    });
+
+    var remoteAvatarSyncTimer = null;
+    function scheduleRemoteAvatarSync() {
+        if (remoteAvatarSyncTimer) clearTimeout(remoteAvatarSyncTimer);
+        remoteAvatarSyncTimer = setTimeout(function() {
+            remoteAvatarSyncTimer = null;
+            if (global.avatarSaveInProgress) return;
+            var user = null;
+            try { user = JSON.parse(global.localStorage.getItem('user') || 'null'); } catch (e) { user = null; }
+            if (!user || !user.email || typeof global.syncRemoteProfileMedia !== 'function') return;
+            global.syncRemoteProfileMedia(user.email, { forceServer: true })
+                .then(function() {
+                    refreshHeaderAvatar({ cacheBust: true });
+                })
+                .catch(function() { /* ignore */ });
+        }, 350);
+    }
+
+    global.document.addEventListener('visibilitychange', function() {
+        if (global.document.visibilityState === 'visible') scheduleRemoteAvatarSync();
+    });
+    global.addEventListener('focus', scheduleRemoteAvatarSync);
+    global.addEventListener('pageshow', function(ev) {
+        if (!ev || ev.persisted) scheduleRemoteAvatarSync();
     });
 
     if (global.document.readyState === 'loading') {

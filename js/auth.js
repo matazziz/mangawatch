@@ -27,6 +27,12 @@ export async function syncProfileToFirestore(email, profileData) {
     }
 }
 
+function notifyUserSessionChanged() {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('mw-user-session-changed'));
+    }
+}
+
 /** À appeler au chargement : republie le profil connecté si absent de Firestore. */
 export async function syncCurrentUserProfileToFirestore() {
     const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -125,6 +131,7 @@ function handleGoogleSignIn(response) {
             email: credential.email,
             picture: credential.picture
         }));
+        notifyUserSessionChanged();
 
         console.log('Session sauvegardée');
 
@@ -257,6 +264,7 @@ async function handleFirebaseGoogleSignIn() {
         localStorage.setItem('isLoggedIn', 'true');
         // Activer automatiquement "rester connecté" pour les connexions Google
         localStorage.setItem('rememberMe', 'true');
+        notifyUserSessionChanged();
         console.log('✅ Session sauvegardée dans localStorage avec pseudo:', userName);
         console.log('✅ Option "rester connecté" activée automatiquement pour Google');
 
@@ -593,6 +601,7 @@ async function handleFirebaseGoogleSignUp() {
             localStorage.setItem('isLoggedIn', 'true');
             // Activer automatiquement "rester connecté" pour les connexions Google (utilisateur existant)
             localStorage.setItem('rememberMe', 'true');
+            notifyUserSessionChanged();
             console.log('✅ Option "rester connecté" activée automatiquement pour la connexion Google');
 
             await syncProfileToFirestore(user.email, userData);
@@ -913,6 +922,7 @@ function showGoogleSignUpCompletionForm(googleUser) {
         localStorage.setItem('isLoggedIn', 'true');
         // Activer automatiquement "rester connecté" pour les inscriptions Google
         localStorage.setItem('rememberMe', 'true');
+        notifyUserSessionChanged();
         console.log('✅ Option "rester connecté" activée automatiquement pour l\'inscription Google');
 
         await syncProfileToFirestore(googleUser.email, userData);
