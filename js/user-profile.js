@@ -753,17 +753,10 @@ function applyBannerToDom(banner, bannerImage, bannerVideo, options) {
         }
         bannerVideo.src = displayUrl;
         bannerVideo.load();
-        bannerVideo.play().then(function() {
-            bannerVideo.muted = false;
-            if (muteBtn) {
-                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                muteBtn.title = 'Couper le son de la bannière';
-                muteBtn.setAttribute('aria-label', 'Couper le son de la bannière');
-            }
-        }).catch(function() {
-            bannerVideo.muted = true;
-            bannerVideo.play().catch(function() {});
-        });
+        var playFn = typeof window.playBannerVideoSafely === 'function'
+            ? window.playBannerVideoSafely
+            : function (el, vol) { el.muted = true; return el.play().catch(function () {}); };
+        playFn(bannerVideo, savedVolume);
     }
 }
 
@@ -865,6 +858,14 @@ function initBannerMuteButton() {
     muteBtn.addEventListener('click', function() {
         var willMute = !bannerVideo.muted;
         bannerVideo.muted = willMute;
+        if (!willMute) {
+            bannerVideo.volume = Math.max(0.1, bannerVideo.volume || 0.35);
+            if (typeof window.resumeBannerVideoOnGesture === 'function') {
+                window.resumeBannerVideoOnGesture(bannerVideo);
+            } else {
+                bannerVideo.play().catch(function () {});
+            }
+        }
         if (willMute) {
             muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
             muteBtn.title = 'Activer le son de la bannière';

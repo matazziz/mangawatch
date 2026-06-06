@@ -81,6 +81,7 @@
     
     <script src="/js/localization.js"></script>
     <script src="/js/header-avatar.js?v=2"></script>
+    <script src="/js/banner-video-autoplay.js?v=1"></script>
     <style>
         body {
             background-color: #181a20;
@@ -213,6 +214,35 @@
         
         .banner-volume-control .volume-control-compact {
             width: 100%;
+        }
+
+        .banner-mute-btn {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(20, 22, 30, 0.38);
+            color: #e9eef6;
+            cursor: pointer;
+            z-index: 6;
+            backdrop-filter: blur(6px);
+            opacity: 0.8;
+            transition: opacity 0.2s ease, background 0.2s ease;
+        }
+
+        .banner-mute-btn:hover {
+            opacity: 1;
+            background: rgba(20, 22, 30, 0.55);
+        }
+
+        .banner-mute-btn i {
+            font-size: 0.68rem;
         }
         
         /* Contrôle de volume compact et classe */
@@ -2370,6 +2400,10 @@
                 <i class="fas fa-star" aria-hidden="true"></i>
                 <strong id="profile-rating-average">—</strong><span class="profile-rating-max">/10</span>
             </div>
+
+            <button type="button" class="banner-mute-btn" id="banner-mute-btn" style="display: none;" title="Activer le son de la bannière" aria-label="Activer le son de la bannière">
+                <i class="fas fa-volume-mute"></i>
+            </button>
             
             <!-- Contenu du header (avatar et pseudo) -->
             <div class="profile-header-content">
@@ -5142,32 +5176,16 @@
               return saved;
           }
 
-          async function playBannerVideoSafely(videoEl, volume) {
-              if (!videoEl) return;
+          function playBannerVideoSafely(videoEl, volume) {
+              if (!videoEl) return Promise.resolve();
               var saved = typeof volume === 'number' ? volume : getSavedBannerVolume(volume);
               var vol = saved === null ? 35 : saved;
-              if (vol === 0) {
-                  videoEl.volume = 0;
-                  videoEl.muted = true;
-                  try { await videoEl.play(); } catch (e) {}
-                  return;
+              if (typeof window.playBannerVideoSafely === 'function' && window.playBannerVideoSafely !== playBannerVideoSafely) {
+                  return window.playBannerVideoSafely(videoEl, vol);
               }
-              videoEl.volume = vol / 100;
-              try {
-                  await videoEl.play();
-                  videoEl.muted = false;
-              } catch (e) {
-                  try {
-                      videoEl.muted = true;
-                      await videoEl.play();
-                      setTimeout(function() {
-                          videoEl.muted = false;
-                          videoEl.volume = vol / 100;
-                      }, 100);
-                  } catch (e2) {
-                      console.error('Lecture vidéo impossible (même en muet):', e2);
-                  }
-              }
+              videoEl.muted = true;
+              videoEl.volume = vol > 0 ? vol / 100 : 0;
+              return videoEl.play().catch(function () {});
           }
 
           let bannerSaveQueue = Promise.resolve();
@@ -5603,13 +5621,7 @@
               if (!videoEl) return;
               var saved = getSavedBannerVolume(banner);
               var volume = saved === null ? 35 : saved;
-              if (volume === 0) {
-                  videoEl.volume = 0;
-                  videoEl.muted = true;
-              } else {
-                  videoEl.volume = volume / 100;
-                  videoEl.muted = false;
-              }
+              videoEl.volume = volume > 0 ? volume / 100 : 0;
               syncBannerVolumeUi(volume);
               if (videoEl.paused) {
                   playBannerVideoSafely(videoEl, volume);
@@ -5700,6 +5712,25 @@
           }
           
           // Afficher/masquer le contrôle de volume selon le type de bannière
+          function syncBannerHeaderMuteBtn() {
+              var btn = document.getElementById('banner-mute-btn');
+              if (!btn || !bannerVideo) return;
+              var isVideo = bannerVideo.classList.contains('active');
+              btn.style.display = isVideo ? 'inline-flex' : 'none';
+              if (!isVideo) return;
+              var icon = btn.querySelector('i');
+              if (!icon) return;
+              if (bannerVideo.muted || bannerVideo.volume === 0) {
+                  icon.className = 'fas fa-volume-mute';
+                  btn.title = 'Activer le son de la bannière';
+                  btn.setAttribute('aria-label', 'Activer le son de la bannière');
+              } else {
+                  icon.className = 'fas fa-volume-up';
+                  btn.title = 'Couper le son de la bannière';
+                  btn.setAttribute('aria-label', 'Couper le son de la bannière');
+              }
+          }
+
           function updateVolumeControlVisibility() {
               const volumeControl = document.getElementById('banner-volume-control');
               if (bannerVideo.classList.contains('active')) {
@@ -5707,6 +5738,7 @@
               } else {
                   if (volumeControl) volumeControl.style.display = 'none';
               }
+              syncBannerHeaderMuteBtn();
           }
           
           // Sauvegarder la bannière
@@ -6247,7 +6279,6 @@
           function updateBannerVolume(volume) {
               volume = parseInt(volume, 10);
               if (isNaN(volume)) volume = 35;
-              const wasPlaying = !bannerVideo.paused;
 
               if (volume <= 0) {
                   bannerVideo.volume = 0;
@@ -6256,13 +6287,14 @@
               } else {
                   bannerVideo.volume = volume / 100;
                   bannerVideo.muted = false;
-                  if (wasPlaying && bannerVideo.paused) {
+                  if (bannerVideo.paused) {
                       bannerVideo.play().catch(function(e) {
                           console.log('Erreur de lecture vidéo:', e);
                       });
                   }
                   updateVolumeIcon(volume);
               }
+              syncBannerHeaderMuteBtn();
               
               // Sauvegarder le volume
               const user = JSON.parse(localStorage.getItem('user') || 'null');
@@ -6356,10 +6388,13 @@
                   if (volumeValue) volumeValue.textContent = '0%';
                   updateBannerVolume(0);
               }
+              syncBannerHeaderMuteBtn();
           }
           if (volumeMuteBtn) volumeMuteBtn.addEventListener('click', handleMuteToggle);
           var bannerVolumeMuteBtn = document.getElementById('banner-volume-mute-btn');
           if (bannerVolumeMuteBtn) bannerVolumeMuteBtn.addEventListener('click', handleMuteToggle);
+          var bannerHeaderMuteBtn = document.getElementById('banner-mute-btn');
+          if (bannerHeaderMuteBtn) bannerHeaderMuteBtn.addEventListener('click', handleMuteToggle);
           
           // Fermer le menu en cliquant sur l'overlay
           if (bannerEditOverlay) {
