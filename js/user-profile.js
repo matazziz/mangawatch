@@ -2153,7 +2153,8 @@ async function displayUserAnimeNotesPublic() {
     }
 }
 
-function renderStarContainerPublic(container, note, notesForThisStar, page, maxPage1, cardsPerPageAfter) {
+function renderStarContainerPublic(container, note, notesForThisStar, page, maxPage1, cardsPerPageAfter, renderOptions) {
+    renderOptions = renderOptions || {};
     const totalPages = notesForThisStar.length <= maxPage1
         ? 1
         : 1 + Math.ceil((notesForThisStar.length - maxPage1) / cardsPerPageAfter);
@@ -2321,7 +2322,7 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
             if (p === safePage) btn.classList.add('active');
             btn.onclick = () => {
                 window.starCurrentPagesPublic[note] = p;
-                renderStarContainerPublic(container, note, notesForThisStar, p, maxPage1, cardsPerPageAfter);
+                renderStarContainerPublic(container, note, notesForThisStar, p, maxPage1, cardsPerPageAfter, { scrollToPagination: true });
             };
             paginationContainer.appendChild(btn);
         }
@@ -2338,6 +2339,10 @@ function renderStarContainerPublic(container, note, notesForThisStar, page, maxP
         if (starGroup) {
             starGroup.insertBefore(paginationContainer, container.nextSibling);
         }
+    }
+
+    if (renderOptions.scrollToPagination && totalPages > 1 && typeof scrollToProfilePaginationAnchor === 'function') {
+        scrollToProfilePaginationAnchor(starGroup || container, 'top');
     }
 }
 
@@ -3719,7 +3724,8 @@ function performSearchPublic(query) {
 const GENRE_CARDS_PER_PAGE_PUBLIC = 100;
 
 // Rendre une page du conteneur de genre (pagination, comme les containers à étoiles page > 1)
-window.renderGenreContainerPagePublic = function(page) {
+window.renderGenreContainerPagePublic = function(page, renderOptions) {
+    renderOptions = renderOptions || {};
     const notes = window.lastGenreFilteredNotesPublic;
     if (!notes || !Array.isArray(notes)) return;
     const totalPages = Math.max(1, Math.ceil(notes.length / GENRE_CARDS_PER_PAGE_PUBLIC));
@@ -3766,8 +3772,6 @@ window.renderGenreContainerPagePublic = function(page) {
         nextBtn.textContent = (window.t && window.t('common.pagination_next')) || 'Suivant';
         nextBtn.className = 'genre-pagination-next';
         nextBtn.style.cssText = 'padding:10px 20px;border:2px solid #00b894;border-radius:10px;background:#23262f;color:#00b894;font-weight:600;cursor:pointer;transition:all 0.2s;';
-        prevBtn.onclick = () => { window.renderGenreContainerPagePublic(window.genreContainerCurrentPagePublic - 1); };
-        nextBtn.onclick = () => { window.renderGenreContainerPagePublic(window.genreContainerCurrentPagePublic + 1); };
         paginationEl.appendChild(prevBtn);
         paginationEl.appendChild(pageSpan);
         paginationEl.appendChild(nextBtn);
@@ -3780,13 +3784,19 @@ window.renderGenreContainerPagePublic = function(page) {
         prevBtn.disabled = page <= 1;
         prevBtn.style.opacity = page <= 1 ? '0.5' : '1';
         prevBtn.style.cursor = page <= 1 ? 'not-allowed' : 'pointer';
+        prevBtn.onclick = () => { window.renderGenreContainerPagePublic(window.genreContainerCurrentPagePublic - 1, { scrollToPagination: true }); };
     }
     if (nextBtn) {
         nextBtn.disabled = page >= totalPages;
         nextBtn.style.opacity = page >= totalPages ? '0.5' : '1';
         nextBtn.style.cursor = page >= totalPages ? 'not-allowed' : 'pointer';
+        nextBtn.onclick = () => { window.renderGenreContainerPagePublic(window.genreContainerCurrentPagePublic + 1, { scrollToPagination: true }); };
     }
     if (pageSpan) pageSpan.textContent = `Page ${page} / ${totalPages}`;
+
+    if (renderOptions.scrollToPagination && totalPages > 1 && typeof scrollToProfilePaginationAnchor === 'function') {
+        scrollToProfilePaginationAnchor(genreFilteredContainer, 'top');
+    }
 };
 
 // Trier les containers d'étoiles par ordre (identique au profil perso)

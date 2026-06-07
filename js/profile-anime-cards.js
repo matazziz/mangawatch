@@ -6,6 +6,55 @@ function _profileT(key) {
     return (typeof window.t === 'function' && window.t(key)) || (window.localization && window.localization.get(key)) || key;
 }
 
+/** Après changement de page : repositionner le scroll en haut du conteneur actif. */
+function scrollToProfilePaginationAnchor(rootElement, scrollMode) {
+    if (!rootElement) return;
+    const root = (rootElement.closest && (
+        rootElement.closest('.star-rating-group')
+        || rootElement.closest('#genre-filtered-container')
+        || rootElement.closest('#search-results-container')
+    )) || rootElement;
+
+    function resolveTopTarget() {
+        return root.querySelector('.star-rating-badge')
+            || root.querySelector('.star-scroll-to-bottom-btn')
+            || root.querySelector('[id^="star-containers"]')
+            || (root.id === 'genre-filtered-container' ? root : null)
+            || root.querySelector('#genre-cards-container')
+            || root.querySelector('.genre-filtered-cards')
+            || root;
+    }
+
+    function scrollToTop() {
+        const target = resolveTopTarget();
+        if (!target || !target.isConnected) return;
+        const headerOffset = 90;
+        const top = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: Math.max(0, top), left: 0, behavior: 'auto' });
+    }
+
+    function scrollToPagination() {
+        const pagination = root.querySelector && (
+            root.querySelector('.star-pagination') || root.querySelector('.genre-pagination')
+        );
+        const target = pagination || root;
+        if (!target || !target.isConnected) return;
+        target.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
+    }
+
+    const scrollFn = scrollMode === 'pagination' ? scrollToPagination : scrollToTop;
+
+    requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+            scrollFn();
+            // Pages 2+ : le minHeight 13000px s'applique après le 1er paint
+            setTimeout(scrollFn, 60);
+            setTimeout(scrollFn, 150);
+            setTimeout(scrollFn, 300);
+        });
+    });
+}
+
 function isPublicUserProfilePage() {
     const path = (window.location.pathname || '').toLowerCase();
     return path.includes('user-profile');
@@ -812,6 +861,208 @@ function getTop10MoveLabel() { return (typeof window.t === 'function' && window.
 function getTop10RemoveLabel() { return (typeof window.t === 'function' && window.t('profile.top10_remove')) || 'Retirer'; }
 function getTop10PlaceHintLabel() { return (typeof window.t === 'function' && window.t('profile.top10_place_hint')) || 'Cliquez sur "..." puis sur le bouton pour ajouter au top 10'; }
 
+function openCardMoreMenu(menu) {
+    if (!menu) return;
+    menu.style.display = 'block';
+    menu.style.opacity = '1';
+    menu.style.pointerEvents = 'auto';
+    menu.style.visibility = 'visible';
+}
+
+function closeCardMoreMenu(menu) {
+    if (!menu) return;
+    menu.style.display = 'none';
+    menu.style.opacity = '0';
+    menu.style.pointerEvents = 'none';
+    menu.style.visibility = 'hidden';
+}
+
+function isCardInTop10ContextContainer(card) {
+    if (!card) return false;
+    return !!(
+        card.closest('#genre-filtered-container') ||
+        card.closest('#genre-cards-container') ||
+        card.closest('#search-results-container') ||
+        card.closest('#search-cards-container')
+    );
+}
+
+function setTop10ContextFromCard(card) {
+    if (!card) return;
+    const inGenre = !!(card.closest('#genre-filtered-container') || card.closest('#genre-cards-container'));
+    const inSearch = !!(card.closest('#search-results-container') || card.closest('#search-cards-container'));
+    const selectedGenres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
+    window.top10Context = {
+        genre: selectedGenres,
+        type: window.selectedType || null,
+        isGenreContext: inGenre || (inSearch && selectedGenres.length > 0)
+    };
+}
+
+function resolveTop10ViewScope() {
+    const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
+    const genre = genres.length > 0 ? genres.slice().sort().join(',') : null;
+    let type = window.selectedType || null;
+
+    if (type === 'manga') {
+        const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
+        if (genres.some(function (g) { return typeGenres.includes(g); })) {
+            if (genres.includes('Doujin')) type = 'doujin';
+            else if (genres.includes('Manhwa')) type = 'manhwa';
+            else if (genres.includes('Manhua')) type = 'manhua';
+        }
+    }
+
+    const normalized = normalizeTop10Type(type);
+    return {
+        genre: genre,
+        type: normalized || 'anime'
+    };
+}
+
+function isCardIdInTop10(top10, animeId) {
+    if (!Array.isArray(top10) || animeId == null) return false;
+    return top10.some(function (entry) {
+        return entry && String(entry.id) === String(animeId);
+    });
+}
+
+/** Même anime (ID ou titre/série) déjà dans le top 10 → masquer le bouton « … ». Films : ID uniquement. */
+function isCardInTop10ForButtonHide(top10, cardInfo, contextType) {
+    if (!Array.isArray(top10) || !cardInfo || cardInfo.id == null) return false;
+
+    const animeId = cardInfo.id;
+    const cardTitle = cardInfo.title || cardInfo.titre || cardInfo.name || '';
+    let cardContentType = cardInfo.contentType;
+
+    return top10.some(function (entry) {
+        if (!entry) return false;
+        if (String(entry.id) === String(animeId)) return true;
+
+        if (!cardContentType) {
+            if (contextType === 'anime') cardContentType = 'anime';
+            else if (contextType === 'manga') cardContentType = 'manga';
+            else if (contextType === 'film') cardContentType = 'film';
+        }
+
+        const top10ContentType = entry.contentType
+            || (contextType === 'anime' ? 'anime' : (contextType === 'film' ? 'film' : (contextType === 'manga' ? 'manga' : null)));
+
+        if (top10ContentType && cardContentType && top10ContentType !== cardContentType) return false;
+        if (top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentType, contextType)) return false;
+
+        const isAnimeType = contextType === 'anime' || cardContentType === 'anime';
+        const isMangaType = contextType === 'manga' || cardContentType === 'manga';
+        if (!isAnimeType && !isMangaType) return false;
+
+        const contentTypeForExtraction = cardContentType || contextType || 'anime';
+        const top10Title = entry.titre || entry.title || entry.name || '';
+        if (!top10Title || !cardTitle) return false;
+
+        const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
+        const cardBaseTitle = extractBaseAnimeTitle(cardTitle, contentTypeForExtraction);
+        const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
+        const normalizedCardBase = (cardBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
+
+        if (normalizedTop10Base && normalizedCardBase && normalizedTop10Base === normalizedCardBase) return true;
+        if (areAnimeTitlesSimilar(top10Title, cardTitle, contentTypeForExtraction)) return true;
+
+        if (isSeriesWithMultipleSeasons(top10Title) || isSeriesWithMultipleSeasons(cardTitle)) {
+            const prefixLength = Math.min(15, Math.min(normalizedTop10Base.length, normalizedCardBase.length));
+            if (prefixLength >= 15 && normalizedTop10Base.substring(0, prefixLength) === normalizedCardBase.substring(0, prefixLength)) {
+                return true;
+            }
+        }
+
+        const normalizedTop10Raw = top10Title.toLowerCase().trim().replace(/\s+/g, ' ');
+        const normalizedCardRaw = cardTitle.toLowerCase().trim().replace(/\s+/g, ' ');
+        if (normalizedTop10Raw.length > 5 && normalizedCardRaw.length > 5) {
+            const prefixLength = Math.min(20, Math.min(normalizedTop10Raw.length, normalizedCardRaw.length));
+            const top10Prefix = normalizedTop10Raw.substring(0, prefixLength);
+            const cardPrefix = normalizedCardRaw.substring(0, prefixLength);
+            if (normalizedTop10Raw.startsWith(cardPrefix) || normalizedCardRaw.startsWith(top10Prefix)) return true;
+        }
+
+        return false;
+    });
+}
+
+async function resolveTop10ContextForCard(card, user, cardContentType) {
+    const isInGenreContainer = card.closest('#genre-filtered-container') || card.closest('#genre-cards-container');
+    const isInStarContainer = card.closest('[id^="star-containers"]');
+    const isInSearchContainer = card.closest('#search-results-container');
+
+    let contextType;
+    let viewTop10;
+
+    if (isInGenreContainer || isInSearchContainer) {
+        const scope = resolveTop10ViewScope();
+        contextType = scope.type;
+        viewTop10 = await getUserTop10(user, scope.genre, scope.type);
+    } else if (isInStarContainer) {
+        contextType = window.selectedType || null;
+        if (contextType === 'manga') {
+            const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
+            const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
+            if (genres.some(function (g) { return typeGenres.includes(g); })) {
+                if (genres.includes('Doujin')) contextType = 'doujin';
+                else if (genres.includes('Manhwa')) contextType = 'manhwa';
+                else if (genres.includes('Manhua')) contextType = 'manhua';
+            }
+        }
+        viewTop10 = await getUserTop10(user, null, contextType);
+        if (!contextType && (cardContentType === 'anime' || !cardContentType)) {
+            const animeTop10 = await getUserTop10(user, null, 'anime');
+            viewTop10 = (viewTop10 || []).slice();
+            animeTop10.forEach(function (item) {
+                if (!viewTop10.some(function (e) { return e && String(e.id) === String(item && item.id); })) {
+                    viewTop10.push(item);
+                }
+            });
+        }
+    } else {
+        const scope = resolveTop10ViewScope();
+        contextType = scope.type;
+        viewTop10 = await getUserTop10(user, scope.genre, scope.type);
+    }
+
+    return { viewTop10: viewTop10 || [], contextType: contextType };
+}
+
+function handleSelectTop10FromCard(card, moreMenu) {
+    if (!card) return;
+
+    if (window.selectedTop10Card === card) {
+        if (typeof setAnimeCardSelection === 'function') {
+            setAnimeCardSelection(card, false);
+        }
+        window.selectedTop10Card = null;
+    } else {
+        if (window.selectedTop10Card && window.selectedTop10Card !== card) {
+            if (typeof setAnimeCardSelection === 'function') {
+                setAnimeCardSelection(window.selectedTop10Card, false);
+            }
+        }
+        if (typeof setAnimeCardSelection === 'function') {
+            setAnimeCardSelection(card, true);
+        }
+        window.selectedTop10Card = card;
+        setTop10ContextFromCard(card);
+
+        setTimeout(() => {
+            if (window.selectedTop10Card && window.selectedTop10Card === card && typeof showTop10MiniInterface === 'function') {
+                showTop10MiniInterface().catch(function (err) {
+                    console.error('🔘 ERREUR lors de l\'appel de showTop10MiniInterface:', err);
+                });
+            }
+        }, 50);
+    }
+
+    if (moreMenu) {
+        closeCardMoreMenu(moreMenu);
+    }
+}
+
 // Fonction pour tronquer le synopsis à 180 caractères maximum
 function truncateSynopsis(synopsis, maxLength = 150) {
     if (!synopsis) return '';
@@ -1358,21 +1609,8 @@ window.createStarBadges = function createStarBadges() {
         e.stopPropagation();
         searchInput.value = '';
         searchInput.focus();
-        
-        // Si les résultats étaient dans le container de genre, restaurer la vue genre (liste du genre comme avant la recherche)
-        if (window.searchResultsInGenreContainer && typeof applyGenreFilter === 'function') {
-            window.searchResultsInGenreContainer = false;
-            applyGenreFilter();
-        }
-        // Supprimer immédiatement le container de recherche s'il existe (recherche sans genre)
-        const existingSearchContainer = document.getElementById('search-results-container');
-        if (existingSearchContainer) {
-            existingSearchContainer.remove();
-        }
-        
-        // Réafficher immédiatement les containers d'étoiles
-        performSearch('');
         clearButton.style.display = 'none';
+        clearProfileSearchView();
     });
     
     // Afficher/masquer le bouton de fermeture selon le contenu
@@ -1383,16 +1621,7 @@ window.createStarBadges = function createStarBadges() {
             clearButton.style.display = 'flex';
         } else {
             clearButton.style.display = 'none';
-            // Si la barre est vidée, supprimer immédiatement le container de recherche
-            // Utiliser requestAnimationFrame pour une suppression synchrone
-            requestAnimationFrame(() => {
-                const existingSearchContainer = document.getElementById('search-results-container');
-                if (existingSearchContainer) {
-                    existingSearchContainer.remove();
-                }
-                // Réafficher les containers d'étoiles
-                performSearch('');
-            });
+            clearProfileSearchView();
         }
     });
     
@@ -2046,10 +2275,7 @@ window.createStarBadges = function createStarBadges() {
         
         // Fermer tous les menus "..." des cartes
         document.querySelectorAll('.card-more-menu, .dropdown-menu').forEach(menu => {
-            menu.style.display = 'none';
-            menu.style.opacity = '0';
-            menu.style.pointerEvents = 'none';
-            menu.style.visibility = 'hidden';
+            closeCardMoreMenu(menu);
         });
         
         // Ne pas fermer les popups du top 10 au clic ailleurs - ils doivent rester ouverts
@@ -2303,60 +2529,49 @@ window.createStarBadges = function createStarBadges() {
     // Appeler updateTypeButtonState au chargement initial
     updateTypeButtonState();
 
+    function clearProfileSearchView() {
+        window.searchResultsInGenreContainer = false;
+
+        document.getElementById('search-results-container')?.remove();
+
+        isGenreContainerOpen = false;
+        const genreSortContainer = document.getElementById('genre-sort-container');
+        const sortBtn = document.getElementById('sort-by-genre-btn');
+        if (genreSortContainer) {
+            genreSortContainer.classList.remove('open');
+            genreSortContainer.style.display = 'none';
+            genreSortContainer.style.visibility = 'hidden';
+            genreSortContainer.style.opacity = '0';
+            genreSortContainer.style.maxHeight = '0';
+            genreSortContainer.style.marginBottom = '0';
+        }
+        if (sortBtn) {
+            sortBtn.classList.remove('genre-open');
+            sortBtn.style.opacity = '1';
+            sortBtn.style.cursor = 'pointer';
+            sortBtn.style.pointerEvents = 'auto';
+        }
+
+        const hasGenreSelected = Array.isArray(window.selectedGenres) && window.selectedGenres.length > 0;
+        if (hasGenreSelected && typeof applyGenreFilter === 'function') {
+            applyGenreFilter();
+        } else {
+            document.getElementById('genre-filtered-container')?.remove();
+            const allContainers = document.querySelector('.all-star-containers');
+            if (allContainers) allContainers.style.display = '';
+            document.querySelectorAll('.star-rating-group').forEach(function (group) {
+                group.style.display = '';
+            });
+        }
+    }
+
     // Fonction de recherche avec tri par pertinence - DÉSACTIVÉE
     // Cette fonction a été désactivée car elle créait un conteneur de résultats en décalé
     // La nouvelle barre de recherche dans le header est utilisée à la place
     function performSearch(query) {
         // Vérifier d'abord si la recherche est vide AVANT toute opération
         if (!query || query.trim() === '' || window.isSearchCleared) {
-            // Supprimer immédiatement tout conteneur de résultats existant (synchrone)
-            let searchResultsContainer = document.getElementById('search-results-container');
-            if (searchResultsContainer) {
-                searchResultsContainer.remove();
-            }
-            
-            // Double vérification après un court délai
-            setTimeout(() => {
-                searchResultsContainer = document.getElementById('search-results-container');
-                if (searchResultsContainer) {
-                    searchResultsContainer.remove();
-                }
-            }, 100);
-            
-            // Réafficher les containers d'étoiles SEULEMENT si aucun genre n'est sélectionné
-            // (tant qu'un genre est sélectionné, on garde la vue genre sans les étoiles)
-            const hasGenreSelected = Array.isArray(window.selectedGenres) && window.selectedGenres.length > 0;
-            if (!hasGenreSelected) {
-                const allContainers = document.querySelector('.all-star-containers');
-                if (allContainers) {
-                    allContainers.style.display = '';
-                }
-                const starGroups = document.querySelectorAll('.star-rating-group');
-                starGroups.forEach(group => {
-                    group.style.display = '';
-                });
-            }
-            
-            // Réafficher le container de genres filtrés s'il était visible (genre sélectionné)
-            const genreFilteredContainer = document.getElementById('genre-filtered-container');
-            if (genreFilteredContainer && window.selectedGenres && window.selectedGenres.length > 0) {
-                genreFilteredContainer.style.display = '';
-            }
-            
-            // Réafficher aussi le container de sélection de genres (genre-sort-container) s'il était ouvert
-            const genreSortContainer = document.getElementById('genre-sort-container');
-            if (genreSortContainer && isGenreContainerOpen) {
-                genreSortContainer.style.display = 'flex';
-            }
-            
-            // Réactiver le bouton "Trier par genre"
-            const sortBtn = document.getElementById('sort-by-genre-btn');
-            if (sortBtn) {
-                sortBtn.style.opacity = '1';
-                sortBtn.style.cursor = 'pointer';
-                sortBtn.style.pointerEvents = 'auto';
-            }
-            
+            clearProfileSearchView();
             return;
         }
         
@@ -3043,16 +3258,14 @@ window.createStarBadges = function createStarBadges() {
         if (moreBtn && moreMenu) {
             moreBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isOpen = moreMenu.style.display === 'block';
+                const isOpen = moreMenu.style.display === 'block' && moreMenu.style.visibility !== 'hidden';
                 document.querySelectorAll('.card-more-menu').forEach(menu => {
-                    menu.style.display = 'none';
-                    menu.style.opacity = '0';
-                    menu.style.pointerEvents = 'none';
+                    if (menu !== moreMenu) closeCardMoreMenu(menu);
                 });
                 if (!isOpen) {
-                    moreMenu.style.display = 'block';
-                    moreMenu.style.opacity = '1';
-                    moreMenu.style.pointerEvents = 'auto';
+                    openCardMoreMenu(moreMenu);
+                } else {
+                    closeCardMoreMenu(moreMenu);
                 }
             });
 
@@ -3061,48 +3274,8 @@ window.createStarBadges = function createStarBadges() {
                 selectBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     e.preventDefault();
-                    e.stopImmediatePropagation(); // Empêcher la propagation vers d'autres gestionnaires
-                    
-                    
-                    // Si la carte est déjà sélectionnée, la désélectionner
-                    if (window.selectedTop10Card === card) {
-                        if (typeof setAnimeCardSelection === 'function') {
-                            setAnimeCardSelection(card, false);
-                        }
-                        window.selectedTop10Card = null;
-                    } else {
-                        // Si une autre carte était sélectionnée, la désélectionner
-                        if (window.selectedTop10Card && window.selectedTop10Card !== card) {
-                            if (typeof setAnimeCardSelection === 'function') {
-                                setAnimeCardSelection(window.selectedTop10Card, false);
-                            }
-                        }
-                        // Sélection visuelle
-                        if (typeof setAnimeCardSelection === 'function') {
-                    setAnimeCardSelection(card, true);
-                        }
-                        window.selectedTop10Card = card;
-                        
-                        
-                        // Afficher l'interface en miniature après un court délai pour s'assurer que la carte est bien sélectionnée
-                        setTimeout(() => {
-                            if (window.selectedTop10Card && window.selectedTop10Card === card) {
-                                if (typeof showTop10MiniInterface === 'function') {
-                                    showTop10MiniInterface();
-                                } else {
-                                    console.error('🔘 ERREUR: showTop10MiniInterface n\'est pas définie');
-                                }
-                            } else {
-                                console.error('🔘 ERREUR: window.selectedTop10Card est null ou différent après délai');
-                            }
-                        }, 50);
-                        
-                    }
-                    
-                    // Fermer le menu immédiatement
-                    moreMenu.style.display = 'none';
-                    moreMenu.style.opacity = '0';
-                    moreMenu.style.pointerEvents = 'none';
+                    e.stopImmediatePropagation();
+                    handleSelectTop10FromCard(card, moreMenu);
                 });
             }
         }
@@ -3119,125 +3292,23 @@ window.createStarBadges = function createStarBadges() {
         let shouldHideButton = false;
         
         if (user && user.email) {
-            // Vérifier le top 10 du genre et type sélectionnés (contexte actuel), pas le global
-            let type = window.selectedType || null;
-            const selectedGenres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-            const genreKey = selectedGenres.length > 0 ? selectedGenres.slice().sort().join(',') : null;
-            const contextTop10 = await getUserTop10(user, genreKey, type);
-            
-            // Récupérer le titre et contentType depuis les notes (plus fiable que le DOM)
             let cardTitle = null;
             let cardContentType = null;
             const notes = JSON.parse(localStorage.getItem('user_content_notes_' + user.email) || '[]');
-            const note = notes.find(n => String(n.id) === String(animeId));
+            const note = notes.find(function (n) { return String(n.id) === String(animeId); });
             if (note) {
-                // Utiliser le titre depuis les notes en priorité (plus fiable que le DOM)
                 cardTitle = note.titre || note.title || note.name || null;
                 cardContentType = note.contentType || (note.isManga ? 'manga' : null);
             }
-            
-            // Fallback : utiliser extractTitleFromCard si le titre n'a pas été trouvé dans les notes
-            if (!cardTitle) {
+            if (!cardTitle && typeof extractTitleFromCard === 'function') {
                 cardTitle = extractTitleFromCard(card);
             }
-            
-            // Si cardContentType n'a pas été trouvé dans les notes, utiliser le type sélectionné
-            if (!cardContentType) {
-                if (type === 'anime') {
-                    cardContentType = 'anime';
-                } else if (type === 'manga') {
-                    cardContentType = 'manga';
-                } else if (type === 'film') {
-                    cardContentType = 'film';
-                }
-            }
-            
-            const isInGlobalTop10 = contextTop10.some(a => {
-                if (!a) return false;
-                // Comparaison par ID d'abord
-                if (String(a.id) === String(animeId)) return true;
-                
-                // IMPORTANT: Ne comparer par titre que si les deux éléments sont du MÊME type
-                // Les films ont leur propre Top 10 et ne doivent pas être comparés avec les anime
-                const top10ContentType = a.contentType || (type === 'anime' ? 'anime' : (type === 'film' ? 'film' : null));
-                
-                // Si les types sont différents (ex: film vs anime), ne pas comparer par titre
-                if (top10ContentType && cardContentType && top10ContentType !== cardContentType) {
-                    return false; // Types différents, ce n'est pas la même carte
-                }
-                
-                if (top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentType, type)) {
-                    return false;
-                }
-                
-                // Pour les animes ET mangas, comparer aussi par titre de base et similarité
-                // MAIS seulement si les deux sont du même type (anime/anime ou manga/manga, pas de mélange)
-                if ((type === 'anime' || type === 'manga') && 
-                    (top10ContentType === type || !top10ContentType) && 
-                    cardContentType === type) {
-                    const top10Title = a.titre || a.title || a.name || '';
-                    let cardTitleFromVar = cardTitle || '';
-                    
-                    if (!top10Title || !cardTitleFromVar) {
-                        return false;
-                    }
-                    
-                    // Vérifier si l'un des deux titres appartient à une série avec plusieurs saisons
-                    const isSeriesTop10 = isSeriesWithMultipleSeasons(top10Title);
-                    let isSeriesCard = isSeriesWithMultipleSeasons(cardTitleFromVar);
-                    
-                    // Vérification supplémentaire : si le titre extrait du DOM ne correspond pas à une série avec saisons,
-                    // vérifier si l'ID de la carte correspond à un titre de série avec saisons dans les notes
-                    if (!isSeriesCard && isSeriesTop10 && user && user.email) {
-                        const noteForCard = notes.find(n => String(n.id) === String(animeId));
-                        if (noteForCard) {
-                            const noteTitle = noteForCard.titre || noteForCard.title || noteForCard.name || '';
-                            if (isSeriesWithMultipleSeasons(noteTitle)) {
-                                // Utiliser le titre depuis les notes au lieu du titre extrait du DOM
-                                cardTitleFromVar = noteTitle;
-                                isSeriesCard = true;
-                                console.log(`✅ [BUTTON SERIES FIX SEARCH] Titre corrigé depuis les notes pour animeId=${animeId}: "${cardTitleFromVar}" (était: "${cardTitle}")`);
-                            }
-                        }
-                    }
-                    
-                    const contentTypeForExtraction = type; // 'anime' ou 'manga'
-                    const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
-                    const cardBaseTitle = extractBaseAnimeTitle(cardTitleFromVar, contentTypeForExtraction);
-                    
-                    // Normaliser les titres de base pour la comparaison
-                    const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                    const normalizedCardBase = (cardBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                    
-                    // Si les titres de base correspondent exactement, masquer le bouton
-                    if (normalizedTop10Base && normalizedCardBase && normalizedTop10Base === normalizedCardBase) {
-                        console.log(`✅ [BUTTON HIDE UPDATE] Titres de base identiques (${contentTypeForExtraction}): "${top10BaseTitle}" === "${cardBaseTitle}"`);
-                        return true;
-                    }
-                    
-                    // Si les titres sont similaires (même série sans indication explicite de saison), masquer le bouton
-                    if (areAnimeTitlesSimilar(top10Title, cardTitleFromVar, contentTypeForExtraction)) {
-                        console.log(`✅ [BUTTON HIDE UPDATE] Cartes similaires détectées (${contentTypeForExtraction}): "${top10Title}" vs "${cardTitleFromVar}"`);
-                        return true;
-                    }
-                    
-                    // Vérification supplémentaire pour les séries avec saisons : comparer les préfixes
-                    if (isSeriesTop10 || isSeriesCard) {
-                        const prefixLength = Math.min(15, Math.min(normalizedTop10Base.length, normalizedCardBase.length));
-                        if (prefixLength >= 15) {
-                            const top10Prefix = normalizedTop10Base.substring(0, prefixLength);
-                            const cardPrefix = normalizedCardBase.substring(0, prefixLength);
-                            if (top10Prefix === cardPrefix) {
-                                console.log(`✅ [BUTTON HIDE SERIES UPDATE] Préfixes identiques: "${top10Prefix}"`);
-                                return true;
-                            }
-                        }
-                    }
-                }
-                
-                return false;
-            });
-            shouldHideButton = isInGlobalTop10;
+            const top10Ctx = await resolveTop10ContextForCard(card, user, cardContentType);
+            shouldHideButton = isCardInTop10ForButtonHide(top10Ctx.viewTop10, {
+                id: animeId,
+                title: cardTitle,
+                contentType: cardContentType
+            }, top10Ctx.contextType);
         }
         
         // Affiche ou masque le bouton '...' et son menu
@@ -3271,44 +3342,7 @@ window.createStarBadges = function createStarBadges() {
         // Si la recherche est vide, réafficher les containers à étoiles immédiatement
         // et supprimer le container de recherche de manière synchrone
         if (!query) {
-            // Si les résultats étaient affichés dans le container de genre, restaurer la vue genre (liste du genre comme avant la recherche)
-            if (window.searchResultsInGenreContainer && typeof applyGenreFilter === 'function') {
-                window.searchResultsInGenreContainer = false;
-                applyGenreFilter();
-            }
-            // Supprimer immédiatement le container de recherche s'il existe (synchrone)
-            const existingSearchContainer = document.getElementById('search-results-container');
-            if (existingSearchContainer) {
-                existingSearchContainer.remove();
-            }
-            
-            // Utiliser requestAnimationFrame pour une suppression garantie même si rapide
-            requestAnimationFrame(() => {
-                const stillExists = document.getElementById('search-results-container');
-                if (stillExists) {
-                    stillExists.remove();
-                }
-                
-                // Réafficher immédiatement les containers d'étoiles
-                performSearch('');
-            });
-            
-            // Double vérification après un court délai pour les suppressions très rapides
-            setTimeout(() => {
-                const finalCheck = document.getElementById('search-results-container');
-                if (finalCheck) {
-                    finalCheck.remove();
-                }
-                // Réafficher les containers d'étoiles SEULEMENT si aucun genre n'est sélectionné
-                const hasGenreSelected = Array.isArray(window.selectedGenres) && window.selectedGenres.length > 0;
-                if (!hasGenreSelected) {
-                    const allContainers = document.querySelector('.all-star-containers');
-                    if (allContainers && allContainers.style.display === 'none') {
-                        allContainers.style.display = '';
-                    }
-                }
-            }, 100);
-            
+            clearProfileSearchView();
             return;
         }
         
@@ -3451,10 +3485,10 @@ function applyGenreFilter() {
             group.style.display = '';
         });
         
-        // Réafficher le conteneur de recherche s'il était masqué
+        // Supprimer tout conteneur de recherche résiduel
         const searchResultsContainer = document.getElementById('search-results-container');
-        if (searchResultsContainer && searchResultsContainer.style.display === 'none') {
-            searchResultsContainer.style.display = '';
+        if (searchResultsContainer) {
+            searchResultsContainer.remove();
         }
         
         // Réafficher les cartes normalement
@@ -4501,7 +4535,8 @@ function applyGenreFilter() {
         let currentPage = 1;
         const totalPages = Math.ceil(filteredAnimes.length / pageSize);
         
-        function renderGenrePage(page) {
+        function renderGenrePage(page, renderOptions) {
+        renderOptions = renderOptions || {};
         cardsContainer.innerHTML = '';
         const start = (page - 1) * pageSize;
         const end = start + pageSize;
@@ -4814,62 +4849,7 @@ function applyGenreFilter() {
                             hideMenuHandler = null;
                         }
                         
-                        // Vérifier que le menu est visible avant de traiter le clic
-                        if (moreMenu.style.opacity === '0' || moreMenu.style.display === 'none' || moreMenu.style.visibility === 'hidden') {
-                            return;
-                        }
-                        
-                        // Si la carte est déjà sélectionnée, la désélectionner
-                        if (window.selectedTop10Card === card) {
-                            if (typeof setAnimeCardSelection === 'function') {
-                            setAnimeCardSelection(card, false);
-                            }
-                            window.selectedTop10Card = null;
-                        } else {
-                            // Si une autre carte était sélectionnée, la désélectionner
-                            if (window.selectedTop10Card && window.selectedTop10Card !== card) {
-                                if (typeof setAnimeCardSelection === 'function') {
-                                setAnimeCardSelection(window.selectedTop10Card, false);
-                                }
-                            }
-                            // Sélection visuelle
-                            if (typeof setAnimeCardSelection === 'function') {
-                            setAnimeCardSelection(card, true);
-                            }
-                            window.selectedTop10Card = card;
-                            
-                            // Si la carte est dans le conteneur de recherche, définir le contexte Top 10 (genre/type)
-                            const isInSearchContainer = card.closest('#search-results-container') || card.closest('#search-cards-container');
-                            if (isInSearchContainer) {
-                                window.top10Context = {
-                                    genre: Array.isArray(window.selectedGenres) ? window.selectedGenres : [],
-                                    type: window.selectedType || null,
-                                    isGenreContext: true
-                                };
-                            }
-                            
-                            // Afficher l'interface en miniature après un court délai pour s'assurer que la carte est bien sélectionnée
-                            setTimeout(() => {
-                                if (window.selectedTop10Card && window.selectedTop10Card === card) {
-                                    if (typeof showTop10MiniInterface === 'function') {
-                                        showTop10MiniInterface().catch(err => {
-                                            console.error('🔘 ERREUR lors de l\'appel de showTop10MiniInterface:', err);
-                                        });
-                                    } else {
-                                        console.error('🔘 ERREUR: showTop10MiniInterface n\'est pas une fonction');
-                                    }
-                                } else {
-                                    console.error('🔘 ERREUR: window.selectedTop10Card est null ou différent après délai');
-                                }
-                            }, 50);
-                            
-                        }
-                        
-                        // Fermer le menu immédiatement
-                        moreMenu.style.opacity = '0';
-                        moreMenu.style.pointerEvents = 'none';
-                        moreMenu.style.display = 'none';
-                        moreMenu.style.visibility = 'hidden';
+                        handleSelectTop10FromCard(card, moreMenu);
                         isMenuOpen = false;
                     }, true); // true = capture phase pour une priorité élevée
                 } else {
@@ -4980,7 +4960,7 @@ function applyGenreFilter() {
                 `;
                 prevBtn.onclick = () => {
                     currentPage = page - 1;
-                    renderGenrePage(currentPage);
+                    renderGenrePage(currentPage, { scrollToPagination: true });
                 };
                 paginationContainer.appendChild(prevBtn);
             }
@@ -5002,7 +4982,7 @@ function applyGenreFilter() {
                 `;
                 pageBtn.onclick = () => {
                     currentPage = i;
-                    renderGenrePage(currentPage);
+                    renderGenrePage(currentPage, { scrollToPagination: true });
                 };
                 paginationContainer.appendChild(pageBtn);
             }
@@ -5023,7 +5003,7 @@ function applyGenreFilter() {
                 `;
                 nextBtn.onclick = () => {
                     currentPage = page + 1;
-                    renderGenrePage(currentPage);
+                    renderGenrePage(currentPage, { scrollToPagination: true });
                 };
                 paginationContainer.appendChild(nextBtn);
             }
@@ -5049,6 +5029,14 @@ function applyGenreFilter() {
                     window.translateSynopses(localStorage.getItem('mangaWatchLanguage') || 'fr');
                 }
             }, 350);
+
+            if (renderOptions.scrollToPagination && totalPages > 1) {
+                scrollToProfilePaginationAnchor(genreContainer, 'top');
+            }
+
+            if (typeof refreshAllCardMoreButtons === 'function') {
+                setTimeout(function () { refreshAllCardMoreButtons(true); }, 80);
+            }
         }
         
         // Afficher la première page
@@ -5185,57 +5173,10 @@ function applyGenreFilter() {
                 return;
             }
             
-            // Vérifier que le menu est visible
-            if (moreMenu.style.opacity === '0' || moreMenu.style.display === 'none' || moreMenu.style.visibility === 'hidden') {
-                return;
-            }
-            
             e.stopPropagation();
             e.preventDefault();
             e.stopImmediatePropagation();
-            
-            
-            // Si la carte est déjà sélectionnée, la désélectionner
-            if (window.selectedTop10Card === card) {
-                if (typeof setAnimeCardSelection === 'function') {
-                    setAnimeCardSelection(card, false);
-                }
-                window.selectedTop10Card = null;
-            } else {
-                // Si une autre carte était sélectionnée, la désélectionner
-                if (window.selectedTop10Card && window.selectedTop10Card !== card) {
-                    if (typeof setAnimeCardSelection === 'function') {
-                        setAnimeCardSelection(window.selectedTop10Card, false);
-                    }
-                }
-                // Sélection visuelle
-                if (typeof setAnimeCardSelection === 'function') {
-                    setAnimeCardSelection(card, true);
-                }
-                window.selectedTop10Card = card;
-                
-                
-                // Afficher l'interface en miniature
-                setTimeout(() => {
-                    if (window.selectedTop10Card && window.selectedTop10Card === card) {
-                        if (typeof showTop10MiniInterface === 'function') {
-                            showTop10MiniInterface().catch(err => {
-                                console.error('🔘 ERREUR lors de l\'appel de showTop10MiniInterface:', err);
-                            });
-                        } else {
-                            console.error('🔘 ERREUR: showTop10MiniInterface n\'est pas une fonction');
-                        }
-                    } else {
-                        console.error('🔘 ERREUR: window.selectedTop10Card est null ou différent après délai');
-                    }
-                }, 50);
-            }
-            
-            // Fermer le menu
-            moreMenu.style.opacity = '0';
-            moreMenu.style.pointerEvents = 'none';
-            moreMenu.style.display = 'none';
-            moreMenu.style.visibility = 'hidden';
+            handleSelectTop10FromCard(card, moreMenu);
         }, true); // true = capture phase pour une priorité élevée
         
         // Test 2: Vérifier périodiquement si de nouveaux boutons sont ajoutés
@@ -5308,67 +5249,10 @@ function applyGenreFilter() {
                 return;
             }
             
-            // Vérifier que le menu est visible
-            if (moreMenu.style.opacity === '0' || moreMenu.style.display === 'none' || moreMenu.style.visibility === 'hidden') {
-                return;
-            }
-            
             e.stopPropagation();
             e.preventDefault();
             e.stopImmediatePropagation();
-            
-            
-            // Si la carte est déjà sélectionnée, la désélectionner
-            if (window.selectedTop10Card === card) {
-                if (typeof setAnimeCardSelection === 'function') {
-                    setAnimeCardSelection(card, false);
-                }
-                window.selectedTop10Card = null;
-            } else {
-                // Si une autre carte était sélectionnée, la désélectionner
-                if (window.selectedTop10Card && window.selectedTop10Card !== card) {
-                    if (typeof setAnimeCardSelection === 'function') {
-                        setAnimeCardSelection(window.selectedTop10Card, false);
-                    }
-                }
-                // Sélection visuelle
-                if (typeof setAnimeCardSelection === 'function') {
-                    setAnimeCardSelection(card, true);
-                }
-                window.selectedTop10Card = card;
-                
-                // Si la carte est dans le conteneur de recherche, définir le contexte Top 10 (genre/type)
-                // pour que l'ajout se fasse dans le Top 10 du genre sélectionné
-                const isInSearchContainer = card.closest('#search-results-container') || card.closest('#search-cards-container');
-                if (isInSearchContainer) {
-                    window.top10Context = {
-                        genre: Array.isArray(window.selectedGenres) ? window.selectedGenres : [],
-                        type: window.selectedType || null,
-                        isGenreContext: true
-                    };
-                }
-                
-                // Afficher l'interface en miniature
-                setTimeout(() => {
-                    if (window.selectedTop10Card && window.selectedTop10Card === card) {
-                        if (typeof showTop10MiniInterface === 'function') {
-                            showTop10MiniInterface().catch(err => {
-                                console.error('🔘 ERREUR lors de l\'appel de showTop10MiniInterface:', err);
-                            });
-                        } else {
-                            console.error('🔘 ERREUR: showTop10MiniInterface n\'est pas une fonction');
-                        }
-                    } else {
-                        console.error('🔘 ERREUR: window.selectedTop10Card est null ou différent après délai');
-                    }
-                }, 50);
-            }
-            
-            // Fermer le menu
-            moreMenu.style.opacity = '0';
-            moreMenu.style.pointerEvents = 'none';
-            moreMenu.style.display = 'none';
-            moreMenu.style.visibility = 'hidden';
+            handleSelectTop10FromCard(card, moreMenu);
         }, true); // true = capture phase pour une priorité élevée
         
         window.top10ButtonGlobalHandlerAdded = true;
@@ -6887,7 +6771,8 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
         // Appeler renderStarPage pour afficher les cartes
         renderStarPage(window.starCurrentPages[note]);
 
-        function renderStarPage(page) {
+        function renderStarPage(page, renderOptions) {
+            renderOptions = renderOptions || {};
             const isMobileStarCards = typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 768px)').matches;
             // Récupérer le container pour cette note
             const container = document.getElementById(note === 10 ? 'star-containers' : `star-containers-${note}`);
@@ -7440,216 +7325,15 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                 let shouldHideButton = false;
                 
                 if (user && user.email) {
-                    // Déterminer le contexte de la carte
-                    const isInGenreContainer = card.closest('#genre-filtered-container') || card.closest('#genre-cards-container');
-                    const isInStarContainer = card.closest('[id^="star-containers"]');
-                    
-                    if (isInGenreContainer) {
-                        // Dans les conteneurs de genre : vérifier le top 10 du genre spécifique + type réel
-                        const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-                        const genre = genres.length > 0 ? genres.sort().join(',') : null;
-                        let type = window.selectedType || null;
-                        
-                        // Si un genre "type" est sélectionné (Doujin, Manhwa, Manhua), utiliser le type réel
-                        if (type === 'manga') {
-                            const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
-                            if (genres.some(g => typeGenres.includes(g))) {
-                                if (genres.includes('Doujin')) {
-                                    type = 'doujin';
-                                } else if (genres.includes('Manhwa')) {
-                                    type = 'manhwa';
-                                } else if (genres.includes('Manhua')) {
-                                    type = 'manhua';
-                                }
-                            }
-                        }
-                        
-                        const genreTop10 = await getUserTop10(user, genre, type);
-                        // Pour les animes UNIQUEMENT, comparer aussi par titre de base (sans saison/partie)
-                        const animeTitle = anime.titre || anime.title || anime.name || '';
-                        const isInGenreTop10 = genreTop10.some(a => {
-                            if (!a) return false;
-                            // Comparaison par ID d'abord
-                            if (String(a.id) === String(anime.id)) {
-                                console.log(`✅ [BUTTON HIDE RENDER] Carte ${anime.id} trouvée dans le top 10 genre par ID exact dans renderStarPage`);
-                                return true;
-                            }
-                            
-                            // IMPORTANT: Ne comparer par titre que si les deux éléments sont du MÊME type
-                            // Les films ont leur propre Top 10 et ne doivent pas être comparés avec les anime
-                            const top10ContentType = a.contentType || (type === 'anime' ? 'anime' : (type === 'film' ? 'film' : null));
-                            const animeContentType = anime.contentType || (type === 'anime' ? 'anime' : (type === 'film' ? 'film' : null));
-                            
-                            // Si les types sont différents (ex: film vs anime), ne pas comparer par titre
-                            if (top10ContentType && animeContentType && top10ContentType !== animeContentType) {
-                                return false; // Types différents, ce n'est pas la même carte
-                            }
-                            
-                            if (top10ButtonHideUsesIdOnlyForFilms(animeContentType, top10ContentType, type)) {
-                                return false;
-                            }
-                            
-                            // Pour les animes UNIQUEMENT, comparer aussi par titre de base et similarité
-                            // MAIS seulement si les deux sont des anime (pas de film)
-                            if (type === 'anime' && top10ContentType === 'anime' && animeContentType === 'anime') {
-                                const top10Title = a.titre || a.title || a.name || '';
-                                const animeTitleFromVar = animeTitle || '';
-                                
-                                if (!top10Title || !animeTitleFromVar) {
-                                    return false;
-                                }
-                                
-                                const top10BaseTitle = extractBaseAnimeTitle(top10Title, 'anime');
-                                const animeBaseTitle = extractBaseAnimeTitle(animeTitleFromVar, 'anime');
-                                
-                                // Normaliser les titres de base pour la comparaison
-                                const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                                const normalizedAnimeBase = (animeBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                                
-                                // Si les titres de base correspondent exactement, masquer le bouton
-                                if (normalizedTop10Base && normalizedAnimeBase && normalizedTop10Base === normalizedAnimeBase) {
-                                    console.log(`✅ [BUTTON HIDE RENDER GENRE] Titres de base identiques: "${top10BaseTitle}" === "${animeBaseTitle}"`);
-                                    return true;
-                                }
-                                
-                                // Si les titres sont similaires (même série sans indication explicite de saison), masquer le bouton
-                                if (areAnimeTitlesSimilar(top10Title, animeTitleFromVar, 'anime')) {
-                                    console.log(`✅ [BUTTON HIDE RENDER GENRE] Cartes similaires détectées: "${top10Title}" vs "${animeTitleFromVar}"`);
-                                    return true;
-                                }
-                                
-                                // Vérification supplémentaire pour les séries avec saisons : comparer les préfixes
-                                const isSeriesTop10 = isSeriesWithMultipleSeasons(top10Title);
-                                const isSeriesAnime = isSeriesWithMultipleSeasons(animeTitleFromVar);
-                                if (isSeriesTop10 || isSeriesAnime) {
-                                    const prefixLength = Math.min(15, Math.min(normalizedTop10Base.length, normalizedAnimeBase.length));
-                                    if (prefixLength >= 15) {
-                                        const top10Prefix = normalizedTop10Base.substring(0, prefixLength);
-                                        const animePrefix = normalizedAnimeBase.substring(0, prefixLength);
-                                        if (top10Prefix === animePrefix) {
-                                            console.log(`✅ [BUTTON HIDE SERIES RENDER GENRE] Préfixes identiques: "${top10Prefix}"`);
-                                            return true;
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            return false;
-                        });
-                        shouldHideButton = isInGenreTop10;
-                    } else if (isInStarContainer) {
-                        // Dans les conteneurs d'étoiles : vérifier le top 10 global du type sélectionné
-                        let type = window.selectedType || null;
-                        
-                        // Si aucun type n'est sélectionné et que la carte est un anime, vérifier aussi le top 10 "anime"
-                        let globalTop10 = await getUserTop10(user, null, type);
-                        const animeContentType = anime.contentType || (type === 'anime' ? 'anime' : (type === 'film' ? 'film' : (type === 'manga' ? 'manga' : 'anime')));
-                        if (!type && animeContentType === 'anime') {
-                            // Vérifier aussi le top 10 "anime" spécifiquement pour les cartes anime
-                            const animeTop10 = await getUserTop10(user, null, 'anime');
-                            // Combiner les deux listes (en évitant les doublons)
-                            const combinedTop10 = [...globalTop10];
-                            animeTop10.forEach(item => {
-                                if (!combinedTop10.some(existing => String(existing?.id) === String(item?.id))) {
-                                    combinedTop10.push(item);
-                                }
-                            });
-                            globalTop10 = combinedTop10;
-                        }
-                        
-                        // Pour les animes UNIQUEMENT, comparer aussi par titre de base (sans saison/partie)
-                        const animeTitle = anime.titre || anime.title || anime.name || '';
-                        const isInGlobalTop10 = globalTop10.some(a => {
-                            if (!a) return false;
-                            // Comparaison par ID d'abord
-                            if (String(a.id) === String(anime.id)) {
-                                console.log(`✅ [BUTTON HIDE RENDER] Carte ${anime.id} trouvée dans le top 10 par ID exact dans renderStarPage`);
-                                return true;
-                            }
-                            
-                            // IMPORTANT: Ne comparer par titre que si les deux éléments sont du MÊME type
-                            // Les films ont leur propre Top 10 et ne doivent pas être comparés avec les anime
-                            const top10ContentType = a.contentType || (type === 'anime' ? 'anime' : (type === 'film' ? 'film' : null));
-                            const animeContentType = anime.contentType || (type === 'anime' ? 'anime' : (type === 'film' ? 'film' : null));
-                            
-                            // Si les types sont différents (ex: film vs anime), ne pas comparer par titre
-                            if (top10ContentType && animeContentType && top10ContentType !== animeContentType) {
-                                return false; // Types différents, ce n'est pas la même carte
-                            }
-                            
-                            if (top10ButtonHideUsesIdOnlyForFilms(animeContentType, top10ContentType, type)) {
-                                return false;
-                            }
-                            
-                            // Pour les animes UNIQUEMENT, comparer aussi par titre de base et similarité
-                            // MAIS seulement si les deux sont du même type (anime/anime ou manga/manga, pas de mélange)
-                            // IMPORTANT: Vérifier aussi quand type est null ou "tous types" en se basant sur animeContentType
-                            const isAnimeType = (type === 'anime' || (!type && animeContentType === 'anime'));
-                            const isMangaType = (type === 'manga' || (!type && animeContentType === 'manga'));
-                            if ((isAnimeType || isMangaType) && 
-                                top10ContentType === animeContentType && animeContentType) {
-                                const contentTypeForExtraction = animeContentType; // 'anime' ou 'manga'
-                                const top10Title = a.titre || a.title || a.name || '';
-                                const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
-                                const animeBaseTitle = extractBaseAnimeTitle(animeTitle, contentTypeForExtraction);
-                                // Normaliser les titres de base pour la comparaison (minuscules, sans espaces multiples)
-                                const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                                const normalizedAnimeBase = (animeBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                                
-                                // Si les titres de base correspondent exactement, masquer le bouton
-                                if (normalizedTop10Base && normalizedAnimeBase && normalizedTop10Base === normalizedAnimeBase) {
-                                    console.log(`✅ [BUTTON HIDE RENDER] Titres de base identiques: "${top10BaseTitle}" === "${animeBaseTitle}"`);
-                                    return true;
-                                } else {
-                                    const isSeriesTop10 = isSeriesWithMultipleSeasons(top10Title);
-                                    const isSeriesAnime = isSeriesWithMultipleSeasons(animeTitle);
-                                    if (isSeriesTop10 || isSeriesAnime) {
-                                        console.log(`🔍 [BUTTON DEBUG SERIES RENDER] Titres de base normalisés: "${normalizedTop10Base}" vs "${normalizedAnimeBase}"`);
-                                        
-                                        // Pour les séries avec saisons, vérifier aussi si les préfixes correspondent (au moins 15 caractères)
-                                        const prefixLength = Math.min(15, Math.min(normalizedTop10Base.length, normalizedAnimeBase.length));
-                                        if (prefixLength >= 15) {
-                                            const top10Prefix = normalizedTop10Base.substring(0, prefixLength);
-                                            const animePrefix = normalizedAnimeBase.substring(0, prefixLength);
-                                            if (top10Prefix === animePrefix) {
-                                                console.log(`✅ [BUTTON HIDE SERIES RENDER] Préfixes identiques détectés: "${top10Prefix}"`);
-                                                return true;
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                // Si les titres sont similaires (même série sans indication explicite de saison), masquer le bouton
-                                if (areAnimeTitlesSimilar(top10Title, animeTitle, contentTypeForExtraction)) {
-                                    console.log(`✅ [BUTTON HIDE RENDER] Cartes similaires détectées via areAnimeTitlesSimilar (${contentTypeForExtraction}): "${top10Title}" vs "${animeTitle}"`);
-                                    return true;
-                                } else {
-                                    const isSeriesTop10 = isSeriesWithMultipleSeasons(top10Title);
-                                    const isSeriesAnime = isSeriesWithMultipleSeasons(animeTitle);
-                                    if (isSeriesTop10 || isSeriesAnime) {
-                                        console.log(`🔍 [BUTTON DEBUG SERIES RENDER] areAnimeTitlesSimilar retourné false pour: "${top10Title}" vs "${animeTitle}"`);
-                                    }
-                                }
-                                
-                                // Vérification supplémentaire : comparer directement les titres bruts par préfixe
-                                const normalizedTop10Raw = top10Title.toLowerCase().trim().replace(/\s+/g, ' ');
-                                const normalizedAnimeRaw = animeTitle.toLowerCase().trim().replace(/\s+/g, ' ');
-                                if (normalizedTop10Raw.length > 5 && normalizedAnimeRaw.length > 5) {
-                                    const prefixLength = Math.min(20, Math.min(normalizedTop10Raw.length, normalizedAnimeRaw.length));
-                                    const top10Prefix = normalizedTop10Raw.substring(0, prefixLength);
-                                    const animePrefix = normalizedAnimeRaw.substring(0, prefixLength);
-                                    if (normalizedTop10Raw.startsWith(animePrefix) || normalizedAnimeRaw.startsWith(top10Prefix)) {
-                                        console.log(`✅ [BUTTON HIDE RENDER] Préfixes similaires détectés: "${top10Title}" vs "${animeTitle}" (préfixe: "${top10Prefix}" vs "${animePrefix}")`);
-                                        return true;
-                                    }
-                                }
-                            }
-                            
-                            return false;
-                        });
-                        shouldHideButton = isInGlobalTop10;
-                    }
+                    const cardContentType = anime.contentType || null;
+                    const top10Ctx = await resolveTop10ContextForCard(card, user, cardContentType);
+                    shouldHideButton = isCardInTop10ForButtonHide(top10Ctx.viewTop10, {
+                        id: anime.id,
+                        title: anime.titre || anime.title || anime.name,
+                        contentType: cardContentType
+                    }, top10Ctx.contextType);
                 }
+                
                 
                 if (moreBtn) {
                     // Ne pas masquer les boutons dans le top 10
@@ -7682,17 +7366,9 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     e.preventDefault();
                     e.stopImmediatePropagation();
                     if (moreMenu.style.display === 'none') {
-                        moreMenu.style.display = 'block';
-                        setTimeout(() => {
-                            moreMenu.style.opacity = '1';
-                            moreMenu.style.pointerEvents = 'auto';
-                        }, 10);
+                        openCardMoreMenu(moreMenu);
                     } else {
-                        moreMenu.style.opacity = '0';
-                        moreMenu.style.pointerEvents = 'none';
-                        setTimeout(() => {
-                            moreMenu.style.display = 'none';
-                        }, 250);
+                        closeCardMoreMenu(moreMenu);
                     }
                 }, true); // Utiliser capture: true pour être exécuté en premier
                 
@@ -7702,63 +7378,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                     selectBtn.onclick = function(e) {
                         e.stopPropagation();
                         e.preventDefault();
-                        
-                        // Si la carte est déjà sélectionnée, la désélectionner
-                        if (window.selectedTop10Card === card) {
-                            setAnimeCardSelection(card, false);
-                            window.selectedTop10Card = null;
-                            if (moreMenu) {
-                                moreMenu.style.opacity = '0';
-                                moreMenu.style.pointerEvents = 'none';
-                                setTimeout(() => {
-                                    moreMenu.style.display = 'none';
-                                }, 250);
-                            }
-                            return;
-                        }
-                        
-                        // S'assurer que la carte est bien définie
-                        if (!card) {
-                            console.error('🔘 ERREUR: Carte non définie dans renderStarPage');
-                            return;
-                        }
-                        
-                        // Si une autre carte était sélectionnée, la désélectionner
-                        if (window.selectedTop10Card && window.selectedTop10Card !== card) {
-                            setAnimeCardSelection(window.selectedTop10Card, false);
-                        }
-                        
-                        // Sélectionner la carte
-                        setAnimeCardSelection(card, true);
-                        window.selectedTop10Card = card;
-                        
-                        // Fermer le menu
-                        if (moreMenu) {
-                            moreMenu.style.opacity = '0';
-                            moreMenu.style.pointerEvents = 'none';
-                            setTimeout(() => {
-                                moreMenu.style.display = 'none';
-                            }, 100);
-                        }
-                        
-                        // Afficher l'interface en miniature après un court délai pour s'assurer que la carte est bien sélectionnée
-                        setTimeout(() => {
-                            if (window.selectedTop10Card && window.selectedTop10Card === card) {
-                                showTop10MiniInterface();
-                            } else {
-                                console.error('🔘 ERREUR: window.selectedTop10Card est null ou différent après délai');
-                            }
-                        }, 100);
-                        
-                        // Fermer le menu ...
-                        if (moreMenu) {
-                            moreMenu.style.opacity = '0';
-                            moreMenu.style.pointerEvents = 'none';
-                            setTimeout(() => {
-                                moreMenu.style.display = 'none';
-                            }, 250);
-                        }
-                        // Le bouton '...' reste visible
+                        handleSelectTop10FromCard(card, moreMenu);
                     };
                 }
                 
@@ -7986,7 +7606,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                                 const realPage = totalPagesForPagination - p + 1;
                                 if (realPage !== page) {
                                     window.starCurrentPages[note] = realPage;
-                                    renderStarPage(realPage);
+                                    renderStarPage(realPage, { scrollToPagination: true });
                                     // Mettre à jour tous les boutons "..." après le changement de page
                                     setTimeout(() => {
                                         if (typeof refreshAllCardMoreButtons === 'function') {
@@ -7998,7 +7618,7 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
                             } else {
                                 if (p !== page) {
                                     window.starCurrentPages[note] = p;
-                                    renderStarPage(p);
+                                    renderStarPage(p, { scrollToPagination: true });
                                     // Mettre à jour tous les boutons "..." après le changement de page
                                     setTimeout(() => {
                                         if (typeof refreshAllCardMoreButtons === 'function') {
@@ -8074,6 +7694,10 @@ window.displayUserAnimeNotes = async function displayUserAnimeNotes() {
             
             if (window.selectedGenre) {
                 setTimeout(applyGenreFilter, 50);
+            }
+
+            if (renderOptions.scrollToPagination && typeof totalPagesForPagination !== 'undefined' && totalPagesForPagination > 1) {
+                scrollToProfilePaginationAnchor(starGroup || container, 'top');
             }
         }
         renderStarPage(window.starCurrentPages[note]);
@@ -9220,7 +8844,8 @@ document.addEventListener('DOMContentLoaded', function() {
             let currentPage = 1;
             const totalPages = Math.ceil(filteredAnimes.length / pageSize);
             
-            function renderGenrePage(page) {
+            function renderGenrePage(page, renderOptions) {
+                renderOptions = renderOptions || {};
                 cardsContainer.innerHTML = '';
                 const start = (page - 1) * pageSize;
                 const end = start + pageSize;
@@ -9610,7 +9235,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         prevBtn.onclick = () => {
                             currentPage = page - 1;
-                            renderGenrePage(currentPage);
+                            renderGenrePage(currentPage, { scrollToPagination: true });
                             // Ne pas appeler applyTypeFilter ici pour éviter les boucles infinies
                         };
                         paginationContainer.appendChild(prevBtn);
@@ -9633,7 +9258,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         pageBtn.onclick = () => {
                             currentPage = i;
-                            renderGenrePage(currentPage);
+                            renderGenrePage(currentPage, { scrollToPagination: true });
                             // Ne pas appeler applyTypeFilter ici pour éviter les boucles infinies
                         };
                         paginationContainer.appendChild(pageBtn);
@@ -9655,7 +9280,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         nextBtn.onclick = () => {
                             currentPage = page + 1;
-                            renderGenrePage(currentPage);
+                            renderGenrePage(currentPage, { scrollToPagination: true });
                             // Ne pas appeler applyTypeFilter ici pour éviter les boucles infinies
                         };
                         paginationContainer.appendChild(nextBtn);
@@ -9675,6 +9300,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (oldPagination) {
                         oldPagination.remove();
                     }
+                }
+
+                if (renderOptions.scrollToPagination && totalPages > 1) {
+                    scrollToProfilePaginationAnchor(genreContainer, 'top');
                 }
             }
             
@@ -10536,16 +10165,12 @@ async function cleanTop10FromRemovedNotes() {
             for (let i = 0; i < top10.length; i++) {
                 if (top10[i]) {
                     const animeId = top10[i].id;
-                    const itemContentType = normalizeTypeValue(top10[i].contentType || type || 'anime');
                     
-                    // Vérifier si une note existe avec le même ID ET le même contentType
-                    const noteExists = notes.some(note =>
-                        String(note.id) === String(animeId) && 
-                        normalizeTypeValue(note.contentType) === itemContentType
-                    );
+                    // Vérifier si une note existe avec le même ID (contentType peut varier)
+                    const noteExists = notes.some(note => String(note.id) === String(animeId));
                     
                     if (!noteExists) {
-                        console.log(`Suppression de ${top10[i].titre || top10[i].title || top10[i].name || animeId} (${itemContentType}) du top 10 (type: ${type}, genre: ${genre})`);
+                        console.log(`Suppression de ${top10[i].titre || top10[i].title || top10[i].name || animeId} du top 10 (type: ${type}, genre: ${genre})`);
                         top10[i] = null;
                         hasChanges = true;
                     }
@@ -12592,481 +12217,14 @@ async function refreshAllCardMoreButtons(force = false) {
         }
         
         if (user && user.email) {
-            if (isInGenreContainer) {
-                // Dans les conteneurs de genre : vérifier le top 10 du genre spécifique + type réel
-                const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-                const genre = genres.length > 0 ? genres.sort().join(',') : null;
-                let type = window.selectedType || null;
-                
-                // Si un genre "type" est sélectionné (Doujin, Manhwa, Manhua), utiliser le type réel
-                if (type === 'manga') {
-                    const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
-                    if (genres.some(g => typeGenres.includes(g))) {
-                        if (genres.includes('Doujin')) {
-                            type = 'doujin';
-                        } else if (genres.includes('Manhwa')) {
-                            type = 'manhwa';
-                        } else if (genres.includes('Manhua')) {
-                            type = 'manhua';
-                        }
-                    }
-                }
-                
-                // Si cardContentType n'a pas été trouvé dans les notes, utiliser le type sélectionné
-                if (!cardContentType) {
-                    if (type === 'anime') {
-                        cardContentType = 'anime';
-                    } else if (type === 'manga') {
-                        cardContentType = 'manga';
-                    } else if (type === 'film') {
-                        cardContentType = 'film';
-                    }
-                }
-                
-                const genreTop10 = await getUserTop10(user, genre, type);
-                const isInGenreTop10 = genreTop10.some(a => {
-                    if (!a) return false;
-                    // Comparaison par ID d'abord
-                    if (String(a.id) === String(animeId)) return true;
-                    // Pour les animes ET mangas, comparer aussi par titre de base et similarité
-                    if ((type === 'anime' || type === 'manga') && 
-                        (a.contentType === type || !a.contentType) && 
-                        cardContentType === type) {
-                        const contentTypeForExtraction = type; // 'anime' ou 'manga'
-                        const top10Title = a.titre || a.title || a.name || '';
-                        let cardTitleForComparison = cardTitle || '';
-                        
-                        // Vérifier si l'un des deux titres appartient à une série avec plusieurs saisons
-                        const isSeriesTop10 = isSeriesWithMultipleSeasons(top10Title);
-                        let isSeriesCard = isSeriesWithMultipleSeasons(cardTitleForComparison);
-                        
-                        // Vérification supplémentaire : si le titre extrait du DOM ne correspond pas à une série avec saisons,
-                        // vérifier si l'ID de la carte correspond à un titre de série avec saisons dans les notes
-                        if (!isSeriesCard && isSeriesTop10 && user && user.email) {
-                            const notes = JSON.parse(localStorage.getItem('user_content_notes_' + user.email) || '[]');
-                            const noteForCard = notes.find(n => String(n.id) === String(animeId));
-                            if (noteForCard) {
-                                const noteTitle = noteForCard.titre || noteForCard.title || noteForCard.name || '';
-                                if (isSeriesWithMultipleSeasons(noteTitle)) {
-                                    // Utiliser le titre depuis les notes au lieu du titre extrait du DOM
-                                    cardTitleForComparison = noteTitle;
-                                    isSeriesCard = true;
-                                    console.log(`✅ [BUTTON SERIES FIX GENRE] Titre corrigé depuis les notes pour animeId=${animeId}: "${cardTitleForComparison}" (était: "${cardTitle}"), type=${contentTypeForExtraction}`);
-                                }
-                            }
-                        }
-                        
-                        const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
-                        const cardBaseTitle = extractBaseAnimeTitle(cardTitleForComparison, contentTypeForExtraction);
-                        // Si les titres de base correspondent exactement, masquer le bouton
-                        if (top10BaseTitle === cardBaseTitle && top10BaseTitle) {
-                            return true;
-                        }
-                        // Si les titres sont similaires (même série sans indication explicite de saison), masquer le bouton
-                        if (areAnimeTitlesSimilar(top10Title, cardTitleForComparison, contentTypeForExtraction)) {
-                            return true;
-                        }
-                        
-                        // Vérification supplémentaire pour les séries avec saisons : comparer les préfixes
-                        if (isSeriesTop10 || isSeriesCard) {
-                            const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                            const normalizedCardBase = (cardBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ');
-                            const prefixLength = Math.min(15, Math.min(normalizedTop10Base.length, normalizedCardBase.length));
-                            if (prefixLength >= 15) {
-                                const top10Prefix = normalizedTop10Base.substring(0, prefixLength);
-                                const cardPrefix = normalizedCardBase.substring(0, prefixLength);
-                                if (top10Prefix === cardPrefix) {
-                                    console.log(`✅ [BUTTON HIDE SERIES GENRE] Préfixes identiques (${contentTypeForExtraction}): "${top10Prefix}"`);
-                                    return true;
-                                }
-                            }
-                        }
-                    }
-                    return false;
-                });
-                shouldHideButton = isInGenreTop10;
-            } else if (isInStarContainer || isInGlobalTop10Slot) {
-                // Dans les conteneurs d'étoiles ou top 10 global : vérifier le top 10 global du type sélectionné
-                let type = window.selectedType || null;
-                
-                // Si le type est "manga" et qu'un genre "type" est sélectionné, vérifier le top 10 global du type réel
-                // MAIS seulement si on est dans les conteneurs d'étoiles, pas dans le top 10 global
-                if (!isInGlobalTop10Slot && type === 'manga') {
-                    const genres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-                    const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
-                    if (genres.some(g => typeGenres.includes(g))) {
-                        if (genres.includes('Doujin')) {
-                            type = 'doujin';
-                        } else if (genres.includes('Manhwa')) {
-                            type = 'manhwa';
-                        } else if (genres.includes('Manhua')) {
-                            type = 'manhua';
-                        }
-                    }
-                }
-                
-                // Utiliser le titre et contentType récupérés depuis les notes (définis en haut de la fonction)
-                // Si cardContentType n'a pas été trouvé dans les notes, utiliser le type sélectionné
-                if (!cardContentType) {
-                    if (type === 'anime') {
-                        cardContentType = 'anime';
-                    } else if (type === 'manga') {
-                        cardContentType = 'manga';
-                    } else if (type === 'film') {
-                        cardContentType = 'film';
-                    } else if (!type) {
-                        // Si aucun type n'est sélectionné, essayer de détecter le type
-                        // Par défaut, considérer comme anime si pas de contentType
-                        cardContentType = 'anime';
-                    }
-                }
-                
-                // Fallback final : si cardContentType n'est toujours pas défini et qu'on est dans un conteneur d'étoiles,
-                // vérifier si la carte a l'attribut data-is-manga ou la classe manga-card
-                if (!cardContentType && isInStarContainer) {
-                    const isMangaAttr = card.hasAttribute('data-is-manga') || card.classList.contains('manga-card');
-                    if (isMangaAttr) {
-                        cardContentType = 'manga';
-                    } else {
-                        // Par défaut, considérer comme anime si on ne peut pas déterminer
-                        cardContentType = type || 'anime';
-                    }
-                }
-                
-                // Si aucun type n'est sélectionné et que la carte est un anime, vérifier aussi le top 10 "anime"
-                let globalTop10 = await getUserTop10(user, null, type);
-                if (!type && cardContentType === 'anime') {
-                    // Vérifier aussi le top 10 "anime" spécifiquement pour les cartes anime
-                    const animeTop10 = await getUserTop10(user, null, 'anime');
-                    // Combiner les deux listes (en évitant les doublons)
-                    const combinedTop10 = [...globalTop10];
-                    animeTop10.forEach(item => {
-                        if (!combinedTop10.some(existing => String(existing?.id) === String(item?.id))) {
-                            combinedTop10.push(item);
-                        }
-                    });
-                    globalTop10 = combinedTop10;
-                }
-                
-                // Filtrer les valeurs null du Top 10
-                const validTop10Items = globalTop10.filter(a => a !== null && a !== undefined);
-                
-                const isInGlobalTop10Check = validTop10Items.some(a => {
-                    if (!a) return false;
-                    
-                    // Comparaison par ID d'abord (normaliser en string pour éviter les problèmes de type)
-                    const top10Id = String(a.id || '');
-                    const cardId = String(animeId || '');
-                    if (top10Id === cardId && top10Id !== '') {
-                        console.log(`✅ [BUTTON HIDE] Carte ${cardId} trouvée dans le top 10 par ID exact`);
-                        return true;
-                    }
-                    
-                    // IMPORTANT: Ne comparer par titre que si les deux éléments sont du MÊME type
-                    // Les films ont leur propre Top 10 et ne doivent pas être comparés avec les anime
-                    // Déterminer le top10ContentType : d'abord essayer contentType, puis utiliser type, sinon utiliser cardContentType
-                    let top10ContentTypeCheck = a.contentType || null;
-                    if (!top10ContentTypeCheck) {
-                        if (type === 'anime' || type === 'film') {
-                            top10ContentTypeCheck = type;
-                        } else if (!type && cardContentType) {
-                            // Si aucun type n'est sélectionné, utiliser le cardContentType pour déterminer
-                            top10ContentTypeCheck = cardContentType;
-                        }
-                    }
-                    
-                    // Si les types sont différents (ex: film vs anime), ne pas comparer par titre
-                    if (top10ContentTypeCheck && cardContentType && top10ContentTypeCheck !== cardContentType) {
-                        return false; // Types différents, ce n'est pas la même carte
-                    }
-                    
-                    if (top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentTypeCheck, type)) {
-                        return false;
-                    }
-                    
-                    // Pour les animes ET mangas, comparer aussi par titre de base et similarité
-                    // MAIS seulement si les deux sont du même type (anime/anime, manga/manga, pas de mélange)
-                    // IMPORTANT: Vérifier si cardContentType est 'anime' ou 'manga' et que top10ContentTypeCheck correspond
-                    if ((cardContentType === 'anime' || cardContentType === 'manga') && 
-                        (top10ContentTypeCheck === cardContentType || !top10ContentTypeCheck || top10ContentTypeCheck === cardContentType)) {
-                        const top10Title = a.titre || a.title || a.name || '';
-                        let cardTitleFromVar = cardTitle || '';
-                        
-                        // Si les titres sont vides, ne pas comparer
-                        if (!top10Title || !cardTitleFromVar) {
-                            // Continuer sans masquer
-                        } else {
-                            // Vérifier si l'un des deux titres appartient à une série avec plusieurs saisons
-                            const isSeriesTop10 = isSeriesWithMultipleSeasons(top10Title);
-                            let isSeriesCard = isSeriesWithMultipleSeasons(cardTitleFromVar);
-                            
-                            // Vérification supplémentaire : si le top 10 contient une série avec saisons,
-                            // vérifier si l'ID de la carte correspond à un ID connu de cette série dans TOUTES les notes
-                            if (!isSeriesCard && isSeriesTop10 && user && user.email) {
-                                const notes = JSON.parse(localStorage.getItem('user_content_notes_' + user.email) || '[]');
-                                
-                                // D'abord, vérifier la note avec le même ID
-                                const noteForCard = notes.find(n => String(n.id) === String(animeId));
-                                if (noteForCard) {
-                                    const noteTitle = noteForCard.titre || noteForCard.title || noteForCard.name || '';
-                                    if (isSeriesWithMultipleSeasons(noteTitle)) {
-                                        // Utiliser le titre depuis les notes au lieu du titre extrait du DOM
-                                        cardTitleFromVar = noteTitle;
-                                        isSeriesCard = true;
-                                        console.log(`✅ [BUTTON SERIES FIX] Titre corrigé depuis les notes (même ID) pour animeId=${animeId}: "${cardTitleFromVar}" (était: "${cardTitle}")`);
-                                    }
-                                }
-                                
-                                // Si toujours pas trouvé, vérifier si l'ID de la carte correspond à un ID d'une autre saison de la même série
-                                // en comparant le titre de base extrait du top 10 avec les titres de base des notes
-                                if (!isSeriesCard && noteForCard) {
-                                    const contentTypeForExtraction = cardContentType || 'anime';
-                                    const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
-                                    const noteTitle = noteForCard.titre || noteForCard.title || noteForCard.name || '';
-                                    const noteBaseTitle = extractBaseAnimeTitle(noteTitle, contentTypeForExtraction);
-                                    
-                                    // Comparer les titres de base normalisés
-                                    const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                    const normalizedNoteBase = (noteBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                    
-                                    // Si les titres de base correspondent (même série), masquer le bouton
-                                    if (normalizedTop10Base && normalizedNoteBase && 
-                                        (normalizedTop10Base === normalizedNoteBase || 
-                                         normalizedTop10Base.startsWith(normalizedNoteBase) || 
-                                         normalizedNoteBase.startsWith(normalizedTop10Base))) {
-                                        // Utiliser le titre depuis les notes même si ce n'est pas une série avec saisons selon notre fonction
-                                        cardTitleFromVar = noteTitle;
-                                        isSeriesCard = true;
-                                        console.log(`✅ [BUTTON SERIES FIX] Titres de base correspondent pour animeId=${animeId}: top10Base="${top10BaseTitle}", noteBase="${noteBaseTitle}"`);
-                                    }
-                                }
-                                
-                                // Dernière vérification : chercher dans toutes les notes si un titre de base correspond
-                                if (!isSeriesCard) {
-                                    const contentTypeForExtraction = cardContentType || 'anime';
-                                    const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
-                                    const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                    
-                                    // Chercher une note avec le même ID dont le titre de base correspond à celui du top 10
-                                    const matchingNote = notes.find(n => {
-                                        if (String(n.id) !== String(animeId)) return false;
-                                        const noteTitle = n.titre || n.title || n.name || '';
-                                        const noteBaseTitle = extractBaseAnimeTitle(noteTitle, contentTypeForExtraction);
-                                        const normalizedNoteBase = (noteBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                        
-                                        return normalizedTop10Base && normalizedNoteBase && 
-                                               (normalizedTop10Base === normalizedNoteBase || 
-                                                normalizedTop10Base.length >= 15 && normalizedNoteBase.length >= 15 &&
-                                                (normalizedTop10Base.substring(0, 15) === normalizedNoteBase.substring(0, 15)));
-                                    });
-                                    
-                                    if (matchingNote) {
-                                        const noteTitle = matchingNote.titre || matchingNote.title || matchingNote.name || '';
-                                        cardTitleFromVar = noteTitle;
-                                        isSeriesCard = true;
-                                        console.log(`✅ [BUTTON SERIES FIX] Titre trouvé par comparaison de base pour animeId=${animeId}: "${cardTitleFromVar}"`);
-                                    }
-                                }
-                            }
-                            
-                            // Log de débogage pour toutes les cartes de séries avec saisons
-                            if (isSeriesTop10 || isSeriesCard) {
-                                console.log(`🔍 [BUTTON DEBUG SERIES] Comparaison pour animeId=${animeId}, top10Title="${top10Title}", cardTitle="${cardTitleFromVar}", cardContentType=${cardContentType}, top10ContentTypeCheck=${top10ContentTypeCheck}`);
-                            }
-                            
-                            // TOUJOURS extraire les titres de base pour la comparaison
-            // IMPORTANT: Si le top 10 contient une série avec saisons, TOUJOURS utiliser le titre depuis les notes
-            // pour améliorer la comparaison, AVANT d'extraire les titres de base
-            // Cela permet de détecter les autres saisons même si le titre de la carte est incorrect
-            if (isSeriesTop10 && user && user.email) {
-                const notes = JSON.parse(localStorage.getItem('user_content_notes_' + user.email) || '[]');
-                const noteForCard = notes.find(n => String(n.id) === String(animeId));
-                if (noteForCard) {
-                    const noteTitle = noteForCard.titre || noteForCard.title || noteForCard.name || '';
-                    if (noteTitle) {
-                        // Toujours utiliser le titre depuis les notes si le top 10 contient une série avec saisons
-                        const oldTitle = cardTitleFromVar;
-                        cardTitleFromVar = noteTitle;
-                        // Re-vérifier si c'est une série avec saisons maintenant qu'on a le bon titre
-                        isSeriesCard = isSeriesWithMultipleSeasons(noteTitle);
-                        console.log(`🔧 [BUTTON SERIES] Titre utilisé depuis les notes pour comparaison: animeId=${animeId}, oldTitle="${oldTitle}", newTitle="${noteTitle}", isSeriesCard=${isSeriesCard}`);
-                        
-                        // Log pour TOUS les IDs High School DxD et Shokugeki
-                        const seriesIds = ['24703', '15451', '34281', '32282', '28171', '36949', '43608'];
-                        if (seriesIds.includes(String(animeId))) {
-                            console.log(`🔍 [BUTTON SERIES DEBUG] ID=${animeId}, top10Title="${top10Title}", noteTitle="${noteTitle}", isSeriesTop10=${isSeriesTop10}, isSeriesCard=${isSeriesCard}`);
-                        }
-                    } else {
-                        console.log(`⚠️ [BUTTON SERIES] Note trouvée pour animeId=${animeId} mais titre vide`);
-                    }
-                } else {
-                    // Log pour déboguer si la note n'est pas trouvée - pour TOUS les IDs de séries
-                    const seriesIds = ['24703', '15451', '34281', '32282', '28171', '36949'];
-                    if (seriesIds.includes(String(animeId))) {
-                        console.log(`⚠️ [BUTTON SERIES DEBUG] Note NON trouvée pour animeId=${animeId} dans localStorage. Nombre total de notes: ${notes.length}`);
-                        console.log(`⚠️ [BUTTON SERIES DEBUG] IDs disponibles:`, notes.map(n => ({ id: n.id, titre: n.titre || n.title || n.name })));
-                    }
-                }
-            }
-            
-            // Log pour TOUS les IDs High School DxD et Shokugeki même si isSeriesTop10 est false
-            const seriesIds = ['24703', '15451', '34281', '32282', '28171', '36949'];
-            if (seriesIds.includes(String(animeId))) {
-                console.log(`🔍 [BUTTON SERIES ALL] ID=${animeId}, cardTitle="${cardTitleFromVar}", isSeriesTop10=${isSeriesTop10}, top10Title="${top10Title || 'N/A'}"`);
-            }
-                            
-                            // TOUJOURS extraire les titres de base pour la comparaison
-                            // Utiliser le contentType approprié (anime ou manga)
-                            const contentTypeForExtraction = cardContentType || 'anime';
-                            const top10BaseTitle = extractBaseAnimeTitle(top10Title, contentTypeForExtraction);
-                            let cardBaseTitle = extractBaseAnimeTitle(cardTitleFromVar, contentTypeForExtraction);
-                            
-                            // Log pour les séries avec saisons : afficher les titres de base extraits
-                            if (isSeriesTop10 || isSeriesCard) {
-                                console.log(`🔍 [BUTTON DEBUG SERIES] Titres de base extraits - top10BaseTitle="${top10BaseTitle}", cardBaseTitle="${cardBaseTitle}"`);
-                            }
-                            
-                            // Si le top 10 contient une série avec saisons, TOUJOURS comparer les titres de base
-                            // même si la carte n'est pas détectée comme une série avec saisons
-                            if (isSeriesTop10 || (top10BaseTitle && cardBaseTitle)) {
-                                // Normaliser les titres pour la comparaison (minuscules, sans espaces multiples)
-                                const normalizedTop10Base = (top10BaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                const normalizedCardBase = (cardBaseTitle || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                
-                                // Si les titres de base correspondent exactement, masquer le bouton
-                                if (normalizedTop10Base && normalizedCardBase && 
-                                    normalizedTop10Base === normalizedCardBase && normalizedTop10Base.length > 0) {
-                                    console.log(`✅ [BUTTON HIDE] Titres de base identiques: "${top10BaseTitle}" === "${cardBaseTitle}"`);
-                                    return true;
-                                } else if (isSeriesTop10 || isSeriesCard) {
-                                    console.log(`🔍 [BUTTON DEBUG SERIES] Titres de base différents: "${top10BaseTitle}" vs "${cardBaseTitle}" (normalisés: "${normalizedTop10Base}" vs "${normalizedCardBase}")`);
-                                    
-                                    // Pour les séries avec saisons, vérifier aussi si les préfixes correspondent
-                                    // Déterminer la longueur minimale selon la série
-                                    let minPrefixLength;
-                                    if (normalizedTop10Base.includes('high school dxd') || normalizedCardBase.includes('high school dxd')) {
-                                        // Pour High School DxD, utiliser 18 caractères minimum
-                                        minPrefixLength = 18;
-                                    } else {
-                                        // Pour Shokugeki no Souma, utiliser 15 caractères minimum
-                                        minPrefixLength = 15;
-                                    }
-                                    
-                                    const prefixLength = Math.min(minPrefixLength, Math.min(normalizedTop10Base.length, normalizedCardBase.length));
-                                    if (prefixLength >= minPrefixLength) {
-                                        const top10Prefix = normalizedTop10Base.substring(0, prefixLength);
-                                        const cardPrefix = normalizedCardBase.substring(0, prefixLength);
-                                        if (top10Prefix === cardPrefix) {
-                                            console.log(`✅ [BUTTON HIDE SERIES] Préfixes identiques détectés: "${top10Prefix}"`);
-                                            return true;
-                                        } else if (isSeriesTop10 || isSeriesCard) {
-                                            console.log(`🔍 [BUTTON DEBUG SERIES] Préfixes différents: "${top10Prefix}" vs "${cardPrefix}"`);
-                                        }
-                                    }
-                                }
-                            } else if (isSeriesTop10 || isSeriesCard) {
-                                console.log(`⚠️ [BUTTON DEBUG SERIES] Titres de base manquants: top10BaseTitle=${!!top10BaseTitle}, cardBaseTitle=${!!cardBaseTitle}`);
-                            }
-                            
-                            // Si les titres sont similaires (même série sans indication explicite de saison), masquer le bouton
-                            if (areAnimeTitlesSimilar(top10Title, cardTitleFromVar, contentTypeForExtraction)) {
-                                console.log(`✅ [BUTTON HIDE] Cartes similaires détectées via areAnimeTitlesSimilar (${contentTypeForExtraction}): "${top10Title}" vs "${cardTitleFromVar}"`);
-                                return true;
-                            } else if (isSeriesTop10 || isSeriesCard) {
-                                // Log spécifique pour les séries si la comparaison échoue
-                                console.log(`🔍 [BUTTON DEBUG SERIES] areAnimeTitlesSimilar retourné false pour: "${top10Title}" vs "${cardTitleFromVar}"`);
-                                console.log(`🔍 [BUTTON DEBUG SERIES] Titres de base: "${top10BaseTitle}" vs "${cardBaseTitle}"`);
-                            }
-                            
-                            // IMPORTANT: Si le top 10 contient une série avec saisons, TOUJOURS comparer les titres bruts par préfixe
-                            // même si la carte n'est pas détectée comme une série avec saisons
-                            // Cela permet de détecter les autres saisons même si le titre de la carte est incorrect
-                            if (isSeriesTop10) {
-                                // Toujours utiliser le titre depuis les notes si disponible pour améliorer la comparaison
-                                if (user && user.email && !isSeriesCard) {
-                                    const notes = JSON.parse(localStorage.getItem('user_content_notes_' + user.email) || '[]');
-                                    const noteForCard = notes.find(n => String(n.id) === String(animeId));
-                                    if (noteForCard) {
-                                        const noteTitle = noteForCard.titre || noteForCard.title || noteForCard.name || '';
-                                        if (noteTitle) {
-                                            cardTitleFromVar = noteTitle;
-                                        }
-                                    }
-                                }
-                                
-                                const normalizedTop10Raw = top10Title.toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                const normalizedCardRaw = cardTitleFromVar.toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                
-                                // Si les titres normalisés correspondent (sans tenir compte de la casse et des espaces)
-                                if (normalizedTop10Raw.length > 5 && normalizedCardRaw.length > 5) {
-                                    // Déterminer la longueur du préfixe selon la série
-                                    let prefixLength;
-                                    if (normalizedTop10Raw.includes('high school dxd')) {
-                                        // Pour High School DxD, utiliser 18 caractères pour capturer "high school dxd"
-                                        prefixLength = Math.min(18, Math.min(normalizedTop10Raw.length, normalizedCardRaw.length));
-                                    } else {
-                                        // Pour Shokugeki no Souma, comparer les 15 premiers caractères
-                                        prefixLength = Math.min(15, Math.min(normalizedTop10Raw.length, normalizedCardRaw.length));
-                                    }
-                                    
-                                    const top10Prefix = normalizedTop10Raw.substring(0, prefixLength);
-                                    const cardPrefix = normalizedCardRaw.substring(0, prefixLength);
-                                    
-                                    // Vérifier si un titre commence par l'autre (indique une série avec saison/partie)
-                                    // OU si les préfixes correspondent (même série)
-                                    if (normalizedTop10Raw.startsWith(cardPrefix) || 
-                                        normalizedCardRaw.startsWith(top10Prefix) ||
-                                        (prefixLength >= 15 && top10Prefix === cardPrefix)) {
-                                        console.log(`✅ [BUTTON HIDE SERIES] Préfixes similaires détectés dans titres bruts: "${top10Title}" vs "${cardTitleFromVar}" (préfixe: "${top10Prefix}" vs "${cardPrefix}")`);
-                                        return true;
-                                    } else {
-                                        console.log(`🔍 [BUTTON DEBUG SERIES] Préfixes bruts différents: "${top10Prefix}" vs "${cardPrefix}"`);
-                                    }
-                                }
-                            } else if (isSeriesCard) {
-                                // Si seule la carte est une série avec saisons (mais pas le top 10), faire une comparaison normale
-                                const normalizedTop10Raw = top10Title.toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                const normalizedCardRaw = cardTitleFromVar.toLowerCase().trim().replace(/\s+/g, ' ').replace(/×/g, 'x');
-                                
-                                if (normalizedTop10Raw.length > 5 && normalizedCardRaw.length > 5) {
-                                    let prefixLength;
-                                    if (normalizedCardRaw.includes('high school dxd')) {
-                                        prefixLength = Math.min(18, Math.min(normalizedTop10Raw.length, normalizedCardRaw.length));
-                                    } else {
-                                        prefixLength = Math.min(15, Math.min(normalizedTop10Raw.length, normalizedCardRaw.length));
-                                    }
-                                    
-                                    const top10Prefix = normalizedTop10Raw.substring(0, prefixLength);
-                                    const cardPrefix = normalizedCardRaw.substring(0, prefixLength);
-                                    
-                                    if (normalizedTop10Raw.startsWith(cardPrefix) || 
-                                        normalizedCardRaw.startsWith(top10Prefix) ||
-                                        (prefixLength >= 15 && top10Prefix === cardPrefix)) {
-                                        console.log(`✅ [BUTTON HIDE SERIES] Préfixes similaires détectés: "${top10Title}" vs "${cardTitleFromVar}"`);
-                                        return true;
-                                    }
-                                }
-                            }
-                        }
-                    } else if (animeId === '9253' || (cardTitle && (cardTitle.toLowerCase().includes('shokugeki') || cardTitle.toLowerCase().includes('steins')))) {
-                        // Log de débogage pour comprendre pourquoi la comparaison ne s'exécute pas
-                        console.log(`⚠️ [BUTTON DEBUG] Comparaison SKIPPÉE pour animeId=${animeId}, cardContentType=${cardContentType}, top10ContentTypeCheck=${top10ContentTypeCheck}, type=${type}`);
-                    }
-                    
-                    // Comparaison par titre exact (hors films : plusieurs films d'une même œuvre autorisés)
-                    if (top10Id !== cardId && cardTitle &&
-                        !top10ButtonHideUsesIdOnlyForFilms(cardContentType, top10ContentTypeCheck, type)) {
-                        const top10Title = a.titre || a.title || a.name || '';
-                        if (top10Title && cardTitle && top10Title.toLowerCase().trim() === cardTitle.toLowerCase().trim()) {
-                            return true;
-                        }
-                    }
-                    
-                    return false;
-                });
-                shouldHideButton = isInGlobalTop10Check;
-            }
+            const top10Ctx = await resolveTop10ContextForCard(card, user, cardContentType);
+            shouldHideButton = isCardInTop10ForButtonHide(top10Ctx.viewTop10, {
+                id: animeId,
+                title: cardTitle,
+                contentType: cardContentType
+            }, top10Ctx.contextType);
         }
+        
         const mainMoreBtn = card.querySelector('.card-more-btn, .more-button, .card-more-button');
         const mainMoreMenu = card.querySelector('.card-more-menu, .dropdown-menu');
         if (mainMoreBtn) {
@@ -14417,98 +13575,12 @@ async function showTop10MiniInterface() {
     
     // Vérifier si on est dans un conteneur de genre filtré ou dans le conteneur de recherche
     // (les cartes de recherche doivent être liées au Top 10 du genre/type sélectionné)
-    const isInGenreContainer = window.selectedTop10Card && (
-        window.selectedTop10Card.closest('#genre-filtered-container') || 
-        window.selectedTop10Card.closest('#genre-cards-container') ||
-        window.selectedTop10Card.closest('#search-results-container') ||
-        window.selectedTop10Card.closest('#search-cards-container')
-    );
+    const isInGenreContainer = window.selectedTop10Card && isCardInTop10ContextContainer(window.selectedTop10Card);
     
-    // Récupérer les genres depuis le contexte ou les genres sélectionnés
-    // MAIS seulement si on est vraiment dans un conteneur de genre
-    let genreArray = [];
-    if (window.top10Context && window.top10Context.isGenreContext && window.top10Context.genre) {
-        genreArray = Array.isArray(window.top10Context.genre) ? window.top10Context.genre : [window.top10Context.genre];
-    } else if (isInGenreContainer) {
-        // Seulement utiliser window.selectedGenres si on est dans un conteneur de genre
-        genreArray = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-    } else {
-        // Pour le top 10 global, ne pas utiliser de genres
-        genreArray = [];
-    }
-    
-    // Pour le top 10 global, genre doit être null
-    const genre = genreArray.length > 0 ? genreArray.sort().join(',') : null;
-    const type = (window.top10Context && window.top10Context.isGenreContext) ? window.top10Context.type : (window.selectedType || null);
-    
-    // Log désactivé pour éviter les logs infinis
-    // Log désactivé pour éviter les logs infinis
-    // Log désactivé pour éviter les logs infinis
-    
-    // Détecter le type réel de la carte sélectionnée
-    let realType = null;
-    if (window.selectedTop10Card && window.selectedTop10Card.dataset && window.selectedTop10Card.dataset.contentType) {
-        realType = window.selectedTop10Card.dataset.contentType;
-    } else if (window.selectedTop10Card) {
-        const cardTitle = window.selectedTop10Card.querySelector('.card-title')?.textContent || '';
-        const cardGenres = window.selectedTop10Card.querySelector('.card-genres')?.textContent || '';
-        const isDoujin = cardTitle.toLowerCase().includes('doujin') || 
-                        cardTitle.toLowerCase().includes('totally captivated') ||
-                        cardTitle.toLowerCase().includes('hentai') ||
-                        cardGenres.toLowerCase().includes('erotica') ||
-                        cardGenres.toLowerCase().includes('adult');
-        
-        const isRoman = cardTitle.toLowerCase().includes('roman') || 
-                       cardTitle.toLowerCase().includes('novel');
-        
-        const isManhwa = cardTitle.toLowerCase().includes('manhwa') ||
-                        cardTitle.toLowerCase().includes('on the way to meet mom') ||
-                        cardTitle.toLowerCase().includes('solo leveling') ||
-                        cardTitle.toLowerCase().includes('tower of god') ||
-                        cardTitle.toLowerCase().includes('noblesse') ||
-                        cardTitle.toLowerCase().includes('the beginning after the end');
-        
-        const isManhua = cardTitle.toLowerCase().includes('manhua');
-        
-        const isFilm = cardTitle.toLowerCase().includes('film') ||
-                      cardTitle.toLowerCase().includes('movie');
-        
-        if (isDoujin) {
-            realType = 'doujin';
-        } else if (isRoman) {
-            realType = 'roman';
-        } else if (isManhwa) {
-            realType = 'manhwa';
-        } else if (isManhua) {
-            realType = 'manhua';
-        } else if (isFilm) {
-            realType = 'film';
-        }
-    }
-    
-    // Utiliser la MÊME logique que lors de la sauvegarde pour déterminer finalType
-    // Si un genre "type" est sélectionné et que le type est 'manga', utiliser le type réel
-    const typeGenres = ['Doujin', 'Manhwa', 'Manhua'];
-    let finalType = realType || type || 'anime';
-    
-    if (type === 'manga' && genreArray.some(g => typeGenres.includes(g))) {
-        if (genreArray.includes('Doujin')) {
-            finalType = 'doujin';
-        } else if (genreArray.includes('Manhwa')) {
-            finalType = 'manhwa';
-        } else if (genreArray.includes('Manhua')) {
-            finalType = 'manhua';
-        }
-    } else if (!realType) {
-        finalType = type || 'anime';
-    } else {
-        finalType = realType;
-    }
-    
-    // Log désactivé pour éviter les logs infinis
-    // Log désactivé pour éviter les logs infinis
-    // Log désactivé pour éviter les logs infinis
-    // Log désactivé pour éviter les logs infinis
+    // Utiliser le même scope genre/type que renderTop10Slots (évite sauvegarde dans le mauvais top 10)
+    const viewScope = resolveTop10ViewScope();
+    const genre = viewScope.genre;
+    const finalType = viewScope.type;
     
     let top10 = await getUserTop10(user, genre, finalType) || [];
     // Log désactivé pour éviter les logs infinis
@@ -15025,100 +14097,12 @@ async function showTop10MiniInterface() {
                 
             }
             
-            // Vérifier si on est dans un conteneur de genre filtré
-            const isInGenreContainer = window.selectedTop10Card && (
-                window.selectedTop10Card.closest('#genre-filtered-container') || 
-                window.selectedTop10Card.closest('#genre-cards-container')
-            );
-            
-            // Déterminer le type réel de l'élément AVANT de charger le top 10
-            // Utiliser la fonction de validation pour corriger le contentType si nécessaire
-            const itemTitle = item.titre || item.title || item.name || '';
-            const validatedContentType = validateAndCorrectContentType(
-                item.contentType, 
-                itemTitle, 
-                window.selectedType, 
-                isManga
-            );
-            
-            let itemRealType = null;
-            
-            // Utiliser TOUJOURS le type réel validé de la carte pour éviter le mélange des top 10
-            itemRealType = validatedContentType || item.contentType || window.selectedType || 'anime';
-            
-            console.log('🔍 Type déterminé - isInGenreContainer:', isInGenreContainer, 'item.contentType:', item.contentType, 'window.selectedType:', window.selectedType, 'itemRealType:', itemRealType);
-            
-            // Déterminer le genre et le type pour charger le bon top 10
-            let loadGenre = null;
-            let loadType = null;
-            
-            if (window.top10Context.isGenreContext && window.top10Context.genre) {
-                const contextGenres = Array.isArray(window.top10Context.genre) ? window.top10Context.genre : [window.top10Context.genre];
-                loadGenre = contextGenres.length > 0 ? contextGenres.sort().join(',') : null;
-                loadType = window.top10Context.type || itemRealType;
-            } else if (isInGenreContainer) {
-                const selectedGenres = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-                loadGenre = selectedGenres.length > 0 ? selectedGenres.sort().join(',') : null;
-                loadType = window.selectedType || itemRealType;
-            } else {
-                // Pour le top 10 global, genre = null, utiliser le type sélectionné
-                loadGenre = null;
-                loadType = itemRealType; // itemRealType est déjà window.selectedType pour le top 10 global
-            }
-            
-            console.log('🔍 Chargement du top 10, genre:', loadGenre, 'type:', loadType, 'itemRealType:', itemRealType);
-            
-            // Si on est dans un contexte de genre avec un genre "type" (Doujin, Manhwa, Manhua)
-            // ET que le type sélectionné est 'manga', alors utiliser le type réel correspondant au genre
-            let itemFinalType = itemRealType;
-            
-            // Récupérer le genre depuis le contexte ou depuis window.selectedGenres
-            // MAIS seulement si on est vraiment dans un conteneur de genre
-            let itemGenreArray = [];
-            if (window.top10Context.isGenreContext && window.top10Context.genre) {
-                itemGenreArray = Array.isArray(window.top10Context.genre) ? window.top10Context.genre : [window.top10Context.genre];
-            } else if (isInGenreContainer) {
-                // Seulement utiliser window.selectedGenres si on est dans un conteneur de genre
-                itemGenreArray = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-            } else {
-                // Pour le top 10 global, ne pas utiliser de genres
-                itemGenreArray = [];
-            }
-            
-            // Déterminer finalGenre de manière cohérente avec renderTop10Slots
-            // Pour le top 10 global (pas dans un conteneur de genre), finalGenre doit être null
-            let finalGenre = null;
-            if (window.top10Context.isGenreContext && window.top10Context.genre) {
-                const contextGenres = Array.isArray(window.top10Context.genre) ? window.top10Context.genre : [window.top10Context.genre];
-                finalGenre = contextGenres.length > 0 ? contextGenres.sort().join(',') : null;
-            } else if (isInGenreContainer) {
-                // Seulement utiliser window.selectedGenres si on est dans un conteneur de genre
-                const selectedGenresForKey = Array.isArray(window.selectedGenres) ? window.selectedGenres : [];
-                finalGenre = selectedGenresForKey.length > 0 ? selectedGenresForKey.sort().join(',') : null;
-            }
-            // Sinon, finalGenre reste null pour le top 10 global
-            
-            const itemTypeGenres = ['Doujin', 'Manhwa', 'Manhua'];
-            
-            // Si un genre "type" est sélectionné et que le type est 'manga', utiliser le type réel
-            if (window.selectedType === 'manga' && itemGenreArray.some(g => itemTypeGenres.includes(g))) {
-                if (itemGenreArray.includes('Doujin')) {
-                    itemFinalType = 'doujin';
-                } else if (itemGenreArray.includes('Manhwa')) {
-                    itemFinalType = 'manhwa';
-                } else if (itemGenreArray.includes('Manhua')) {
-                    itemFinalType = 'manhua';
-                }
-            } else if (!itemRealType) {
-                // Si pas de contentType dans l'élément, utiliser window.selectedType
-                itemFinalType = window.selectedType || 'anime';
-            } else {
-                // Utiliser le contentType réel de l'élément s'il existe
-                itemFinalType = itemRealType;
-            }
-            
-            // Sauvegarder via file d'attente (évite les conflits lors d'ajouts rapides)
+            // Aligner la sauvegarde sur le top 10 actuellement affiché
+            const placementScope = resolveTop10ViewScope();
+            const finalGenre = placementScope.genre;
+            const itemFinalType = placementScope.type;
             const placementItem = item;
+            placementItem.contentType = itemFinalType;
             const placementSlot = slotIndex;
             try {
                 if (grid) grid.style.pointerEvents = 'none';
@@ -15164,6 +14148,11 @@ async function showTop10MiniInterface() {
             
             // Fermer l'interface
             miniInterface.remove();
+            
+            isRenderingTop10 = false;
+            if (typeof renderTop10Slots === 'function') {
+                await renderTop10Slots();
+            }
             
             window.skipRefreshButtons = true;
             if (typeof refreshAllCardMoreButtons === 'function') {
