@@ -25,7 +25,8 @@ import {
   orderBy,
   limit,
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 import { storage } from './firebase-config.js';
@@ -1638,6 +1639,97 @@ export const profileRatingService = {
     }, { merge: true });
 
     return { average, count, sum, myScore: normalizedScore };
+  },
+
+  /**
+   * Ajuste la note moyenne affichée sur le profil (action admin).
+   * Recalcule sum pour rester cohérent avec count existant.
+   */
+  async adminSetAverage(profileEmail, newAverage) {
+    const profile = normalizeProfileEmail(profileEmail);
+    if (!profile) throw new Error('Email profil invalide');
+    const score = Math.max(1, Math.min(10, Math.round(Number(newAverage) * 10) / 10));
+    const statsRef = doc(db, COLLECTIONS.PROFILE_RATING_STATS, profile);
+    const statsSnap = await getDoc(statsRef);
+    let count = 1;
+    if (statsSnap.exists()) {
+      const d = statsSnap.data() || {};
+      count = Math.max(1, Number(d.count) || 1);
+    }
+    const sum = Math.round(score * count * 10) / 10;
+    const payload = {
+      profile_email: profile,
+      average: score,
+      count,
+      sum,
+      admin_adjusted: true,
+      updated_at: serverTimestamp()
+    };
+    await setDoc(statsRef, payload, { merge: true });
+    return { average: score, count, sum };
+  },
+
+  /**
+   * Ajoute plusieurs notes admin (votes synthétiques) pour faire remonter la moyenne.
+   * @param {string} profileEmail
+   * @param {number} quantity - nombre de notes à ajouter (1–1000)
+   * @param {number} score - note de chaque vote (1–10)
+   */
+  async adminAddVotes(profileEmail, quantity, score) {
+    const profile = normalizeProfileEmail(profileEmail);
+    if (!profile) throw new Error('Email profil invalide');
+
+    const qty = Math.max(1, Math.min(1000, Math.round(Number(quantity))));
+    const normalizedScore = Math.max(1, Math.min(10, Math.round(Number(score))));
+
+    const statsRef = doc(db, COLLECTIONS.PROFILE_RATING_STATS, profile);
+    const statsSnap = await getDoc(statsRef);
+    let prevSum = 0;
+    let prevCount = 0;
+    if (statsSnap.exists()) {
+      const d = statsSnap.data() || {};
+      prevSum = Number(d.sum) || 0;
+      prevCount = Number(d.count) || 0;
+    }
+
+    const baseTs = Date.now();
+    const voteWrites = [];
+    for (let i = 0; i < qty; i++) {
+      const voterId = `__admin_${baseTs}_${i}`;
+      voteWrites.push({
+        ref: doc(db, COLLECTIONS.PROFILE_RATING_VOTES, profileRatingVoteId(voterId, profile)),
+        data: {
+          voter_email: voterId,
+          profile_email: profile,
+          score: normalizedScore,
+          admin_vote: true,
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
+        }
+      });
+    }
+
+    const CHUNK = 450;
+    for (let start = 0; start < voteWrites.length; start += CHUNK) {
+      const batch = writeBatch(db);
+      voteWrites.slice(start, start + CHUNK).forEach(({ ref, data }) => batch.set(ref, data));
+      await batch.commit();
+    }
+
+    const newCount = prevCount + qty;
+    const newSum = prevSum + normalizedScore * qty;
+    const average = newCount > 0 ? Math.round((newSum / newCount) * 10) / 10 : 0;
+
+    await setDoc(statsRef, {
+      profile_email: profile,
+      sum: newSum,
+      count: newCount,
+      average,
+      admin_adjusted: true,
+      updated_at: serverTimestamp()
+    }, { merge: true });
+
+    return { average, count: newCount, sum: newSum, added: qty, score: normalizedScore };
   }
 };
 

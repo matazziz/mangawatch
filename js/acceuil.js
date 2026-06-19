@@ -2,6 +2,7 @@
 // Script dédié à la page d'accueil (acceuil.html)
 
 import { syncCurrentUserProfileToFirestore, syncProfileToFirestore } from './auth.js';
+import { launchPostSignupMediaFlow } from './post-signup-media.js';
 
 // === FONCTIONS POUR MODALS D'ERREUR ET DE SUCCÈS ===
 
@@ -332,7 +333,6 @@ function setupAuthPopupOnInteraction() {
             '#searchForm',
             '.nav-links a',
             '.mobile-menu a',
-            '.avatar-link',
             '.search-type-selector'
         ].join(', '));
     }
@@ -361,11 +361,21 @@ function setupAuthPopupOnInteraction() {
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('✅ DOMContentLoaded - Bienvenue sur la page d\'accueil !');
 
+    if (typeof syncHeaderAuthState === 'function') {
+        syncHeaderAuthState();
+    }
+
     // Charger l'avatar depuis Firestore et réappliquer (persistance après changement de page)
     function applyAvatarFromUser() {
+        if (localStorage.getItem('isLoggedIn') !== 'true') {
+            if (typeof syncHeaderAuthState === 'function') syncHeaderAuthState();
+            return;
+        }
         const u = JSON.parse(localStorage.getItem('user') || 'null');
         const url = u?.customAvatar || u?.avatar || u?.originalAvatar || u?.picture || (u?.email ? localStorage.getItem('avatar_' + u.email) : null);
-        if (url) {
+        if (url && typeof refreshHeaderAvatar === 'function') {
+            refreshHeaderAvatar();
+        } else if (url) {
             const img = document.getElementById('user-avatar');
             if (img) img.src = url;
         }
@@ -373,6 +383,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     applyAvatarFromUser();
     void (async function loadHeaderAvatarFromFirebase() {
         try {
+            if (localStorage.getItem('isLoggedIn') !== 'true') return;
             const user = JSON.parse(localStorage.getItem('user') || 'null');
             if (user && user.email) {
                 const { avatarService } = await import('./firebase-service.js?v=6febe22');
@@ -451,6 +462,10 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         isPopupOpening = true;
         console.log('🔓 Ouverture du popup...');
+
+        if (typeof syncHeaderAuthState === 'function') {
+            syncHeaderAuthState();
+        }
         
         // Fond semi-transparent avec effet de particules
         const overlay = document.createElement('div');
@@ -1770,7 +1785,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                         name: username,
                         username: username,
                         email: email,
-                        picture: 'https://via.placeholder.com/150',
                         langue: langue,
                         country: country,
                         isMinor: isMinor,
@@ -1792,24 +1806,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     await syncProfileToFirestore(email, user);
                     console.log('✅ Profil synchronisé sur Firestore');
                     
-                    // Ajouter le nouvel utilisateur à la liste avec un avatar aléatoire
                     addNewUser(username);
                     
-                    // Fermer le popup d'authentification
-                    closeAuthPopup();
+                    await launchPostSignupMediaFlow(username);
                     
-                    // Afficher le modal de succès
-                    showAuthSuccessModal('Inscription réussie ! Bienvenue ' + username + ' !');
-                    
-                    // Recharger les sections dynamiques immédiatement
-                    setTimeout(async () => {
+                    setTimeout(async function () {
                         await reloadDynamicSections();
-                    }, 500);
-                    
-                    // Recharger la page après un court délai pour laisser voir le message
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                    }, 300);
                 });
             }
 

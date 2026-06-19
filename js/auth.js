@@ -1,4 +1,5 @@
 import { importFirebaseService } from './firebase-import.js';
+import { launchPostSignupMediaFlow } from './post-signup-media.js';
 
 /** Publie le profil dans Firestore pour que les autres utilisateurs puissent le voir. */
 export async function syncProfileToFirestore(email, profileData) {
@@ -494,7 +495,17 @@ function updateUI(profile) {
             userName.textContent = profile.name || profile.email;
         }
         if (userAvatar) {
-            userAvatar.src = profile.picture || 'https://via.placeholder.com/150';
+            if (typeof refreshHeaderAvatar === 'function') {
+                refreshHeaderAvatar();
+            } else {
+                const avatarUrl = profile.customAvatar || profile.avatar || profile.picture || '';
+                if (avatarUrl) {
+                    userAvatar.src = avatarUrl;
+                } else {
+                    userAvatar.removeAttribute('src');
+                    userAvatar.src = '';
+                }
+            }
         }
 
         // Afficher le bouton Google en mode connexion
@@ -909,7 +920,6 @@ function showGoogleSignUpCompletionForm(googleUser) {
             name: pseudo,
             username: pseudo,
             email: googleUser.email,
-            picture: googleUser.photoURL || 'https://via.placeholder.com/150',
             uid: googleUser.uid,
             provider: 'google',
             langue: langue,
@@ -927,25 +937,15 @@ function showGoogleSignUpCompletionForm(googleUser) {
 
         await syncProfileToFirestore(googleUser.email, userData);
         
-        // Fermer le popup
         closeGoogleSignUpCompletion();
         
-        // Afficher le message de succès
-        if (typeof showAuthSuccessModal === 'function') {
-            showAuthSuccessModal('Inscription réussie ! Bienvenue ' + pseudo + ' !');
-        }
+        await launchPostSignupMediaFlow(pseudo);
         
-        // Recharger les sections dynamiques immédiatement
         if (typeof window.reloadDynamicSections === 'function') {
-            setTimeout(async () => {
+            setTimeout(async function () {
                 await window.reloadDynamicSections();
-            }, 500);
+            }, 300);
         }
-        
-        // Recharger la page
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
     });
 }
 
@@ -987,6 +987,7 @@ if (typeof window !== 'undefined') {
     window.handleFirebaseGoogleSignIn = handleFirebaseGoogleSignIn;
     window.handleFirebaseGoogleSignUp = handleFirebaseGoogleSignUp;
     window.handleLogout = handleLogout;
+    window.closeGoogleSignUpCompletion = closeGoogleSignUpCompletion;
     window.closeGoogleSignUpCompletion = closeGoogleSignUpCompletion;
     window.goBackFromGoogleSignupCompletionForm = goBackFromGoogleSignupCompletionForm;
 }

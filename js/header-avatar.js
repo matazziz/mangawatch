@@ -1,7 +1,10 @@
 /**
  * Avatar header — résolution unifiée et affichage #user-avatar / #profile-avatar.
+ * Masque l'avatar tant que l'utilisateur n'est pas connecté ou n'a pas d'image.
  */
 (function(global) {
+    var HEADER_AVATAR_INIT = false;
+
     function upgradeProfileAvatarUrl(url) {
         if (!url || typeof url !== 'string') return url;
         if (url.indexOf('data:') === 0 || url.indexOf('blob:') === 0) return url;
@@ -28,7 +31,64 @@
         return String(email || '').trim().toLowerCase();
     }
 
+    function isUserLoggedIn() {
+        try {
+            if (global.localStorage.getItem('isLoggedIn') !== 'true') return false;
+            var user = JSON.parse(global.localStorage.getItem('user') || 'null');
+            return !!(user && user.email);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function getAvatarLinkEl() {
+        var el = global.document.getElementById('user-avatar');
+        return (el && el.closest('.avatar-link')) || global.document.querySelector('.avatar-link');
+    }
+
+    function clearHeaderAvatarImage() {
+        var el = global.document.getElementById('user-avatar');
+        if (!el) return;
+        el.onerror = null;
+        el.onload = null;
+        el.removeAttribute('src');
+        el.src = '';
+        el.alt = '';
+        delete el.dataset.mwAvatarSrc;
+        delete el.dataset.mwAvatarRetried;
+    }
+
+    function setAvatarLinkVisible(visible) {
+        var links = global.document.querySelectorAll('.main-header .avatar-link, header .avatar-link, .avatar-link');
+        if (!links.length) {
+            var single = getAvatarLinkEl();
+            if (single) links = [single];
+        }
+        for (var i = 0; i < links.length; i++) {
+            var link = links[i];
+            link.classList.toggle('is-auth-visible', !!visible);
+            link.classList.toggle('is-guest-hidden', !visible);
+        }
+    }
+
+    function ensureGuestAvatarHidden() {
+        if (isUserLoggedIn()) return;
+        setAvatarLinkVisible(false);
+        clearHeaderAvatarImage();
+    }
+
+    function syncHeaderAuthState() {
+        if (!isUserLoggedIn()) {
+            setAvatarLinkVisible(false);
+            clearHeaderAvatarImage();
+            return false;
+        }
+        return true;
+    }
+
     function resolveProfileAvatarUrl(userOrEmail) {
+        if (!isUserLoggedIn()) return '';
+
         var user = null;
         var email = '';
 
@@ -74,7 +134,7 @@
     function isPlaceholderAvatarSrc(src) {
         if (!src) return true;
         if (src === global.location.href) return true;
-        return /\/images\/logo\.png/i.test(src) || /placeholder/i.test(src);
+        return /\/images\/(logo|default-avatar)\.png/i.test(src) || /placeholder/i.test(src);
     }
 
     function shouldPreserveLivePreview(imgEl) {
@@ -105,6 +165,8 @@
         el.onerror = function() {
             if (this.dataset.mwAvatarRetried === '1') {
                 this.onerror = null;
+                setAvatarLinkVisible(false);
+                clearHeaderAvatarImage();
                 return;
             }
             this.dataset.mwAvatarRetried = '1';
@@ -120,24 +182,43 @@
     }
 
     function refreshHeaderAvatar(opts) {
+        if (!syncHeaderAuthState()) return '';
+
         var url = resolveProfileAvatarUrl();
-        if (!url) return '';
+        if (!url) {
+            setAvatarLinkVisible(false);
+            clearHeaderAvatarImage();
+            return '';
+        }
 
         var headerEl = global.document.getElementById('user-avatar');
         if (global.avatarSaveInProgress && headerEl && shouldPreserveLivePreview(headerEl)) {
+            setAvatarLinkVisible(true);
             return url;
         }
 
+        setAvatarLinkVisible(true);
         applyProfileAvatars(url, opts);
         return url;
     }
 
     function initHeaderAvatar() {
+        ensureGuestAvatarHidden();
+        if (HEADER_AVATAR_INIT) {
+            refreshHeaderAvatar();
+            return;
+        }
+        HEADER_AVATAR_INIT = true;
         refreshHeaderAvatar();
 
         var tries = 0;
         var timer = setInterval(function() {
             tries += 1;
+            if (!isUserLoggedIn()) {
+                syncHeaderAuthState();
+                if (tries >= 80) clearInterval(timer);
+                return;
+            }
             var el = global.document.getElementById('user-avatar');
             if (!el) {
                 if (tries >= 40) clearInterval(timer);
@@ -156,14 +237,22 @@
     global.resolveProfileAvatarUrl = resolveProfileAvatarUrl;
     global.applyProfileAvatars = applyProfileAvatars;
     global.refreshHeaderAvatar = refreshHeaderAvatar;
+    global.syncHeaderAuthState = syncHeaderAuthState;
+    global.isUserLoggedIn = isUserLoggedIn;
 
     global.addEventListener('profileAvatarUpdated', function(ev) {
         var url = ev && ev.detail && ev.detail.url;
         if (url) {
+            setAvatarLinkVisible(true);
             applyProfileAvatars(url, { cacheBust: true });
         } else {
             refreshHeaderAvatar({ cacheBust: true });
         }
+    });
+
+    global.addEventListener('storage', function(ev) {
+        if (!ev || (ev.key !== 'user' && ev.key !== 'isLoggedIn')) return;
+        refreshHeaderAvatar({ cacheBust: true });
     });
 
     var remoteAvatarSyncTimer = null;
@@ -171,7 +260,7 @@
         if (remoteAvatarSyncTimer) clearTimeout(remoteAvatarSyncTimer);
         remoteAvatarSyncTimer = setTimeout(function() {
             remoteAvatarSyncTimer = null;
-            if (global.avatarSaveInProgress) return;
+            if (global.avatarSaveInProgress || !isUserLoggedIn()) return;
             var user = null;
             try { user = JSON.parse(global.localStorage.getItem('user') || 'null'); } catch (e) { user = null; }
             if (!user || !user.email || typeof global.syncRemoteProfileMedia !== 'function') return;
@@ -184,10 +273,17 @@
     }
 
     global.document.addEventListener('visibilitychange', function() {
-        if (global.document.visibilityState === 'visible') scheduleRemoteAvatarSync();
+        if (global.document.visibilityState === 'visible') {
+            refreshHeaderAvatar();
+            scheduleRemoteAvatarSync();
+        }
     });
-    global.addEventListener('focus', scheduleRemoteAvatarSync);
+    global.addEventListener('focus', function() {
+        refreshHeaderAvatar();
+        scheduleRemoteAvatarSync();
+    });
     global.addEventListener('pageshow', function(ev) {
+        refreshHeaderAvatar();
         if (!ev || ev.persisted) scheduleRemoteAvatarSync();
     });
 
@@ -196,4 +292,7 @@
     } else {
         initHeaderAvatar();
     }
+
+    // Masquer immédiatement le cadre avatar si le script charge après le HTML
+    ensureGuestAvatarHidden();
 })(typeof window !== 'undefined' ? window : globalThis);

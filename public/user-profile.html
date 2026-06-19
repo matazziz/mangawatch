@@ -13,13 +13,13 @@
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.37">
     <link rel="stylesheet" href="/css/messaging.css">
-    <link rel="stylesheet" href="/css/list.css?v=20260604-cards9">
-    <link rel="stylesheet" href="/css/profile-rating.css?v=7">
+    <link rel="stylesheet" href="/css/list.css?v=20260618-filters">
+    <link rel="stylesheet" href="/css/profile-rating.css?v=8">
     <script src="/js/localization.js"></script>
     <!-- Import Firebase Service pour charger la bannière (image/vidéo) sur le profil public -->
     <script type="module">
         import { bannerService, profileSettingsService, syncRemoteProfileMedia, userReportService } from '/js/firebase-service.js?v=6febe25';
-        import { initProfileRatingUI, requestProfileRatingInit } from '/js/profile-rating-ui.js?v=6';
+        import { initProfileRatingUI, requestProfileRatingInit } from '/js/profile-rating-ui.js?v=7';
         import { firebaseNotesService, firebaseTop10Service } from '/js/firebaseNotesService.js';
         window.bannerService = bannerService;
         window.profileSettingsService = profileSettingsService;
@@ -1184,7 +1184,7 @@
       
       <!-- Avatar utilisateur -->
       <a href="profil.html" class="avatar-link">
-        <img id="user-avatar" src="/images/logo.png" alt="Avatar utilisateur" class="user-avatar" onerror="this.src='/images/logo.png'">
+        <img id="user-avatar" src="" alt="Avatar utilisateur" class="user-avatar" onerror="this.onerror=null;this.src='';">
       </a>
     </div>
   </header>
@@ -1463,7 +1463,7 @@
 
     <script src="/js/profile-anime-cards.js?v=2.23"></script>
     <script src="/js/banner-video-autoplay.js?v=1"></script>
-    <script src="/js/user-profile.js?v=2.22"></script>
+    <script src="/js/user-profile.js?v=2.23"></script>
     <script src="/js/search.js"></script>
     <script src="/js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>
@@ -1492,17 +1492,20 @@
                 searchInput.placeholder = placeholders[searchType.value] || 'Rechercher...';
             }
             
-            // Mettre à jour l'avatar de l'utilisateur connecté dans le header
-            const user = JSON.parse(localStorage.getItem('user') || 'null');
-            const userAvatar = document.getElementById('user-avatar');
-            
-            if (user && user.email && userAvatar) {
-                const avatarKey = 'avatar_' + user.email;
-                const storedAvatar = localStorage.getItem(avatarKey);
-                if (storedAvatar) {
-                    userAvatar.src = storedAvatar;
-                } else if (user.picture) {
-                    userAvatar.src = user.picture;
+            // Avatar header : masqué si non connecté ou sans image
+            if (typeof refreshHeaderAvatar === 'function') {
+                refreshHeaderAvatar();
+            } else {
+                const user = JSON.parse(localStorage.getItem('user') || 'null');
+                const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+                const userAvatar = document.getElementById('user-avatar');
+                const avatarLink = document.querySelector('.avatar-link');
+                if (!isLoggedIn || !user || !user.email) {
+                    if (avatarLink) avatarLink.classList.add('is-guest-hidden');
+                    if (userAvatar) {
+                        userAvatar.removeAttribute('src');
+                        userAvatar.src = '';
+                    }
                 }
             }
             

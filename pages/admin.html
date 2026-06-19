@@ -628,6 +628,83 @@
             display: flex;
             align-items: center;
             gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .admin-profile-rating {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.45rem;
+            padding: 0.5rem 0.7rem;
+            background: rgba(255, 193, 7, 0.08);
+            border: 1px solid rgba(255, 193, 7, 0.28);
+            border-radius: 10px;
+            max-width: 100%;
+        }
+
+        .admin-rating-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .admin-profile-rating label {
+            font-size: 0.8rem;
+            color: #ffc107;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        .admin-rating-current {
+            font-size: 0.85rem;
+            color: #ffe082;
+            font-weight: 700;
+        }
+
+        .admin-rating-count {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .admin-rating-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .admin-rating-select,
+        .admin-rating-qty {
+            padding: 0.35rem 0.5rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.35);
+            color: #f5f6fa;
+            font-size: 0.85rem;
+        }
+
+        .admin-rating-qty {
+            width: 4.2rem;
+            text-align: center;
+        }
+
+        .admin-rating-qty::-webkit-outer-spin-button,
+        .admin-rating-qty::-webkit-inner-spin-button {
+            opacity: 1;
+        }
+
+        .admin-rating-add {
+            padding: 0.45rem 0.75rem !important;
+            font-size: 0.82rem !important;
         }
         
         .verified-status {
@@ -2888,6 +2965,61 @@
             return false;
         }
         
+        window.__adminProfileRatings = window.__adminProfileRatings || {};
+
+        function escapeHtmlAttr(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;');
+        }
+
+        function formatAdminRatingDisplay(stats) {
+            const avg = stats && stats.average ? Number(stats.average) : 0;
+            if (!avg || avg <= 0) return '—';
+            return avg.toFixed(1).replace(/\.0$/, '');
+        }
+
+        function profileRatingControlHtml(email) {
+            const norm = String(email || '').trim().toLowerCase();
+            const stats = window.__adminProfileRatings[norm] || { average: 0, count: 0 };
+            const voteCount = Number(stats.count) || 0;
+            const options = Array.from({ length: 10 }, (_, i) => {
+                const n = i + 1;
+                return `<option value="${n}"${n === 10 ? ' selected' : ''}>${n}/10</option>`;
+            }).join('');
+            const countLabel = voteCount === 1 ? '1 note' : voteCount + ' notes';
+            return `
+                <div class="admin-profile-rating" data-user-email="${escapeHtmlAttr(email)}">
+                    <div class="admin-rating-summary">
+                        <label><i class="fas fa-star"></i> Profil</label>
+                        <span class="admin-rating-current">${formatAdminRatingDisplay(stats)}/10</span>
+                        <span class="admin-rating-count">(${countLabel})</span>
+                    </div>
+                    <div class="admin-rating-controls">
+                        <select class="admin-rating-select" aria-label="Note à ajouter">${options}</select>
+                        <input type="number" class="admin-rating-qty" min="1" max="1000" value="1" aria-label="Nombre de notes" title="Nombre de notes à ajouter">
+                        <button type="button" class="toggle-btn verify admin-rating-add">
+                            <i class="fas fa-plus"></i> Ajouter
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function refreshAdminProfileRatings(emails) {
+            const list = [...new Set((emails || []).map(e => String(e || '').trim().toLowerCase()).filter(Boolean))];
+            if (!list.length) return;
+            try {
+                const { profileRatingService } = await import('/js/firebase-service.js?v=6febe26');
+                if (!profileRatingService || typeof profileRatingService.getStatsBulk !== 'function') return;
+                const bulk = await profileRatingService.getStatsBulk(list);
+                Object.assign(window.__adminProfileRatings, bulk);
+            } catch (e) {
+                console.warn('[Admin] Chargement notes profil:', e);
+            }
+        }
+
         // Afficher les utilisateurs
         function displayUsers(users) {
             const usersList = document.getElementById('users-list');
@@ -2918,6 +3050,7 @@
                             </div>
                         </div>
                         <div class="user-actions">
+                            ${profileRatingControlHtml(user.email)}
                             <span class="verified-status ${isVerified ? 'verified' : 'not-verified'}">
                                 ${isVerified ? '<i class="fas fa-check-circle"></i> Certifié' : 'Non certifié'}
                             </span>
@@ -3086,9 +3219,10 @@
         }
         
         // Charger les utilisateurs
-        function loadUsers() {
+        async function loadUsers() {
             const searchTerm = document.getElementById('user-search-input').value;
             const filteredUsers = filterUsers(searchTerm);
+            await refreshAdminProfileRatings(filteredUsers.map(u => u.email));
             displayUsers(filteredUsers);
         }
         
@@ -4258,15 +4392,16 @@
             });
             
             // Afficher les utilisateurs pour la gestion
-            function loadUsersForManagement() {
+            async function loadUsersForManagement() {
                 const searchTerm = document.getElementById('users-management-search-input')?.value || '';
-                const allUsers = getAllUsers();
                 const filteredUsers = filterUsers(searchTerm);
                 const usersList = document.getElementById('users-management-list');
                 const bannedUsers = getBannedUsers();
                 const bannedEmails = bannedUsers.map(b => normalizeEmail(b.email));
                 
                 if (!usersList) return;
+
+                await refreshAdminProfileRatings(filteredUsers.map(u => u.email));
                 
                 if (filteredUsers.length === 0) {
                     usersList.innerHTML = `
@@ -4293,6 +4428,7 @@
                                 </div>
                             </div>
                             <div class="user-actions" style="display: flex; gap: 0.75rem; align-items: center;">
+                                ${profileRatingControlHtml(user.email)}
                                 ${isBanned ? `
                                     <button class="toggle-btn unverify" onclick="handleUnbanUser('${user.email}')" style="background: rgba(46, 204, 113, 0.2); border: 1px solid #2ecc71; color: #2ecc71;">
                                         <i class="fas fa-unlock"></i> Débannir
@@ -4908,6 +5044,49 @@
             const usersManagementSearchInput = document.getElementById('users-management-search-input');
             const usersManagementSearchClear = document.getElementById('users-management-search-clear');
             
+            document.addEventListener('click', async function (e) {
+                const btn = e.target.closest('.admin-rating-add');
+                if (!btn) return;
+                const wrap = btn.closest('.admin-profile-rating');
+                if (!wrap) return;
+                const email = wrap.getAttribute('data-user-email');
+                const select = wrap.querySelector('.admin-rating-select');
+                const qtyInput = wrap.querySelector('.admin-rating-qty');
+                const score = parseInt(select && select.value, 10);
+                const quantity = parseInt(qtyInput && qtyInput.value, 10);
+                if (!email || !score || score < 1 || score > 10) return;
+                if (!quantity || quantity < 1 || quantity > 1000) {
+                    alert('Indiquez entre 1 et 1000 notes à ajouter.');
+                    return;
+                }
+
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    const { profileRatingService } = await import('/js/firebase-service.js?v=6febe26');
+                    const result = await profileRatingService.adminAddVotes(email, quantity, score);
+                    const norm = email.trim().toLowerCase();
+                    window.__adminProfileRatings[norm] = result;
+                    const currentEl = wrap.querySelector('.admin-rating-current');
+                    const countEl = wrap.querySelector('.admin-rating-count');
+                    if (currentEl) currentEl.textContent = formatAdminRatingDisplay(result) + '/10';
+                    if (countEl) {
+                        const c = Number(result.count) || 0;
+                        countEl.textContent = '(' + (c === 1 ? '1 note' : c + ' notes') + ')';
+                    }
+                    btn.innerHTML = '<i class="fas fa-check"></i> +' + quantity;
+                    setTimeout(() => { btn.innerHTML = originalHtml; }, 1800);
+                } catch (err) {
+                    console.error('[Admin] Note profil:', err);
+                    alert('Impossible d\'ajouter les notes : ' + (err.message || err));
+                    btn.innerHTML = originalHtml;
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+
             if (usersManagementSearchInput && usersManagementSearchClear) {
                 usersManagementSearchInput.addEventListener('input', () => {
                     loadUsersForManagement();

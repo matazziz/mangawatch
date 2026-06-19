@@ -144,3 +144,17 @@ document.addEventListener('DOMContentLoaded', function() {
     setActiveLink();
     bindMenuLinkClose();
 });
+
+(function ensureHeaderAvatarScript() {
+    if (typeof window.refreshHeaderAvatar === 'function') {
+        if (typeof window.syncHeaderAuthState === 'function') {
+            window.syncHeaderAuthState();
+        }
+        window.refreshHeaderAvatar();
+        return;
+    }
+    var script = document.createElement('script');
+    script.src = '/js/header-avatar.js?v=5';
+    script.async = false;
+    document.head.appendChild(script);
+})();

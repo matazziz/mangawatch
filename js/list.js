@@ -1187,6 +1187,32 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateItemStatus(itemId, newStatus) {
         updateItemStatusWithStoppedAt(itemId, newStatus, null);
     }
+
+    // Sync depuis la page détails ou une autre page
+    window.addEventListener('mwCollectionUpdated', async (e) => {
+        const malId = String(e.detail?.malId || '').trim();
+        const newStatus = e.detail?.status;
+        if (!malId || !newStatus) return;
+
+        const itemElement = document.querySelector(`[data-item-id="${malId}"]`);
+        if (itemElement) {
+            itemElement.dataset.status = newStatus;
+            const statusElement = itemElement.querySelector('.item-status');
+            if (statusElement) {
+                statusElement.textContent = getStatusText(newStatus);
+                statusElement.className = `item-status ${newStatus}`;
+            }
+            await updateStats();
+            return;
+        }
+
+        const idx = allItems.findIndex(item => String(item.id) === malId);
+        if (idx !== -1) {
+            allItems[idx].status = newStatus;
+            if (e.detail?.stoppedAt) allItems[idx].stoppedAt = e.detail.stoppedAt;
+            await loadUserList();
+        }
+    });
     
     // Retirer un item de la liste
     window.removeFromList = function(itemId) {

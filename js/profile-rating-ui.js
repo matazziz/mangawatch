@@ -19,9 +19,14 @@ function formatRatingAverage(avg) {
 function renderRatingSummary(badge, stats) {
   if (!badge) return;
   const avgEl = badge.querySelector('#profile-rating-average');
-  const avg = stats && stats.average ? stats.average : 0;
+  const avg = stats && stats.average ? Number(stats.average) : 0;
+  if (!avg || avg <= 0) {
+    badge.style.display = 'none';
+    return;
+  }
   if (avgEl) avgEl.textContent = formatRatingAverage(avg);
   badge.style.display = 'inline-flex';
+  badge.setAttribute('aria-hidden', 'false');
 }
 
 function updateRateButton(btn, myScore) {
@@ -119,7 +124,7 @@ function openRatingModal(options) {
 }
 
 export async function initProfileRatingUI(options) {
-  const profileEmail = (options && options.profileEmail) || '';
+  const profileEmail = String((options && options.profileEmail) || '').trim().toLowerCase();
   const allowVote = !!(options && options.allowVote);
   const bannerBadge = document.getElementById('profile-rating-banner-badge');
   const voteSlot = document.getElementById('profile-rating-vote-slot');
@@ -208,31 +213,47 @@ export async function fetchProfileRatingsForSearch(emails) {
   }
 }
 
-export function requestProfileRatingInit(options) {
-  const opts = options || {};
-  function run() {
-    if (typeof window.initProfileRatingUI === 'function') {
-      window.initProfileRatingUI(opts);
-      return true;
-    }
-    return false;
+const pendingProfileRatingInits = [];
+
+function drainProfileRatingQueue() {
+  if (!document.getElementById('profile-rating-banner-badge')) return false;
+  while (pendingProfileRatingInits.length) {
+    const opts = pendingProfileRatingInits.shift();
+    initProfileRatingUI(opts).catch(function (e) {
+      console.warn('[ProfileRatingUI] init:', e);
+    });
   }
-  if (run()) return;
+  return true;
+}
+
+export function requestProfileRatingInit(options) {
+  if (options && options.profileEmail) {
+    pendingProfileRatingInits.push(options);
+  }
+  if (drainProfileRatingQueue()) return;
+
   let attempts = 0;
   const timer = setInterval(function () {
     attempts += 1;
-    if (run() || attempts >= 40) clearInterval(timer);
+    if (drainProfileRatingQueue() || attempts >= 50) clearInterval(timer);
   }, 100);
+
   window.addEventListener('profileRatingUIReady', function onReady() {
     window.removeEventListener('profileRatingUIReady', onReady);
-    run();
+    drainProfileRatingQueue();
   }, { once: true });
 }
 
 if (typeof window !== 'undefined') {
+  if (Array.isArray(window.__pendingProfileRatingInits) && window.__pendingProfileRatingInits.length) {
+    pendingProfileRatingInits.push.apply(pendingProfileRatingInits, window.__pendingProfileRatingInits);
+    window.__pendingProfileRatingInits = [];
+  }
+
   window.initProfileRatingUI = initProfileRatingUI;
   window.ratingBadgeHtml = ratingBadgeHtml;
   window.fetchProfileRatingsForSearch = fetchProfileRatingsForSearch;
   window.requestProfileRatingInit = requestProfileRatingInit;
   window.dispatchEvent(new CustomEvent('profileRatingUIReady'));
+  drainProfileRatingQueue();
 }

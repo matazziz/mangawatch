@@ -12,7 +12,21 @@
     </script>
     <title>MangaWatch - Accueil</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/header-unified-new.css?v=10">
+    <style id="mw-header-avatar-guest-hide">
+        .main-header .avatar-link:not(.is-auth-visible),
+        .avatar-link:not(.is-auth-visible) {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+    </style>
+    <link rel="stylesheet" href="/css/header-unified-new.css?v=11">
     <link rel="stylesheet" href="/css/home-deathnote.css">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/messaging.css">
@@ -24,8 +38,11 @@
     <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
     <script>
         (function() {
-            // Charger l'avatar avant que la page ne s'affiche
+            function isLoggedIn() {
+                return localStorage.getItem('isLoggedIn') === 'true';
+            }
             try {
+                if (!isLoggedIn()) return;
                 const user = JSON.parse(localStorage.getItem('user') || 'null');
                 if (user && user.email) {
                     const avatarKey = 'avatar_' + user.email;
@@ -56,6 +73,7 @@
                         
                         // Mettre à jour le src de l'image dans le DOM dès qu'il est disponible
                         function updateAvatarSrc() {
+                            if (!isLoggedIn()) return;
                             const avatarElement = document.getElementById('user-avatar');
                             if (avatarElement) {
                                 avatarElement.src = avatarUrl;
@@ -78,7 +96,7 @@
             }
         })();
     </script>
-    <script src="/js/header-avatar.js?v=1"></script>
+    <script src="/js/header-avatar.js?v=5"></script>
     
     <style>
         /* Modals d'authentification - Erreur et Succès */
@@ -292,8 +310,8 @@
             </button>
             
             <!-- Avatar utilisateur -->
-            <a href="profil.html" class="avatar-link">
-                <img id="user-avatar" src="/images/logo.png" alt="" data-i18n-alt="common.avatar_user" class="user-avatar" onerror="this.src='/images/logo.png'">
+            <a href="profil.html" class="avatar-link is-guest-hidden">
+                <img id="user-avatar" src="" alt="" data-i18n-alt="common.avatar_user" class="user-avatar" onerror="this.onerror=null;this.src='';">
             </a>
         </div>
     </header>
@@ -546,7 +564,8 @@
             const logoutBtn = document.getElementById('logout-btn');
             const userAvatar = document.getElementById('user-avatar');
             
-            if (user && user.email) {
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            if (user && user.email && isLoggedIn) {
                 // Utilisateur connecté
                 if (logoutBtn) logoutBtn.style.display = 'inline-block';
                 
@@ -570,7 +589,7 @@
                         if (storedAvatar) {
                             avatarUrl = storedAvatar;
                         } else {
-                            avatarUrl = '/images/logo.png';
+                            avatarUrl = '';
                         }
                     }
                     
@@ -586,6 +605,14 @@
             } else if (window.location.pathname.includes('profil.html')) {
                 // Rediriger vers la page de connexion si non connecté et sur la page de profil
                 window.location.href = 'connexion.html';
+            } else {
+                if (typeof syncHeaderAuthState === 'function') syncHeaderAuthState();
+                else if (userAvatar) {
+                    userAvatar.removeAttribute('src');
+                    userAvatar.src = '';
+                    const link = document.querySelector('.avatar-link');
+                    if (link) link.classList.add('is-guest-hidden');
+                }
             }
             
             // Gestionnaire de déconnexion
@@ -1454,58 +1481,26 @@
         
         // Mettre à jour l'interface utilisateur selon l'état d'authentification
         function updateAuthUI(isLoggedIn, user = null) {
-            const userAvatar = document.getElementById('user-avatar');
-            
-            if (isLoggedIn && user) {
-                // Utilisateur connecté
-                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé (le plus récent)
-                if (userAvatar) {
-                    const avatarKey = 'avatar_' + user.email;
-                    let avatarUrl = null;
-                    
-                    // Prioriser l'avatar personnalisé (le plus récent)
-                    if (user.customAvatar) {
-                        avatarUrl = user.customAvatar;
-                    } else if (user.avatar) {
-                        avatarUrl = user.avatar;
-                    } else if (user.originalAvatar) {
-                        avatarUrl = user.originalAvatar;
-                    } else if (user.picture) {
-                        avatarUrl = user.picture;
-                    } else {
-                        // En dernier recours, vérifier le localStorage
-                        const storedAvatar = localStorage.getItem(avatarKey);
-                        if (storedAvatar) {
-                            avatarUrl = storedAvatar;
-                        } else {
-                            avatarUrl = '/images/logo.png';
-                        }
-                    }
-                    
-                    // Mettre à jour l'avatar et le localStorage avec la valeur la plus récente
-                    if (avatarUrl) {
-                        userAvatar.src = avatarUrl;
-                        // Mettre à jour le localStorage avec l'avatar le plus récent
-                        if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
-                            localStorage.setItem(avatarKey, avatarUrl);
-                        }
-                    }
-                }
-                
-                const logoLink = document.querySelector('.logo-link span');
-                if (logoLink) {
-                    logoLink.textContent = 'MangaWatch';
-                }
+            if (typeof refreshHeaderAvatar === 'function') {
+                refreshHeaderAvatar();
             } else {
-                // Utilisateur non connecté
-                if (userAvatar) {
-                    userAvatar.src = '/images/logo.png';
+                const userAvatar = document.getElementById('user-avatar');
+                const avatarLink = document.querySelector('.avatar-link');
+                if (!isLoggedIn || !user || !user.email) {
+                    if (avatarLink) avatarLink.classList.add('is-guest-hidden');
+                    if (userAvatar) {
+                        userAvatar.removeAttribute('src');
+                        userAvatar.src = '';
+                        userAvatar.alt = '';
+                    }
+                } else if (avatarLink) {
+                    avatarLink.classList.remove('is-guest-hidden');
                 }
-                
-                const logoLink = document.querySelector('.logo-link span');
-                if (logoLink) {
-                    logoLink.textContent = 'MangaWatch';
-                }
+            }
+
+            const logoLink = document.querySelector('.logo-link span');
+            if (logoLink) {
+                logoLink.textContent = 'MangaWatch';
             }
         }
         
@@ -1553,58 +1548,26 @@
         
         // Mettre à jour l'interface utilisateur selon l'état d'authentification
         function updateAuthUI(isLoggedIn, user = null) {
-            const userAvatar = document.getElementById('user-avatar');
-            
-            if (isLoggedIn && user) {
-                // Utilisateur connecté
-                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé (le plus récent)
-                if (userAvatar) {
-                    const avatarKey = 'avatar_' + user.email;
-                    let avatarUrl = null;
-                    
-                    // Prioriser l'avatar personnalisé (le plus récent)
-                    if (user.customAvatar) {
-                        avatarUrl = user.customAvatar;
-                    } else if (user.avatar) {
-                        avatarUrl = user.avatar;
-                    } else if (user.originalAvatar) {
-                        avatarUrl = user.originalAvatar;
-                    } else if (user.picture) {
-                        avatarUrl = user.picture;
-                    } else {
-                        // En dernier recours, vérifier le localStorage
-                        const storedAvatar = localStorage.getItem(avatarKey);
-                        if (storedAvatar) {
-                            avatarUrl = storedAvatar;
-                        } else {
-                            avatarUrl = '/images/logo.png';
-                        }
-                    }
-                    
-                    // Mettre à jour l'avatar et le localStorage avec la valeur la plus récente
-                    if (avatarUrl) {
-                        userAvatar.src = avatarUrl;
-                        // Mettre à jour le localStorage avec l'avatar le plus récent
-                        if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
-                            localStorage.setItem(avatarKey, avatarUrl);
-                        }
-                    }
-                }
-                
-                const logoLink = document.querySelector('.logo-link span');
-                if (logoLink) {
-                    logoLink.textContent = 'MangaWatch';
-                }
+            if (typeof refreshHeaderAvatar === 'function') {
+                refreshHeaderAvatar();
             } else {
-                // Utilisateur non connecté
-                if (userAvatar) {
-                    userAvatar.src = '/images/logo.png';
+                const userAvatar = document.getElementById('user-avatar');
+                const avatarLink = document.querySelector('.avatar-link');
+                if (!isLoggedIn || !user || !user.email) {
+                    if (avatarLink) avatarLink.classList.add('is-guest-hidden');
+                    if (userAvatar) {
+                        userAvatar.removeAttribute('src');
+                        userAvatar.src = '';
+                        userAvatar.alt = '';
+                    }
+                } else if (avatarLink) {
+                    avatarLink.classList.remove('is-guest-hidden');
                 }
-                
-                const logoLink = document.querySelector('.logo-link span');
-                if (logoLink) {
-                    logoLink.textContent = 'MangaWatch';
-                }
+            }
+
+            const logoLink = document.querySelector('.logo-link span');
+            if (logoLink) {
+                logoLink.textContent = 'MangaWatch';
             }
         }
         
@@ -2654,59 +2617,26 @@
         
         // Mettre à jour l'interface utilisateur selon l'état d'authentification
         function updateAuthUI(isLoggedIn, user = null) {
-            const userAvatar = document.getElementById('user-avatar');
-            
-            if (isLoggedIn && user) {
-                // Utilisateur connecté
-                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé (le plus récent)
-                if (userAvatar) {
-                    const avatarKey = 'avatar_' + user.email;
-                    let avatarUrl = null;
-                    
-                    // Prioriser l'avatar personnalisé (le plus récent)
-                    if (user.customAvatar) {
-                        avatarUrl = user.customAvatar;
-                    } else if (user.avatar) {
-                        avatarUrl = user.avatar;
-                    } else if (user.originalAvatar) {
-                        avatarUrl = user.originalAvatar;
-                    } else if (user.picture) {
-                        avatarUrl = user.picture;
-                    } else {
-                        // En dernier recours, vérifier le localStorage
-                        const storedAvatar = localStorage.getItem(avatarKey);
-                        if (storedAvatar) {
-                            avatarUrl = storedAvatar;
-                        } else {
-                            avatarUrl = '/images/logo.png';
-                        }
-                    }
-                    
-                    // Mettre à jour l'avatar et le localStorage avec la valeur la plus récente
-                    if (avatarUrl) {
-                        userAvatar.src = avatarUrl;
-                        // Mettre à jour le localStorage avec l'avatar le plus récent
-                        if (user.customAvatar || user.avatar || user.originalAvatar || user.picture) {
-                            localStorage.setItem(avatarKey, avatarUrl);
-                        }
-                    }
-                }
-                
-                // Garder le nom MangaWatch sans ajouter le pseudo
-                const logoLink = document.querySelector('.logo-link span');
-                if (logoLink) {
-                    logoLink.textContent = 'MangaWatch';
-                }
+            if (typeof refreshHeaderAvatar === 'function') {
+                refreshHeaderAvatar();
             } else {
-                // Utilisateur non connecté
-                // Réinitialiser l'avatar
-                userAvatar.src = '/images/logo.png';
-                
-                // Réinitialiser le nom dans le header
-                const logoLink = document.querySelector('.logo-link span');
-                if (logoLink) {
-                    logoLink.textContent = 'MangaWatch';
+                const userAvatar = document.getElementById('user-avatar');
+                const avatarLink = document.querySelector('.avatar-link');
+                if (!isLoggedIn || !user || !user.email) {
+                    if (avatarLink) avatarLink.classList.add('is-guest-hidden');
+                    if (userAvatar) {
+                        userAvatar.removeAttribute('src');
+                        userAvatar.src = '';
+                        userAvatar.alt = '';
+                    }
+                } else if (avatarLink) {
+                    avatarLink.classList.remove('is-guest-hidden');
                 }
+            }
+
+            const logoLink = document.querySelector('.logo-link span');
+            if (logoLink) {
+                logoLink.textContent = 'MangaWatch';
             }
         }
         

@@ -935,8 +935,10 @@ function setupCollectionFilters() {
     syncCollectionMobileFiltersState();
     window.addEventListener('resize', syncCollectionMobileFiltersState);
 
-    // Filtres par statut
-    const statusFilters = document.querySelectorAll('.status-filter');
+    // Filtres par statut (limités à la section collection publique)
+    const statusFilters = collectionSection
+        ? collectionSection.querySelectorAll('.status-filter')
+        : document.querySelectorAll('#collection-section .status-filter');
     statusFilters.forEach(filter => {
         filter.addEventListener('click', function() {
             statusFilters.forEach(f => f.classList.remove('active'));
@@ -947,7 +949,9 @@ function setupCollectionFilters() {
     });
     
     // Filtres par type
-    const typeFilters = document.querySelectorAll('.type-filter');
+    const typeFilters = collectionSection
+        ? collectionSection.querySelectorAll('.type-filter')
+        : document.querySelectorAll('#collection-section .type-filter');
     typeFilters.forEach(filter => {
         filter.addEventListener('click', function() {
             typeFilters.forEach(f => f.classList.remove('active'));

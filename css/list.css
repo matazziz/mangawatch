@@ -1545,6 +1545,12 @@ body .footer-unified .footer-container {
     #collection-section:not(.mobile-filters-open) .type-filters {
         display: none;
     }
+
+    /* Priorité sur .container:not(.mobile-filters-open) — la classe est sur #collection-section */
+    #collection-section.mobile-filters-open .status-filters,
+    #collection-section.mobile-filters-open .type-filters {
+        display: flex;
+    }
 }
 
 /* Cartes collection publique — dimensions identiques à list.html */

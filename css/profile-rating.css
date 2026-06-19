@@ -50,9 +50,9 @@
 
 .profile-rating-banner-badge {
     position: absolute;
-    top: 14px;
-    right: 14px;
-    z-index: 6;
+    top: max(14px, env(safe-area-inset-top, 0px));
+    right: max(14px, env(safe-area-inset-right, 0px));
+    z-index: 12;
     display: none;
     align-items: center;
     gap: 0.45rem;

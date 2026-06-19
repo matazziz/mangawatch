@@ -107,12 +107,14 @@
 }
 
 /* Styles pour s'assurer que l'avatar s'affiche correctement */
-.main-header .avatar-link {
+.main-header .avatar-link.is-auth-visible {
     display: flex !important;
     align-items: center;
     justify-content: center;
     width: 55px !important;
     height: 55px !important;
+    min-width: 55px !important;
+    min-height: 55px !important;
     border: 3px solid var(--primary);
     border-radius: 50%;
     background: linear-gradient(135deg, var(--primary), var(--primary-dark));
@@ -122,6 +124,24 @@
     text-decoration: none;
     margin-left: 1rem;
     z-index: 1000;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.main-header .avatar-link:not(.is-auth-visible) {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Legacy rule neutralisée — voir is-auth-visible */
+.main-header .avatar-link {
+    display: none !important;
 }
 
 .main-header .avatar-link::before {
@@ -934,10 +954,85 @@ main.manga-database {
     margin: 20px 0;
     border-radius: 4px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     color: var(--light);
     grid-column: 1 / -1;
+}
+
+.catalogue-api-error {
+    background: rgba(255, 152, 0, 0.1);
+    border-left-color: #ff9800;
+}
+
+.catalogue-api-error-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.catalogue-api-error-head {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.05rem;
+}
+
+.catalogue-api-error-lead {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.88);
+    line-height: 1.5;
+}
+
+.catalogue-api-error-steps {
+    margin: 0;
+    padding-left: 1.2rem;
+    color: rgba(255, 255, 255, 0.78);
+    line-height: 1.55;
+}
+
+.catalogue-api-error-steps li + li {
+    margin-top: 0.35rem;
+}
+
+.catalogue-api-error-thanks {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.92rem;
+    font-style: italic;
+}
+
+.catalogue-api-error-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.25rem;
+}
+
+.catalogue-api-error-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 0.9rem;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #00b894, #00a085);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.catalogue-api-error-btn--secondary {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.catalogue-api-error-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .error-message i {

@@ -222,6 +222,10 @@ main {
 }
 
 /* Avatar utilisateur - Style circulaire similaire au logo */
+.avatar-link.is-guest-hidden {
+    display: none !important;
+}
+
 .avatar-link {
     display: flex;
     align-items: center;

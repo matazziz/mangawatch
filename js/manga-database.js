@@ -933,7 +933,7 @@ function initializePage() {
         })
         .catch(error => {
             console.error('❌ Erreur lors du chargement des données:', error);
-            showError('Erreur lors du chargement des données. Veuillez réessayer.');
+            showCatalogueApiError();
         })
         .finally(() => {
             setTimeout(() => revealMangaDatabaseUI(), 80);
@@ -1008,6 +1008,7 @@ async function fetchContentList() {
         });
         
         if (response && response.data) {
+            clearCatalogueApiErrors();
             console.log(`📚 ${response.data.length} éléments trouvés`);
             
             // Mettre à jour la pagination si disponible
@@ -1035,7 +1036,7 @@ async function fetchContentList() {
                 endpoint,
                 params: params.toString()
             });
-            showError('Aucune donnée reçue de l\'API. Réessayez dans un instant.');
+            showCatalogueApiError();
             totalPages = 1;
             currentPage = 1;
             hasNextPage = false;
@@ -1048,7 +1049,7 @@ async function fetchContentList() {
             stack: error?.stack || null
         });
         console.error('Erreur lors de la récupération des données:', error);
-        showError('Erreur lors du chargement des données');
+        showCatalogueApiError();
         totalPages = 1;
         currentPage = 1;
         hasNextPage = false;
@@ -1397,15 +1398,17 @@ function findCollectionItemByMalId(malId) {
     };
 
     const cachedMatch = pickFromList(cachedUserCollectionForStatus);
-    if (cachedMatch) return cachedMatch;
 
     const user = JSON.parse(localStorage.getItem('user') || 'null');
     const userEmail = String(user?.email || '').trim();
     if (userEmail) {
         const localFallback = getLocalCollectionFallback(userEmail);
         const localMatch = pickFromList(localFallback);
+        // localStorage prioritaire : reflète les changements depuis la page détails
         if (localMatch) return localMatch;
     }
+
+    if (cachedMatch) return cachedMatch;
     return null;
 }
 
@@ -1859,7 +1862,7 @@ async function loadUserCollectionForStatusFilter() {
             firebaseItems = await collectionService.getAllItems(userEmail);
         }
 
-        return dedupeCollectionItemsByIdAndType([...(Array.isArray(firebaseItems) ? firebaseItems : []), ...localFallback]);
+        return dedupeCollectionItemsByIdAndType([...localFallback, ...(Array.isArray(firebaseItems) ? firebaseItems : [])]);
     } catch (error) {
         console.warn('⚠️ Chargement Firebase indisponible, fallback localStorage:', error);
         return localFallback;
@@ -2439,6 +2442,35 @@ function getStatusColor(status) {
 }
 
 // Fonction pour rafraîchir l'affichage des cartes
+function refreshCollectionCacheFromStorage() {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    const userEmail = String(user?.email || '').trim();
+    if (!userEmail) return;
+    cachedUserCollectionForStatus = getLocalCollectionFallback(userEmail);
+}
+
+window.refreshCollectionCacheFromStorage = refreshCollectionCacheFromStorage;
+
+window.addEventListener('mwCollectionUpdated', (e) => {
+    refreshCollectionCacheFromStorage();
+    const malId = e.detail?.malId;
+    const status = e.detail?.status;
+    if (malId) {
+        updateCardDisplay(String(malId), status);
+    } else if (typeof window.refreshCardsDisplay === 'function') {
+        window.refreshCardsDisplay();
+    }
+});
+
+window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+        refreshCollectionCacheFromStorage();
+        if (typeof window.refreshCardsDisplay === 'function') {
+            window.refreshCardsDisplay();
+        }
+    }
+});
+
 window.refreshCardsDisplay = function() {
     // Vérifier si un filtre de statut est actif
     const hasStatusFilter = hasActiveStatusFilter();
@@ -2881,6 +2913,16 @@ function updateItemStatusWithStoppedAt(status, stoppedAt) {
         localStorage.setItem(listKey, JSON.stringify(userList));
         cachedUserCollectionForStatus = dedupeCollectionItemsByIdAndType(userList);
         console.log(`✅ Liste sauvegardée dans localStorage`);
+
+        window.dispatchEvent(new CustomEvent('mwCollectionUpdated', {
+            detail: {
+                malId: String(window.currentEditingItem.id),
+                status,
+                type: (existingIndex !== -1 ? userList[existingIndex] : window.currentEditingItem).type,
+                stoppedAt: stoppedAt ?? null,
+                ts: Date.now()
+            }
+        }));
         
         // Synchroniser aussi Firebase pour que la page Collection reflète immédiatement les changements.
         const syncItem = existingIndex !== -1 ? userList[existingIndex] : window.currentEditingItem;
@@ -3699,7 +3741,70 @@ function showLoading(show) {
 }
 
 // Afficher une erreur
+function catalogueT(key, fallback) {
+    if (window.localization) {
+        const value = window.localization.get(key);
+        if (value && value !== key) return value;
+    }
+    return fallback;
+}
+
+function clearCatalogueApiErrors() {
+    document.querySelectorAll('.catalogue-api-error').forEach((el) => el.remove());
+}
+
+function showCatalogueApiError() {
+    clearCatalogueApiErrors();
+
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message catalogue-api-error';
+    errorDiv.setAttribute('role', 'alert');
+    errorDiv.innerHTML = `
+        <div class="catalogue-api-error-inner">
+            <div class="catalogue-api-error-head">
+                <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                <strong data-i18n="catalogue.api_error.title">${catalogueT('catalogue.api_error.title', 'Impossible de charger les résultats')}</strong>
+            </div>
+            <p class="catalogue-api-error-lead" data-i18n="catalogue.api_error.lead">${catalogueT('catalogue.api_error.lead', 'Nous n\'avons pas pu afficher les mangas et animes pour le moment.')}</p>
+            <ul class="catalogue-api-error-steps">
+                <li data-i18n="catalogue.api_error.step_filters">${catalogueT('catalogue.api_error.step_filters', 'Réinitialisez les filtres ou rafraîchissez la page.')}</li>
+                <li data-i18n="catalogue.api_error.step_api">${catalogueT('catalogue.api_error.step_api', 'Si le problème persiste, le catalogue est temporairement indisponible de notre côté. Notre équipe travaille déjà à rétablir le service.')}</li>
+            </ul>
+            <p class="catalogue-api-error-thanks" data-i18n="catalogue.api_error.thanks">${catalogueT('catalogue.api_error.thanks', 'Merci pour votre patience et toutes nos excuses pour la gêne occasionnée.')}</p>
+            <div class="catalogue-api-error-actions">
+                <button type="button" class="catalogue-api-error-btn" data-action="reset-filters">
+                    <i class="fas fa-rotate-left" aria-hidden="true"></i>
+                    <span data-i18n="catalogue.api_error.reset_filters">${catalogueT('catalogue.api_error.reset_filters', 'Réinitialiser les filtres')}</span>
+                </button>
+                <button type="button" class="catalogue-api-error-btn catalogue-api-error-btn--secondary" data-action="refresh">
+                    <i class="fas fa-sync-alt" aria-hidden="true"></i>
+                    <span data-i18n="catalogue.api_error.refresh">${catalogueT('catalogue.api_error.refresh', 'Rafraîchir la page')}</span>
+                </button>
+            </div>
+        </div>
+    `;
+
+    if (elements.mangaGrid && elements.mangaGrid.parentNode) {
+        elements.mangaGrid.parentNode.insertBefore(errorDiv, elements.mangaGrid);
+    } else {
+        document.body.appendChild(errorDiv);
+    }
+
+    errorDiv.querySelector('[data-action="reset-filters"]')?.addEventListener('click', () => {
+        if (typeof resetFilters === 'function') resetFilters();
+        clearCatalogueApiErrors();
+    });
+    errorDiv.querySelector('[data-action="refresh"]')?.addEventListener('click', () => {
+        window.location.reload();
+    });
+
+    if (window.localization) {
+        window.localization.applyLanguage();
+    }
+}
+
 function showError(message) {
+    clearCatalogueApiErrors();
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-message';
     errorDiv.innerHTML = `

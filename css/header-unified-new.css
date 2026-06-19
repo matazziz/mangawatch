@@ -860,20 +860,51 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     transform: translateY(-8px) rotate(-45deg);
 }
 
-.avatar-link {
+/* Avatar : masqué par défaut, visible uniquement après connexion avec une photo */
+.main-header .avatar-link.is-guest-hidden,
+.avatar-link.is-guest-hidden,
+.main-header .avatar-link:not(.is-auth-visible),
+.avatar-link:not(.is-auth-visible) {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    box-shadow: none !important;
+}
+
+.main-header .avatar-link.is-auth-visible,
+.avatar-link.is-auth-visible {
     display: flex !important;
+    visibility: visible !important;
     align-items: center;
     justify-content: center;
     width: 55px;
     height: 55px;
+    min-width: 55px;
+    min-height: 55px;
     border-radius: 50%;
     overflow: hidden;
+    margin-left: 1.5rem;
     border: 3px solid var(--primary);
     background: linear-gradient(135deg, var(--primary), var(--primary-light));
     padding: 2px;
     box-shadow: 0 0 15px rgba(0, 168, 77, 0.3);
     transition: var(--transition);
     flex-shrink: 0;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.avatar-link {
+    display: none !important;
 }
 
 .user-avatar {
@@ -889,7 +920,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     background-color: #333;
 }
 
-.avatar-link:hover {
+.avatar-link.is-auth-visible:hover {
     transform: scale(1.05);
     box-shadow: 0 0 20px rgba(0, 168, 77, 0.5);
     border-color: var(--primary-light);
@@ -1041,13 +1072,15 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     /* Avatar un peu plus grand sur mobile */
-    .avatar-link {
+    .avatar-link.is-auth-visible {
         width: 46px;
         height: 46px;
+        min-width: 46px;
+        min-height: 46px;
         padding: 2px;
     }
     
-    .user-avatar {
+    .avatar-link.is-auth-visible .user-avatar {
         width: 42px;
         height: 42px;
     }
@@ -1311,12 +1344,14 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         display: none;
     }
     
-    .avatar-link {
+    .avatar-link.is-auth-visible {
         width: 44px;
         height: 44px;
+        min-width: 44px;
+        min-height: 44px;
     }
     
-    .user-avatar {
+    .avatar-link.is-auth-visible .user-avatar {
         width: 40px;
         height: 40px;
     }
