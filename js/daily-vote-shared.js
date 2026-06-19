@@ -204,6 +204,7 @@ export async function buildDailyVoteContent(today, contentType, genre, seed) {
     let voteOptions = await fetchMainstreamVoteOptions(contentType, voteSeed);
 
     if (voteOptions.length < 3) {
+        const pool = MAINSTREAM_TOP[contentType] || MAINSTREAM_TOP.manga;
         const extraIds = pickDeterministicThreeIds(pool, voteSeed + '_extra');
         for (const id of extraIds) {
             if (voteOptions.length >= 3) break;

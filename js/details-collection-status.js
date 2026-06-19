@@ -40,18 +40,41 @@
         return 'user_list_' + user.email;
     }
 
-    function findItem(malId) {
+    let collectionCache = null;
+    let collectionLoadPromise = null;
+
+    function readLocalCollectionList() {
         const listKey = getListKey();
-        if (!listKey) return null;
-        const targetId = String(malId || '').trim();
-        if (!targetId) return null;
-        const targetDigits = targetId.replace(/[^\d]/g, '');
-        let list = [];
+        if (!listKey) return [];
         try {
-            list = JSON.parse(localStorage.getItem(listKey) || '[]');
+            return JSON.parse(localStorage.getItem(listKey) || '[]');
         } catch (_) {
-            return null;
+            return [];
         }
+    }
+
+    function typesCompatible(itemType, contentType) {
+        const a = normalizeItemType(itemType);
+        const b = normalizeItemType(contentType);
+        if (!b) return true;
+        if (!a) return true;
+        if ((a === 'anime' || a === 'film') && (b === 'anime' || b === 'film')) return true;
+        return a === b;
+    }
+
+    function pickBestMatch(matches, contentType) {
+        if (!matches.length) return null;
+        const typed = contentType
+            ? matches.filter(item => typesCompatible(item?.type || item?.content_type || item?.contentType, contentType))
+            : matches;
+        const pool = typed.length ? typed : matches;
+        return pool.find(item => normalizeStatus(item?.status)) || pool[0] || null;
+    }
+
+    function findItemInList(list, malId, contentType) {
+        const targetId = String(malId || '').trim();
+        if (!targetId || !Array.isArray(list)) return null;
+        const targetDigits = targetId.replace(/[^\d]/g, '');
         const matches = list.filter(item => {
             const ids = [item?.id, item?.mal_id, item?.malId]
                 .map(v => String(v || '').trim())
@@ -60,7 +83,53 @@
             if (!targetDigits) return false;
             return ids.some(id => id.replace(/[^\d]/g, '') === targetDigits);
         });
-        return matches.find(item => normalizeStatus(item?.status)) || matches[0] || null;
+        return pickBestMatch(matches, contentType);
+    }
+
+    async function ensureCollectionLoaded() {
+        if (collectionCache) return collectionCache;
+        if (collectionLoadPromise) return collectionLoadPromise;
+
+        collectionLoadPromise = (async () => {
+            let list = readLocalCollectionList();
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const email = String(user?.email || '').trim();
+            if (email) {
+                try {
+                    const { collectionService } = await import('./firebase-service.js?v=6febe20');
+                    const firebaseItems = await collectionService.getAllItems(email);
+                    if (Array.isArray(firebaseItems) && firebaseItems.length) {
+                        const seen = new Set();
+                        const merged = [];
+                        [...list, ...firebaseItems].forEach(item => {
+                            const id = String(item?.id || item?.mal_id || item?.malId || '').trim();
+                            const type = normalizeItemType(item?.type || item?.content_type || item?.contentType || '');
+                            const key = `${id}:${type}`;
+                            if (!id || seen.has(key)) return;
+                            seen.add(key);
+                            merged.push(item);
+                        });
+                        list = merged;
+                    }
+                } catch (err) {
+                    console.warn('[DetailsCollectionStatus] Firebase indisponible, localStorage seul:', err);
+                }
+            }
+            collectionCache = list;
+            return list;
+        })();
+
+        return collectionLoadPromise;
+    }
+
+    function invalidateCollectionCache() {
+        collectionCache = null;
+        collectionLoadPromise = null;
+    }
+
+    function findItem(malId, contentType) {
+        const list = collectionCache || readLocalCollectionList();
+        return findItemInList(list, malId, contentType);
     }
 
     function getStatusMeta(status) {
@@ -243,6 +312,8 @@
         }
 
         localStorage.setItem(listKey, JSON.stringify(userList));
+        invalidateCollectionCache();
+        collectionCache = userList;
 
         try {
             const { collectionService } = await import('/js/firebase-service.js?v=6febe20');
@@ -277,7 +348,7 @@
             return;
         }
 
-        const existing = findItem(content.mal_id);
+        const existing = findItem(content.mal_id, contentType);
         window.currentEditingItem = existing || buildEditingItem(content, contentType);
 
         const modal = document.getElementById('detailsStatusModal');
@@ -306,7 +377,7 @@
     }
 
     function renderButtonHtml(content, contentType) {
-        const existing = findItem(content.mal_id);
+        const existing = findItem(content.mal_id, contentType);
         const status = normalizeStatus(existing?.status);
         const addLabel = t('collection.add_to_collection', 'Ajouter');
         const label = t('collection.my_status', 'Statut');
@@ -354,19 +425,21 @@
         });
     }
 
-    function renderSection(content, contentType) {
+    async function renderSection(content, contentType) {
         const section = document.getElementById('details-collection-section');
         if (!section || !content?.mal_id) return;
+        await ensureCollectionLoaded();
         section.innerHTML = renderButtonHtml(content, contentType);
         bindSection(section, content, contentType);
         if (window.localization) window.localization.applyLanguage();
     }
 
-    function refreshSection(malId) {
+    async function refreshSection(malId) {
         const section = document.getElementById('details-collection-section');
         if (!section || !section._detailsContent) return;
         if (String(section._detailsContent.mal_id) !== String(malId)) return;
-        renderSection(section._detailsContent, section._detailsContentType);
+        invalidateCollectionCache();
+        await renderSection(section._detailsContent, section._detailsContentType);
     }
 
     function initModal() {
@@ -397,4 +470,21 @@
     } else {
         initModal();
     }
+
+    window.addEventListener('mwCollectionUpdated', function () {
+        invalidateCollectionCache();
+        const section = document.getElementById('details-collection-section');
+        if (section?._detailsContent) {
+            renderSection(section._detailsContent, section._detailsContentType);
+        }
+    });
+    window.addEventListener('storage', function (e) {
+        if (e.key && e.key.startsWith('user_list_')) {
+            invalidateCollectionCache();
+            const section = document.getElementById('details-collection-section');
+            if (section?._detailsContent) {
+                renderSection(section._detailsContent, section._detailsContentType);
+            }
+        }
+    });
 })();
