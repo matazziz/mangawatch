@@ -176,8 +176,10 @@
         el.onerror = function() {
             if (this.dataset.mwAvatarRetried === '1') {
                 this.onerror = null;
-                setAvatarLinkVisible(false);
-                clearHeaderAvatarImage();
+                if (this.id === 'user-avatar') {
+                    setAvatarLinkVisible(false);
+                    clearHeaderAvatarImage();
+                }
                 return;
             }
             this.dataset.mwAvatarRetried = '1';

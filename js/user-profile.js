@@ -1,6 +1,9 @@
 // Gestion du profil utilisateur public
 // Variable globale pour stocker l'email de l'utilisateur consulté
 let viewedUserEmail = null;
+const VIEWED_PROFILE_AVATAR_ID = 'viewed-profile-avatar';
+let viewedProfileAvatarToken = 0;
+let viewedProfileAvatarLockedUrl = '';
 
 async function applyVerifiedBadgeOnProfile(userEmail, initialVerified) {
     if (!userEmail) return false;
@@ -367,6 +370,8 @@ async function loadUserProfile(userEmail) {
         return;
     }
     viewedUserEmail = normalizedEmail;
+    viewedProfileAvatarToken += 1;
+    const avatarLoadToken = viewedProfileAvatarToken;
     if (typeof window !== 'undefined') {
         window.viewedUserEmail = normalizedEmail;
     }
@@ -479,8 +484,9 @@ async function loadUserProfile(userEmail) {
     // Synchroniser avatar depuis Firebase (bannière gérée par loadUserBanner)
     if (typeof window.syncRemoteProfileMedia === 'function') {
         void window.syncRemoteProfileMedia(normalizedEmail, { forceServer: true }).then(function(remote) {
+            if (avatarLoadToken !== viewedProfileAvatarToken) return;
             if (remote && remote.avatar && /^https?:\/\//i.test(remote.avatar)) {
-                setViewedProfileAvatar(remote.avatar);
+                setViewedProfileAvatar(remote.avatar, normalizedEmail);
             }
         }).catch(function() { /* ignore */ });
     }
@@ -511,18 +517,56 @@ if (typeof window !== 'undefined') {
     window.updateProfileSubbannerVisibility = updateProfileSubbannerVisibility;
 }
 
-function setViewedProfileAvatar(url) {
-    const profileAvatar = document.getElementById('profile-avatar');
+function normalizeViewedProfileEmail(email) {
+    return String(email || '').trim().toLowerCase();
+}
+
+function installViewedProfileAvatarGuard() {
+    const el = document.getElementById(VIEWED_PROFILE_AVATAR_ID);
+    if (!el || el._mwViewedAvatarGuard) return;
+    el._mwViewedAvatarGuard = true;
+    const observer = new MutationObserver(function() {
+        if (!viewedProfileAvatarLockedUrl) return;
+        const current = String(el.getAttribute('src') || '');
+        const locked = String(viewedProfileAvatarLockedUrl || '');
+        if (!current || !locked) return;
+        if (current.split('?')[0] === locked.split('?')[0]) return;
+        var loggedUrl = '';
+        try {
+            if (typeof window.resolveProfileAvatarUrl === 'function') {
+                loggedUrl = window.resolveProfileAvatarUrl() || '';
+            }
+        } catch (e) { /* ignore */ }
+        if (loggedUrl && current.split('?')[0] === loggedUrl.split('?')[0]) {
+            el.src = viewedProfileAvatarLockedUrl;
+        }
+    });
+    observer.observe(el, { attributes: true, attributeFilter: ['src'] });
+}
+
+function setViewedProfileAvatar(url, ownerEmail) {
+    const owner = normalizeViewedProfileEmail(ownerEmail || viewedUserEmail);
+    if (owner && viewedUserEmail && owner !== normalizeViewedProfileEmail(viewedUserEmail)) return;
+
+    const profileAvatar = document.getElementById(VIEWED_PROFILE_AVATAR_ID);
     if (!profileAvatar || !url) return;
     const disp = upgradeProfileAvatarUrl(url);
-    profileAvatar.onerror = null;
+    profileAvatar.onerror = function() {
+        this.onerror = null;
+        if (this.src && this.src.indexOf('/images/logo') === -1) {
+            this.src = '/images/logo.png';
+        }
+    };
     profileAvatar.dataset.mwAvatarSrc = disp;
     profileAvatar.dataset.mwViewedProfile = '1';
+    profileAvatar.dataset.mwViewedEmail = owner || '';
+    viewedProfileAvatarLockedUrl = disp;
     profileAvatar.src = disp;
+    installViewedProfileAvatarGuard();
 }
 
 function displayProfileInfo(user, userEmail) {
-    const profileAvatar = document.getElementById('profile-avatar');
+    const profileAvatar = document.getElementById(VIEWED_PROFILE_AVATAR_ID);
     const userName = document.getElementById('user-name');
     
     // Afficher l'avatar
@@ -543,10 +587,12 @@ function displayProfileInfo(user, userEmail) {
             rawAvatar = storedAvatar;
         }
         if (rawAvatar) {
-            setViewedProfileAvatar(rawAvatar);
+            setViewedProfileAvatar(rawAvatar, userEmail);
         } else {
             profileAvatar.removeAttribute('data-mw-viewed-profile');
-            profileAvatar.src = '';
+            profileAvatar.removeAttribute('data-mw-viewed-email');
+            viewedProfileAvatarLockedUrl = '';
+            profileAvatar.src = '/images/logo.png';
         }
     }
     

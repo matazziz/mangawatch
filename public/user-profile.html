@@ -1227,7 +1227,7 @@
                 <!-- Contenu du header (avatar et pseudo) -->
                 <div class="profile-header-content">
                     <div class="profile-avatar-wrapper">
-                        <img src="/images/logo.png" alt="Avatar utilisateur" id="profile-avatar" class="profile-avatar" onerror="this.src='/images/logo.png'">
+                        <img src="/images/logo.png" alt="Avatar utilisateur" id="viewed-profile-avatar" class="profile-avatar" decoding="async" fetchpriority="high" onerror="this.onerror=null;this.src='/images/logo.png';">
                     </div>
                     <div class="profile-info">
                         <h1 id="user-name">
@@ -1461,9 +1461,10 @@
         </div>
     </main>
 
+    <script src="/js/header-avatar.js?v=8"></script>
     <script src="/js/profile-anime-cards.js?v=2.23"></script>
     <script src="/js/banner-video-autoplay.js?v=1"></script>
-    <script src="/js/user-profile.js?v=2.25"></script>
+    <script src="/js/user-profile.js?v=2.26"></script>
     <script src="/js/search.js"></script>
     <script src="/js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>
