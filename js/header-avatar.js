@@ -143,9 +143,20 @@
         return src.indexOf('blob:') === 0 || src.indexOf('data:') === 0;
     }
 
+    function isPublicUserProfilePage() {
+        return /user-profile\.html/i.test(global.location.pathname || '');
+    }
+
+    function canUpdateProfileAvatarOnPage(opts) {
+        if (!isPublicUserProfilePage()) return true;
+        return !!(opts && opts.scope === 'profile');
+    }
+
     function setAvatarOnElement(el, url, opts) {
         if (!el || !url) return false;
         opts = opts || {};
+
+        if (el.id === 'profile-avatar' && !canUpdateProfileAvatarOnPage(opts)) return false;
 
         if (shouldPreserveLivePreview(el)) return false;
 
@@ -183,11 +194,14 @@
         if (!url) return;
         opts = opts || {};
         var scope = opts.scope || 'both';
+        if (isPublicUserProfilePage() && scope === 'both') {
+            scope = 'header';
+        }
         if (scope === 'both' || scope === 'header') {
             setAvatarOnElement(global.document.getElementById('user-avatar'), url, opts);
         }
         if (scope === 'both' || scope === 'profile') {
-            setAvatarOnElement(global.document.getElementById('profile-avatar'), url, opts);
+            setAvatarOnElement(global.document.getElementById('profile-avatar'), url, Object.assign({}, opts, { scope: 'profile' }));
         }
     }
 
@@ -254,7 +268,8 @@
         var url = ev && ev.detail && ev.detail.url;
         if (url) {
             setAvatarLinkVisible(true);
-            applyProfileAvatars(url, { cacheBust: true });
+            var scope = isPublicUserProfilePage() ? 'header' : 'both';
+            applyProfileAvatars(url, { cacheBust: true, scope: scope });
         } else {
             refreshHeaderAvatar({ cacheBust: true });
         }

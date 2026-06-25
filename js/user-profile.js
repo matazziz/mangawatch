@@ -367,6 +367,9 @@ async function loadUserProfile(userEmail) {
         return;
     }
     viewedUserEmail = normalizedEmail;
+    if (typeof window !== 'undefined') {
+        window.viewedUserEmail = normalizedEmail;
+    }
     // Vérifier si l'utilisateur est banni
     const bannedUsers = JSON.parse(localStorage.getItem('banned_users') || '[]');
     const isBanned = bannedUsers.some(b => String(b.email || '').toLowerCase() === normalizedEmail);
@@ -389,7 +392,7 @@ async function loadUserProfile(userEmail) {
 
     // 1. Firestore (source de vérité — visible par tous les visiteurs)
     try {
-        const mod = await import('./firebase-service.js?v=6febe22');
+        const mod = await import('./firebase-service.js?v=6febe27');
         let remote = null;
         if (mod && mod.profileAccountService && typeof mod.profileAccountService.getProfileAccountInfo === 'function') {
             remote = await mod.profileAccountService.getProfileAccountInfo(normalizedEmail);
@@ -477,15 +480,7 @@ async function loadUserProfile(userEmail) {
     if (typeof window.syncRemoteProfileMedia === 'function') {
         void window.syncRemoteProfileMedia(normalizedEmail, { forceServer: true }).then(function(remote) {
             if (remote && remote.avatar && /^https?:\/\//i.test(remote.avatar)) {
-                if (typeof window.applyProfileAvatars === 'function') {
-                    window.applyProfileAvatars(remote.avatar, { cacheBust: true, scope: 'profile' });
-                } else {
-                    const profileAvatar = document.getElementById('profile-avatar');
-                    const dispUrl = (typeof window.upgradeProfileAvatarUrl === 'function')
-                        ? window.upgradeProfileAvatarUrl(remote.avatar)
-                        : remote.avatar;
-                    if (profileAvatar) profileAvatar.src = dispUrl;
-                }
+                setViewedProfileAvatar(remote.avatar);
             }
         }).catch(function() { /* ignore */ });
     }
@@ -516,6 +511,16 @@ if (typeof window !== 'undefined') {
     window.updateProfileSubbannerVisibility = updateProfileSubbannerVisibility;
 }
 
+function setViewedProfileAvatar(url) {
+    const profileAvatar = document.getElementById('profile-avatar');
+    if (!profileAvatar || !url) return;
+    const disp = upgradeProfileAvatarUrl(url);
+    profileAvatar.onerror = null;
+    profileAvatar.dataset.mwAvatarSrc = disp;
+    profileAvatar.dataset.mwViewedProfile = '1';
+    profileAvatar.src = disp;
+}
+
 function displayProfileInfo(user, userEmail) {
     const profileAvatar = document.getElementById('profile-avatar');
     const userName = document.getElementById('user-name');
@@ -537,7 +542,12 @@ function displayProfileInfo(user, userEmail) {
         } else if (storedAvatar) {
             rawAvatar = storedAvatar;
         }
-        profileAvatar.src = rawAvatar ? upgradeProfileAvatarUrl(rawAvatar) : '';
+        if (rawAvatar) {
+            setViewedProfileAvatar(rawAvatar);
+        } else {
+            profileAvatar.removeAttribute('data-mw-viewed-profile');
+            profileAvatar.src = '';
+        }
     }
     
     // Afficher le nom avec le badge certifié (ne pas utiliser data-i18n sur ce nœud : applyLanguage réécraserait avec « Chargement… »)

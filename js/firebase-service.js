@@ -342,7 +342,17 @@ export async function syncRemoteProfileMedia(userEmail, options) {
 
   if (avatarChanged && typeof window !== 'undefined') {
     try {
-      window.dispatchEvent(new CustomEvent('profileAvatarUpdated', { detail: { url: avatar } }));
+      var isOwnProfile = false;
+      try {
+        var userRaw = localStorage.getItem('user');
+        if (userRaw) {
+          var u = JSON.parse(userRaw);
+          isOwnProfile = !!(u && normalizeProfileEmail(u.email) === email);
+        }
+      } catch (_) { /* ignore */ }
+      if (isOwnProfile) {
+        window.dispatchEvent(new CustomEvent('profileAvatarUpdated', { detail: { url: avatar, email: email } }));
+      }
     } catch (_) { /* ignore */ }
   }
 
