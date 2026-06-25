@@ -175,10 +175,20 @@
         return true;
     }
 
+    /**
+     * Applique une URL d'avatar aux éléments de la page.
+     * opts.scope : 'both' (défaut, profil perso), 'header' (#user-avatar), 'profile' (#profile-avatar, profil public).
+     */
     function applyProfileAvatars(url, opts) {
         if (!url) return;
-        setAvatarOnElement(global.document.getElementById('user-avatar'), url, opts);
-        setAvatarOnElement(global.document.getElementById('profile-avatar'), url, opts);
+        opts = opts || {};
+        var scope = opts.scope || 'both';
+        if (scope === 'both' || scope === 'header') {
+            setAvatarOnElement(global.document.getElementById('user-avatar'), url, opts);
+        }
+        if (scope === 'both' || scope === 'profile') {
+            setAvatarOnElement(global.document.getElementById('profile-avatar'), url, opts);
+        }
     }
 
     function refreshHeaderAvatar(opts) {
@@ -198,7 +208,7 @@
         }
 
         setAvatarLinkVisible(true);
-        applyProfileAvatars(url, opts);
+        applyProfileAvatars(url, Object.assign({}, opts, { scope: 'header' }));
         return url;
     }
 

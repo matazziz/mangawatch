@@ -478,7 +478,7 @@ async function loadUserProfile(userEmail) {
         void window.syncRemoteProfileMedia(normalizedEmail, { forceServer: true }).then(function(remote) {
             if (remote && remote.avatar && /^https?:\/\//i.test(remote.avatar)) {
                 if (typeof window.applyProfileAvatars === 'function') {
-                    window.applyProfileAvatars(remote.avatar, { cacheBust: true });
+                    window.applyProfileAvatars(remote.avatar, { cacheBust: true, scope: 'profile' });
                 } else {
                     const profileAvatar = document.getElementById('profile-avatar');
                     const dispUrl = (typeof window.upgradeProfileAvatarUrl === 'function')
@@ -526,16 +526,16 @@ function displayProfileInfo(user, userEmail) {
     
     if (profileAvatar) {
         var rawAvatar = '';
-        if (storedAvatar) {
-            rawAvatar = storedAvatar;
-        } else if (user.avatar) {
+        if (user.avatar) {
             rawAvatar = user.avatar;
+        } else if (user.picture) {
+            rawAvatar = user.picture;
         } else if (user.customAvatar) {
             rawAvatar = user.customAvatar;
         } else if (user.originalAvatar) {
             rawAvatar = user.originalAvatar;
-        } else if (user.picture) {
-            rawAvatar = user.picture;
+        } else if (storedAvatar) {
+            rawAvatar = storedAvatar;
         }
         profileAvatar.src = rawAvatar ? upgradeProfileAvatarUrl(rawAvatar) : '';
     }

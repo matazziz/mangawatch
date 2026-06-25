@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     var script = document.createElement('script');
-    script.src = '/js/header-avatar.js?v=5';
+    script.src = '/js/header-avatar.js?v=6';
     script.async = false;
     document.head.appendChild(script);
 })();
