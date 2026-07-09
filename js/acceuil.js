@@ -3,6 +3,7 @@
 
 import { syncCurrentUserProfileToFirestore, syncProfileToFirestore } from './auth.js';
 import { launchPostSignupMediaFlow } from './post-signup-media.js';
+import { tryResumeOnboarding, runOnboardingTestIfRequested } from './onboarding-guide.js';
 
 // === FONCTIONS POUR MODALS D'ERREUR ET DE SUCCÈS ===
 
@@ -234,7 +235,7 @@ function showHomeSectionPlaceholders() {
     ensureHomeSkeletonStyles();
     const loadingText = (typeof window.t === 'function' ? window.t('common.loading') : null) || 'Chargement...';
     const skeleton = getHomeSkeletonHtml(loadingText);
-    ['authorOfWeekContainer', 'quizContainer', 'newUsersContainer', 'personalizedRecsContainer'].forEach(function(id) {
+    ['authorOfWeekContainer', 'quizContainer', 'newUsersContainer'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el && el.children.length === 0) {
             el.innerHTML = skeleton;
@@ -246,29 +247,27 @@ let homeSectionsLoadStarted = false;
 
 async function loadAllDynamicSections() {
     console.log('📚 Chargement de toutes les sections dynamiques...');
-    try {
-        if (typeof window.loadAuthorOfWeek === 'function') {
-            await window.loadAuthorOfWeek();
-        } else {
-            console.error('❌ loadAuthorOfWeek n\'est pas disponible');
+    const sections = [
+        { fn: 'loadAuthorOfWeek', label: 'Auteur de la semaine' },
+        { fn: 'loadDailyQuiz', label: 'Quiz du jour' },
+        { fn: 'loadNewUsers', label: 'Nouveaux utilisateurs' }
+    ];
+
+    for (let i = 0; i < sections.length; i++) {
+        const { fn, label } = sections[i];
+        try {
+            if (typeof window[fn] === 'function') {
+                await window[fn]();
+            } else {
+                console.error('❌ ' + fn + ' n\'est pas disponible');
+            }
+        } catch (error) {
+            // Important : on ne bloque pas les recommandations personnalisées si une autre section échoue.
+            console.error('❌ Erreur lors du chargement de ' + label + ':', error);
         }
-        if (typeof window.loadDailyQuiz === 'function') {
-            await window.loadDailyQuiz();
-        } else {
-            console.error('❌ loadDailyQuiz n\'est pas disponible');
-        }
-        if (typeof window.loadNewUsers === 'function') {
-            await window.loadNewUsers();
-        } else {
-            console.error('❌ loadNewUsers n\'est pas disponible');
-        }
-        if (typeof window.loadPersonalizedRecommendations === 'function') {
-            await window.loadPersonalizedRecommendations();
-        }
-        console.log('✅ Toutes les sections dynamiques ont été chargées');
-    } catch (error) {
-        console.error('❌ Erreur lors du chargement des sections dynamiques:', error);
     }
+
+    console.log('✅ Chargement des sections dynamiques terminé');
 }
 
 async function initHomeDynamicSections() {
@@ -363,6 +362,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     if (typeof syncHeaderAuthState === 'function') {
         syncHeaderAuthState();
+    }
+
+    if (!runOnboardingTestIfRequested()) {
+        tryResumeOnboarding();
     }
 
     // Charger l'avatar depuis Firestore et réappliquer (persistance après changement de page)

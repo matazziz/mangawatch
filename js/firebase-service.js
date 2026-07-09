@@ -26,7 +26,8 @@ import {
   limit,
   Timestamp,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  onSnapshot
 } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 import { storage } from './firebase-config.js';
@@ -372,7 +373,9 @@ export const COLLECTIONS = {
   BOUTIQUE_STATS: 'boutique_stats',
   PROFILE_RATING_VOTES: 'profile_rating_votes',
   PROFILE_RATING_STATS: 'profile_rating_stats',
-  USER_REPORTS: 'user_reports'
+  USER_REPORTS: 'user_reports',
+  COMMUNITY_PRESENCE: 'community_presence',
+  COMMUNITY_CHANNELS: 'community_channels'
 };
 
 // ============================================
@@ -1680,7 +1683,8 @@ export const profileRatingService = {
   },
 
   /**
-   * Ajoute plusieurs notes admin (votes synthétiques) pour faire remonter la moyenne.
+   * Ajoute plusieurs notes admin (mise à jour directe des stats affichées sur le profil).
+   * Ne nécessite pas de connexion Firebase : la page admin est protégée par mot de passe local.
    * @param {string} profileEmail
    * @param {number} quantity - nombre de notes à ajouter (1–1000)
    * @param {number} score - note de chaque vote (1–10)
@@ -1700,30 +1704,6 @@ export const profileRatingService = {
       const d = statsSnap.data() || {};
       prevSum = Number(d.sum) || 0;
       prevCount = Number(d.count) || 0;
-    }
-
-    const baseTs = Date.now();
-    const voteWrites = [];
-    for (let i = 0; i < qty; i++) {
-      const voterId = `__admin_${baseTs}_${i}`;
-      voteWrites.push({
-        ref: doc(db, COLLECTIONS.PROFILE_RATING_VOTES, profileRatingVoteId(voterId, profile)),
-        data: {
-          voter_email: voterId,
-          profile_email: profile,
-          score: normalizedScore,
-          admin_vote: true,
-          created_at: serverTimestamp(),
-          updated_at: serverTimestamp()
-        }
-      });
-    }
-
-    const CHUNK = 450;
-    for (let start = 0; start < voteWrites.length; start += CHUNK) {
-      const batch = writeBatch(db);
-      voteWrites.slice(start, start + CHUNK).forEach(({ ref, data }) => batch.set(ref, data));
-      await batch.commit();
     }
 
     const newCount = prevCount + qty;
@@ -2310,6 +2290,7 @@ export const userReportService = {
 // SERVICE SUPPORT TICKETS (Aide)
 // ============================================
 const ADMIN_EMAIL = 'mangawatch.off@gmail.com';
+const SITE_ADMIN_EMAILS = [ADMIN_EMAIL, 'mathieubroyer190508@gmail.com'];
 
 export const supportTicketService = {
   /**
@@ -2491,6 +2472,470 @@ export const boutiqueStatsService = {
   }
 };
 
+// ============================================
+// SALON COMMUNAUTAIRE (chat type Discord)
+// ============================================
+
+const BUILTIN_CHANNEL_ID = 'general';
+const COMMUNITY_MODERATOR_EMAILS = [
+  'mangawatch.off@gmail.com',
+  'mathieubroyer190508@gmail.com'
+];
+
+export function isCommunityModeratorEmail(userEmail) {
+  const email = normalizeProfileEmail(userEmail);
+  if (!email) return false;
+  return COMMUNITY_MODERATOR_EMAILS.includes(email);
+}
+
+function isValidCommunityChannelId(id) {
+  const s = String(id || '').trim().toLowerCase();
+  if (s === BUILTIN_CHANNEL_ID) return true;
+  return /^[a-z0-9][a-z0-9-]{0,48}$/.test(s);
+}
+
+function slugifyChannelName(name) {
+  const base = String(name || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  return base || 'salon';
+}
+
+function communityMessagesRef(channelId) {
+  const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+  if (!isValidCommunityChannelId(id)) {
+    throw new Error('Canal invalide');
+  }
+  return collection(db, 'community_chat', id, 'messages');
+}
+
+function pollVotesRef(channelId, messageId) {
+  const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+  return collection(db, 'community_chat', id, 'messages', messageId, 'poll_votes');
+}
+
+function mapPollVotesSnapshot(snap) {
+  const voteMap = {};
+  snap.forEach((v) => {
+    const data = v.data() || {};
+    const voterEmail = normalizeProfileEmail(data.voter_email || v.id);
+    if (!voterEmail) return;
+    voteMap[voterEmail] = Number(data.option_index);
+  });
+  return voteMap;
+}
+
+function timestampToMs(value) {
+  if (!value) return Date.now();
+  if (typeof value === 'number') return value;
+  if (typeof value.toMillis === 'function') return value.toMillis();
+  if (typeof value.seconds === 'number') return value.seconds * 1000;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? Date.now() : ms;
+}
+
+function mapChannelDoc(d) {
+  const data = d.data();
+  return {
+    id: d.id,
+    slug: data.slug || d.id,
+    name: data.name || d.id,
+    description: data.description || '',
+    created_by: data.created_by || '',
+    created_by_name: data.created_by_name || '',
+    builtin: data.builtin === true,
+    created_at: timestampToMs(data.created_at)
+  };
+}
+
+export const communityLoungeService = {
+  builtinChannelId: BUILTIN_CHANNEL_ID,
+
+  getBuiltinChannel() {
+    return {
+      id: BUILTIN_CHANNEL_ID,
+      slug: BUILTIN_CHANNEL_ID,
+      name: 'général',
+      description: 'Discussions libres',
+      builtin: true
+    };
+  },
+
+  subscribeToChannels(callback) {
+    const colRef = collection(db, COLLECTIONS.COMMUNITY_CHANNELS);
+    const q = query(colRef, orderBy('created_at', 'asc'));
+    return onSnapshot(q, (snap) => {
+      const channels = snap.docs.map(mapChannelDoc);
+      callback(channels);
+    }, (err) => {
+      console.error('[Salon] Erreur écoute canaux:', err);
+      callback([], err);
+    });
+  },
+
+  subscribeToChannel(channelId, callback, options) {
+    const opts = options || {};
+    const msgLimit = opts.limit || 150;
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const q = query(communityMessagesRef(id), orderBy('created_at', 'asc'), limit(msgLimit));
+    let enrichGen = 0;
+
+    function mapMessageDoc(d) {
+      const data = d.data();
+      const msg = {
+        id: d.id,
+        channel: id,
+        type: data.type === 'poll' ? 'poll' : 'message',
+        text: data.text || '',
+        question: data.question || data.text || '',
+        options: Array.isArray(data.options) ? data.options.map(String) : [],
+        poll_votes: {},
+        duration_minutes: typeof data.duration_minutes === 'number' ? data.duration_minutes : 0,
+        closes_at: data.closes_at ? timestampToMs(data.closes_at) : null,
+        user_email: data.user_email || '',
+        user_name: data.user_name || '',
+        user_avatar: data.user_avatar || null,
+        created_at: timestampToMs(data.created_at),
+        updated_at: timestampToMs(data.updated_at),
+        edited: data.edited === true
+      };
+      return msg;
+    }
+
+    async function enrichPollVotes(messages) {
+      const polls = messages.filter((m) => m.type === 'poll');
+      if (!polls.length) return messages;
+      await Promise.all(polls.map(async (m) => {
+        try {
+          const votesSnap = await getDocs(pollVotesRef(id, m.id));
+          m.poll_votes = mapPollVotesSnapshot(votesSnap);
+        } catch (e) {
+          console.warn('[Salon] Votes sondage:', e);
+          m.poll_votes = {};
+        }
+      }));
+      return messages;
+    }
+
+    return onSnapshot(q, (snap) => {
+      const gen = ++enrichGen;
+      const messages = snap.docs.map(mapMessageDoc);
+      callback(messages);
+      enrichPollVotes(messages).then((enriched) => {
+        if (gen !== enrichGen) return;
+        callback(enriched.slice());
+      });
+    }, (err) => {
+      console.error('[Salon] Erreur écoute messages:', err);
+      callback([], err);
+    });
+  },
+
+  async sendMessage(channelId, payload) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const email = normalizeProfileEmail(payload.user_email);
+    if (!email) throw new Error('Email utilisateur requis');
+    await ensureAuthenticatedForStorage(email);
+    const text = String(payload.text || '').trim();
+    if (!text) throw new Error('Message vide');
+    if (text.length > 2000) throw new Error('Message trop long (max 2000 caractères)');
+
+    const docRef = await addDoc(communityMessagesRef(id), {
+      text,
+      user_email: email,
+      user_name: String(payload.user_name || email.split('@')[0]).trim(),
+      user_avatar: payload.user_avatar || null,
+      created_at: serverTimestamp()
+    });
+    return docRef.id;
+  },
+
+  async createPoll(channelId, payload) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const email = normalizeProfileEmail(payload.user_email);
+    if (!email) throw new Error('Email utilisateur requis');
+    await ensureAuthenticatedForStorage(email);
+
+    const question = String(payload.question || '').trim();
+    if (question.length < 3) throw new Error('La question doit contenir au moins 3 caractères');
+    if (question.length > 300) throw new Error('Question trop longue (max 300 caractères)');
+
+    const options = [...new Set((payload.options || []).map((o) => String(o || '').trim()).filter(Boolean))];
+    if (options.length < 2) throw new Error('Ajoutez au moins 2 options');
+    if (options.length > 6) throw new Error('Maximum 6 options');
+    options.forEach((opt) => {
+      if (opt.length > 120) throw new Error('Chaque option est limitée à 120 caractères');
+    });
+
+    const durationMinutes = Math.round(Number(payload.duration_minutes) || 0);
+    const allowedDurations = [0, 60, 360, 1440, 4320, 10080];
+    if (!allowedDurations.includes(durationMinutes)) {
+      throw new Error('Durée de sondage invalide');
+    }
+
+    const pollData = {
+      type: 'poll',
+      question,
+      options,
+      text: question,
+      user_email: email,
+      user_name: String(payload.user_name || email.split('@')[0]).trim(),
+      user_avatar: payload.user_avatar || null,
+      duration_minutes: durationMinutes,
+      created_at: serverTimestamp()
+    };
+
+    if (durationMinutes > 0) {
+      pollData.closes_at = Timestamp.fromMillis(Date.now() + durationMinutes * 60 * 1000);
+    }
+
+    const docRef = await addDoc(communityMessagesRef(id), pollData);
+    return docRef.id;
+  },
+
+  async votePoll(channelId, messageId, optionIndex, userEmail) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const email = normalizeProfileEmail(userEmail);
+    if (!email) throw new Error('Email utilisateur requis');
+    const currentUser = await ensureAuthenticatedForStorage(email);
+    if (!currentUser || !currentUser.uid) {
+      throw new Error('SESSION_FIREBASE_REQUISE');
+    }
+
+    const msgRef = doc(db, 'community_chat', id, 'messages', messageId);
+    const snap = await getDoc(msgRef);
+    if (!snap.exists()) throw new Error('Sondage introuvable');
+    const data = snap.data();
+    if (data.type !== 'poll') throw new Error('Ce message n\'est pas un sondage');
+
+    if (data.closes_at) {
+      const closesMs = timestampToMs(data.closes_at);
+      if (Date.now() >= closesMs) {
+        throw new Error('Ce sondage est terminé');
+      }
+    }
+
+    const idx = Math.round(Number(optionIndex));
+    const options = Array.isArray(data.options) ? data.options : [];
+    if (idx < 0 || idx >= options.length) throw new Error('Option invalide');
+
+    const voteRef = doc(pollVotesRef(id, messageId), currentUser.uid);
+    await setDoc(voteRef, {
+      option_index: idx,
+      voter_email: currentUser.email || email,
+      voted_at: serverTimestamp()
+    });
+  },
+
+  async fetchPollVotes(channelId, messageId) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const votesSnap = await getDocs(pollVotesRef(id, messageId));
+    return mapPollVotesSnapshot(votesSnap);
+  },
+
+  subscribeToPollVotes(channelId, messageId, callback) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    return onSnapshot(pollVotesRef(id, messageId), (snap) => {
+      callback(mapPollVotesSnapshot(snap));
+    }, (err) => {
+      console.warn('[Salon] Écoute votes sondage:', err);
+      callback({});
+    });
+  },
+
+  async createChannel(payload) {
+    const email = normalizeProfileEmail(payload.user_email);
+    if (!email) throw new Error('Email utilisateur requis');
+    await ensureAuthenticatedForStorage(email);
+
+    const displayName = String(payload.name || '').trim();
+    if (displayName.length < 2) throw new Error('Le nom du salon doit contenir au moins 2 caractères');
+    if (displayName.length > 60) throw new Error('Le nom du salon est trop long (max 60 caractères)');
+
+    const firstMessage = String(payload.first_message || '').trim();
+    if (!firstMessage) throw new Error('Écrivez un premier message pour créer le salon');
+    if (firstMessage.length > 2000) throw new Error('Message trop long (max 2000 caractères)');
+
+    const description = String(payload.description || '').trim().slice(0, 200);
+    let baseSlug = slugifyChannelName(displayName);
+    if (baseSlug === BUILTIN_CHANNEL_ID) {
+      baseSlug = baseSlug + '-salon';
+    }
+
+    let slug = baseSlug;
+    let suffix = 1;
+    while (suffix < 50) {
+      const existing = await getDoc(doc(db, COLLECTIONS.COMMUNITY_CHANNELS, slug));
+      if (!existing.exists()) break;
+      suffix += 1;
+      slug = `${baseSlug}-${suffix}`;
+    }
+    if (suffix >= 50) {
+      slug = `${baseSlug}-${Date.now().toString(36)}`;
+    }
+
+    const channelRef = doc(db, COLLECTIONS.COMMUNITY_CHANNELS, slug);
+    const messageRef = doc(collection(db, 'community_chat', slug, 'messages'));
+    const batch = writeBatch(db);
+
+    batch.set(channelRef, {
+      slug,
+      name: displayName,
+      description,
+      created_by: email,
+      created_by_name: String(payload.user_name || email.split('@')[0]).trim(),
+      builtin: false,
+      created_at: serverTimestamp()
+    });
+
+    batch.set(messageRef, {
+      text: firstMessage,
+      user_email: email,
+      user_name: String(payload.user_name || email.split('@')[0]).trim(),
+      user_avatar: payload.user_avatar || null,
+      created_at: serverTimestamp(),
+      is_opening_message: true
+    });
+
+    await batch.commit();
+    return { id: slug, slug, name: displayName, description };
+  },
+
+  async updateMessage(channelId, messageId, userEmail, newText) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const email = normalizeProfileEmail(userEmail);
+    if (!email) throw new Error('Email utilisateur requis');
+    await ensureAuthenticatedForStorage(email);
+    const text = String(newText || '').trim();
+    if (!text) throw new Error('Message vide');
+    if (text.length > 2000) throw new Error('Message trop long (max 2000 caractères)');
+
+    const msgRef = doc(db, 'community_chat', id, 'messages', messageId);
+    const snap = await getDoc(msgRef);
+    if (!snap.exists()) throw new Error('Message introuvable');
+    const data = snap.data();
+    if (data.type === 'poll') {
+      throw new Error('Les sondages ne peuvent pas être modifiés');
+    }
+    const isOwner = normalizeProfileEmail(data.user_email) === email;
+    if (!isOwner && !isCommunityModeratorEmail(email)) {
+      throw new Error('Permission refusée');
+    }
+
+    await updateDoc(msgRef, {
+      text,
+      edited: true,
+      updated_at: serverTimestamp()
+    });
+  },
+
+  async deleteMessage(channelId, messageId, userEmail) {
+    const id = String(channelId || BUILTIN_CHANNEL_ID).trim().toLowerCase();
+    const email = normalizeProfileEmail(userEmail);
+    if (!email) throw new Error('Email utilisateur requis');
+    await ensureAuthenticatedForStorage(email);
+
+    const msgRef = doc(db, 'community_chat', id, 'messages', messageId);
+    const snap = await getDoc(msgRef);
+    if (!snap.exists()) throw new Error('Message introuvable');
+    const data = snap.data();
+    const isOwner = normalizeProfileEmail(data.user_email) === email;
+    if (!isOwner && !isCommunityModeratorEmail(email)) {
+      throw new Error('Permission refusée');
+    }
+
+    if (data.type === 'poll') {
+      const votesSnap = await getDocs(collection(db, 'community_chat', id, 'messages', messageId, 'poll_votes'));
+      if (!votesSnap.empty) {
+        const batch = writeBatch(db);
+        votesSnap.forEach((v) => batch.delete(v.ref));
+        await batch.commit();
+      }
+    }
+
+    await deleteDoc(msgRef);
+  },
+
+  async deleteChannel(channelId, userEmail) {
+    const id = String(channelId || '').trim().toLowerCase();
+    if (!id || id === BUILTIN_CHANNEL_ID) {
+      throw new Error('Impossible de supprimer ce salon');
+    }
+    const email = normalizeProfileEmail(userEmail);
+    if (!email) throw new Error('Email utilisateur requis');
+    await ensureAuthenticatedForStorage(email);
+
+    const channelRef = doc(db, COLLECTIONS.COMMUNITY_CHANNELS, id);
+    const channelSnap = await getDoc(channelRef);
+    if (!channelSnap.exists()) throw new Error('Salon introuvable');
+    const channelData = channelSnap.data();
+    const isOwner = normalizeProfileEmail(channelData.created_by) === email;
+    if (!isOwner && !isCommunityModeratorEmail(email)) {
+      throw new Error('Permission refusée');
+    }
+
+    const messagesSnap = await getDocs(communityMessagesRef(id));
+    let batch = writeBatch(db);
+    let ops = 0;
+    for (const d of messagesSnap.docs) {
+      batch.delete(d.ref);
+      ops += 1;
+      if (ops >= 400) {
+        await batch.commit();
+        batch = writeBatch(db);
+        ops = 0;
+      }
+    }
+    if (ops > 0) await batch.commit();
+    await deleteDoc(channelRef);
+    return true;
+  },
+
+  async updatePresence(userEmail, userName, userAvatar) {
+    const email = normalizeProfileEmail(userEmail);
+    if (!email) return;
+    try {
+      await ensureAuthenticatedForStorage(email, { maxWaitMs: 5000 });
+    } catch (_) {
+      return;
+    }
+    const ref = doc(db, COLLECTIONS.COMMUNITY_PRESENCE, email);
+    await setDoc(ref, {
+      user_email: email,
+      user_name: String(userName || email.split('@')[0]).trim(),
+      user_avatar: userAvatar || null,
+      last_seen: serverTimestamp()
+    }, { merge: true });
+  },
+
+  subscribeToPresence(callback) {
+    const colRef = collection(db, COLLECTIONS.COMMUNITY_PRESENCE);
+    return onSnapshot(colRef, (snap) => {
+      const now = Date.now();
+      const list = snap.docs.map((d) => {
+        const data = d.data();
+        const lastSeen = timestampToMs(data.last_seen);
+        return {
+          email: d.id,
+          name: data.user_name || d.id.split('@')[0],
+          avatar: data.user_avatar || null,
+          last_seen: lastSeen,
+          online: now - lastSeen < 3 * 60 * 1000
+        };
+      });
+      callback(list);
+    }, (err) => {
+      console.warn('[Salon] Présence indisponible:', err);
+      callback([]);
+    });
+  }
+};
+
 // Exposer globalement pour compatibilité
 if (typeof window !== 'undefined') {
   window.forumService = forumService;
@@ -2508,6 +2953,8 @@ if (typeof window !== 'undefined') {
   window.boutiqueStatsService = boutiqueStatsService;
   window.profileRatingService = profileRatingService;
   window.userReportService = userReportService;
+  window.communityLoungeService = communityLoungeService;
+  window.isCommunityModeratorEmail = isCommunityModeratorEmail;
   window.FIREBASE_COLLECTIONS = COLLECTIONS;
   window.MANGAWATCH_ADMIN_EMAIL = ADMIN_EMAIL;
 }

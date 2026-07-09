@@ -2,6 +2,7 @@
  * Popup post-inscription : choix photo de profil + bannière.
  */
 import { importFirebaseService } from './firebase-import.js';
+import { launchOnboardingGuide, markOnboardingPending } from './onboarding-guide.js';
 
 const OVERLAY_ID = 'post-signup-media-overlay';
 
@@ -421,7 +422,12 @@ export async function launchPostSignupMediaFlow(username) {
             window.closeGoogleSignUpCompletion();
         }
     }
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (user && user.email) markOnboardingPending(user.email);
+    } catch (e) { /* ignore */ }
     await showPostSignupMediaPopup({ username: username || '' });
+    await launchOnboardingGuide({ username: username || '' });
 }
 
 if (typeof window !== 'undefined') {

@@ -8,8 +8,70 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    function isBoutiqueDisabledTemporarily() {
+        const path = (window.location.pathname || '').replace(/\\/g, '/');
+        if (/\/user-profile\.html/.test(path)) {
+            return true;
+        }
+        try {
+            return sessionStorage.getItem('mw_boutique_disabled') === '1' ||
+                localStorage.getItem('mw_boutique_disabled') === '1' ||
+                document.documentElement.getAttribute('data-boutique-disabled') === '1' ||
+                document.body.getAttribute('data-boutique-disabled') === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
     function isMobileViewport() {
         return window.innerWidth <= mobileBreakpoint;
+    }
+
+    function resolveForumHref() {
+        const path = (window.location.pathname || '').replace(/\\/g, '/');
+        if (/\/pages\//.test(path)) {
+            return 'salon.html';
+        }
+        if (/\/public\//.test(path)) {
+            return '../pages/salon.html';
+        }
+        return 'pages/salon.html';
+    }
+
+    function isForumChatNavLink(anchor) {
+        const href = (anchor.getAttribute('href') || '').toLowerCase();
+        return href.includes('salon') || href.includes('utilisateurs') ||
+            (href.includes('forum') && !href.includes('topic'));
+    }
+
+    /** Lien Forum (chat communautaire) unique dans chaque menu hamburger. */
+    function ensureForumInMobileMenu() {
+        document.querySelectorAll('.mobile-menu .nav-links').forEach(function (nav) {
+            const matches = Array.from(nav.querySelectorAll('a')).filter(isForumChatNavLink);
+            if (matches.length > 1) {
+                matches.slice(1).forEach(function (dup) { dup.remove(); });
+            }
+
+            let link = matches[0];
+            if (!link) {
+                link = document.createElement('a');
+                link.setAttribute('data-nav-forum-chat', '1');
+                const insertBefore = nav.querySelector('a[href*="profil.html"]') ||
+                    nav.querySelector('a[href*="tierlist"]');
+                if (insertBefore) {
+                    nav.insertBefore(link, insertBefore);
+                } else {
+                    nav.appendChild(link);
+                }
+            }
+
+            link.href = resolveForumHref();
+            link.innerHTML = '<i class="fas fa-comments"></i><span data-i18n="nav.forum">Forum</span>';
+        });
+
+        if (window.localization && typeof window.localization.apply === 'function') {
+            window.localization.apply();
+        }
     }
 
     function resolveBoutiqueHref() {
@@ -30,6 +92,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /** Lien Boutique unique dans chaque menu hamburger (évite les doublons HTML + JS). */
     function ensureBoutiqueInMobileMenu() {
+        if (isBoutiqueDisabledTemporarily()) {
+            // Nettoyage : on retire tout lien boutique potentiellement déjà présent.
+            document.querySelectorAll('.mobile-menu .nav-links a').forEach(function (a) {
+                if (isBoutiqueNavLink(a)) a.remove();
+            });
+            if (window.localization && typeof window.localization.apply === 'function') {
+                window.localization.apply();
+            }
+            return;
+        }
+
         document.querySelectorAll('.mobile-menu .nav-links').forEach(function (nav) {
             const existing = Array.from(nav.querySelectorAll('a')).filter(isBoutiqueNavLink);
             if (existing.length > 1) {
@@ -91,6 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     ensureBoutiqueInMobileMenu();
+    ensureForumInMobileMenu();
 
     hamburgerBtn.addEventListener('click', toggleMenu);
     hamburgerBtn.setAttribute('aria-expanded', 'false');
@@ -136,6 +210,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const href = link.getAttribute('href') || '';
             const hrefPage = href.split('/').pop();
             if (hrefPage === currentPage || href === currentPage) {
+                link.classList.add('active');
+            }
+            if ((currentPage === 'salon.html' || currentPage === 'utilisateurs.html') &&
+                isForumChatNavLink(link)) {
                 link.classList.add('active');
             }
         });

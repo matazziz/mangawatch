@@ -86,11 +86,24 @@ class MessagingUI {
         this.clampButtonAboveFooter();
     }
 
-    /** Empêche le bouton messagerie de passer sous le footer (toutes pages avec footer unifié). */
+    /** Empêche le bouton messagerie de passer sous le footer (sauf pages qui l'autorisent). */
     clampButtonAboveFooter() {
         const btn = document.getElementById('message-button');
+        if (!btn) return;
+
+        const allowOverFooter = document.body.classList.contains('salon-page') ||
+            document.body.dataset.page === 'salon' ||
+            document.body.dataset.messageOverFooter === '1';
+
+        if (allowOverFooter) {
+            const bottomPx = '20px';
+            btn.style.bottom = bottomPx;
+            document.documentElement.style.setProperty('--message-btn-bottom', bottomPx);
+            return;
+        }
+
         const footer = document.querySelector('.footer-unified');
-        if (!btn || !footer) return;
+        if (!footer) return;
         const gap = 16;
         const defaultBottom = 20;
         let bottom = defaultBottom;

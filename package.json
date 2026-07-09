@@ -9,6 +9,8 @@
     "dev": "cross-env NODE_ENV=development nodemon js/server.js",
     "live": "powershell -ExecutionPolicy Bypass -File scripts/dev-live.ps1",
     "live:manga": "powershell -ExecutionPolicy Bypass -File scripts/dev-live.ps1 manga-database",
+    "live:users": "powershell -ExecutionPolicy Bypass -File scripts/dev-live.ps1 salon",
+    "live:salon": "powershell -ExecutionPolicy Bypass -File scripts/dev-live.ps1 salon",
     "admin": "powershell -ExecutionPolicy Bypass -File scripts/ouvrir-admin.ps1",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/images/porte-torii.png" sizes="32x32">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Forum communautaire — MangaWatch</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/messaging.css">
+    <link rel="stylesheet" href="/css/community-lounge.css">
+    <script src="/js/localization.js"></script>
+    <style id="mw-header-avatar-guest-hide">
+        .main-header .avatar-link:not(.is-auth-visible),
+        .avatar-link:not(.is-auth-visible) {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+    </style>
+</head>
+<body class="salon-page" data-page="salon" data-message-over-footer="1">
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+
+        <div class="search-wrapper">
+            <form class="search-bar" id="searchForm">
+                <select id="searchType" class="search-type-selector">
+                    <option value="manga" selected data-i18n="search.type.manga">Manga</option>
+                    <option value="anime" data-i18n="search.type.anime">Anime</option>
+                    <option value="movie" data-i18n="search.type.movie">Film</option>
+                    <option value="user" data-i18n="search.type.user">Utilisateur</option>
+                </select>
+                <input type="text" placeholder="" id="searchInput" data-i18n-placeholder="search.placeholder.manga" autocomplete="new-password" name="forum-search" spellcheck="false">
+                <button type="submit" aria-label="" data-i18n-aria-label="search.aria_label">
+                    <i class="fas fa-search"></i>
+                </button>
+            </form>
+            <div id="search-results" class="search-results-dropdown"></div>
+        </div>
+
+        <nav class="nav-links">
+            <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
+            <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
+            <a href="list.html" data-i18n="nav.collection">Collection</a>
+            <a href="profil.html" data-i18n="nav.profile">Profil</a>
+        </nav>
+
+        <div class="header-right">
+            <button class="hamburger-btn" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <a href="profil.html" class="avatar-link is-guest-hidden">
+                <img id="user-avatar" src="" alt="" data-i18n-alt="common.avatar_user" class="user-avatar" onerror="this.onerror=null;this.src='';">
+            </a>
+        </div>
+    </header>
+
+    <div class="mobile-menu">
+        <nav class="nav-links">
+            <a href="acceuil.html"><i class="fas fa-home"></i><span data-i18n="nav.home">Accueil</span></a>
+            <a href="manga-database.html"><i class="fas fa-tv"></i><span data-i18n="nav.manga_anime">Manga Anime</span></a>
+            <a href="list.html"><i class="fas fa-bookmark"></i><span data-i18n="nav.collection">Collection</span></a>
+            <a href="profil.html"><i class="fas fa-user"></i><span data-i18n="nav.profile">Profil</span></a>
+            <a href="salon.html" class="active"><i class="fas fa-comments"></i><span data-i18n="nav.forum">Forum</span></a>
+        </nav>
+    </div>
+
+    <div class="salon-page-wrap">
+        <div class="salon-drawer-overlay" id="salon-drawer-overlay"></div>
+
+        <aside class="salon-channels-drawer" id="salon-channels-drawer" aria-label="Choisir un salon">
+            <div class="salon-drawer-header">
+                <h3 data-i18n="salon.channels">Salons</h3>
+                <button type="button" class="salon-drawer-close" id="salon-channels-close" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="salon-drawer-list" id="salon-channels-drawer-list"></div>
+            <div class="salon-drawer-footer">
+                <button type="button" class="salon-drawer-create-btn" id="salon-create-channel-btn-drawer">
+                    <i class="fas fa-plus"></i>
+                    <span data-i18n="salon.create_title">Créer un salon</span>
+                </button>
+            </div>
+        </aside>
+
+        <aside class="salon-members" id="salon-members">
+            <div class="salon-members-header">
+                <div class="salon-members-header-top">
+                    <h3><span data-i18n="salon.members">Membres</span> — <span id="salon-member-count">0</span></h3>
+                    <button type="button" class="salon-drawer-close" id="salon-members-close" aria-label="Fermer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <input type="search" class="salon-members-search" id="salon-members-search" placeholder="Rechercher…" data-i18n-placeholder="salon.search_members">
+            </div>
+            <div class="salon-members-list" id="salon-members-list">
+                <div class="salon-loading"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+        </aside>
+
+        <div class="salon-layout">
+            <aside class="salon-channels salon-channels-desktop" aria-label="Salons">
+                <div class="salon-channels-scroll" id="salon-channels-list"></div>
+                <button type="button" class="salon-channel-btn salon-channel-add" id="salon-create-channel-btn" title="Créer un salon">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </aside>
+
+            <main class="salon-chat">
+                <header class="salon-chat-header">
+                    <button type="button" class="salon-channel-picker" id="salon-channel-picker" aria-label="Choisir un salon">
+                        <i class="fas fa-hashtag salon-channel-picker-icon"></i>
+                        <span class="salon-channel-picker-title" id="salon-channel-title">général</span>
+                        <i class="fas fa-chevron-down salon-channel-picker-chevron" aria-hidden="true"></i>
+                    </button>
+                    <span id="salon-channel-desc">Discussions libres</span>
+                    <button type="button" class="salon-channel-delete-btn" id="salon-channel-delete-btn" style="display:none;" title="Supprimer ce salon">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button type="button" class="salon-mobile-members-btn" id="salon-mobile-members-btn" aria-label="Membres">
+                        <i class="fas fa-users"></i>
+                    </button>
+                </header>
+
+                <div class="salon-messages" id="salon-messages">
+                    <div class="salon-loading"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <div class="salon-login-prompt" id="salon-login-prompt" style="display:none;">
+                    <a href="profil.html?redirect=salon.html" data-i18n="salon.login_link">Connectez-vous</a>
+                    <span data-i18n="salon.login_suffix"> pour participer au forum.</span>
+                </div>
+
+                <div class="salon-compose" id="salon-compose">
+                    <div id="salon-mention-suggest" class="salon-mention-suggest" style="display:none;"></div>
+                    <div class="salon-compose-row">
+                        <button type="button" class="salon-compose-tool-btn" id="salon-create-poll-btn" title="Créer un sondage" data-i18n-title="salon.poll_btn" aria-label="Créer un sondage">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                        <div class="salon-compose-inner">
+                            <textarea id="salon-message-input" rows="1" placeholder="Envoyer un message dans #général" data-i18n-placeholder="salon.placeholder"></textarea>
+                            <button type="button" class="salon-send-btn" id="salon-send-btn" aria-label="Envoyer">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal création de salon -->
+    <div class="salon-modal-overlay" id="salon-create-modal" aria-hidden="true">
+        <div class="salon-modal" role="dialog" aria-labelledby="salon-create-modal-title">
+            <div class="salon-modal-header">
+                <h3 id="salon-create-modal-title" data-i18n="salon.create_title">Créer un salon</h3>
+                <button type="button" class="salon-modal-close" id="salon-create-modal-close" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="salon-create-form" class="salon-modal-body">
+                <label class="salon-field">
+                    <span data-i18n="salon.create_name">Nom du salon</span>
+                    <input type="text" id="salon-create-name" maxlength="60" required placeholder="Ex : One Piece, Recos manga…" data-i18n-placeholder="salon.create_name_ph">
+                </label>
+                <label class="salon-field">
+                    <span data-i18n="salon.create_desc">Description (optionnel)</span>
+                    <input type="text" id="salon-create-desc" maxlength="200" placeholder="De quoi parle ce salon ?" data-i18n-placeholder="salon.create_desc_ph">
+                </label>
+                <label class="salon-field">
+                    <span data-i18n="salon.create_message">Premier message (obligatoire)</span>
+                    <textarea id="salon-create-message" rows="4" maxlength="2000" required placeholder="Présentez le salon ou lancez la discussion…" data-i18n-placeholder="salon.create_message_ph"></textarea>
+                </label>
+                <p class="salon-modal-hint" data-i18n="salon.create_hint">Votre salon apparaîtra dans la barre latérale une fois créé.</p>
+                <div class="salon-modal-actions">
+                    <button type="button" class="salon-modal-btn cancel" id="salon-create-cancel" data-i18n="salon.create_cancel">Annuler</button>
+                    <button type="submit" class="salon-modal-btn submit" id="salon-create-submit" data-i18n="salon.create_submit">Créer le salon</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal création de sondage -->
+    <div class="salon-modal-overlay" id="salon-poll-modal" aria-hidden="true">
+        <div class="salon-modal salon-modal--poll" role="dialog" aria-labelledby="salon-poll-modal-title">
+            <div class="salon-modal-header">
+                <h3 id="salon-poll-modal-title" data-i18n="salon.poll_title">Créer un sondage</h3>
+                <button type="button" class="salon-modal-close" id="salon-poll-modal-close" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="salon-poll-form" class="salon-modal-body">
+                <label class="salon-field">
+                    <span data-i18n="salon.poll_question">Question</span>
+                    <input type="text" id="salon-poll-question" maxlength="300" required placeholder="Ex : Quel est votre anime préféré ?" data-i18n-placeholder="salon.poll_question_ph">
+                </label>
+                <label class="salon-field">
+                    <span data-i18n="salon.poll_duration">Durée du sondage</span>
+                    <select id="salon-poll-duration" class="salon-poll-duration-select" required>
+                        <option value="60" data-i18n="salon.poll_duration_1h">1 heure</option>
+                        <option value="360" data-i18n="salon.poll_duration_6h">6 heures</option>
+                        <option value="1440" data-i18n="salon.poll_duration_24h" selected>24 heures</option>
+                        <option value="4320" data-i18n="salon.poll_duration_3d">3 jours</option>
+                        <option value="10080" data-i18n="salon.poll_duration_7d">7 jours</option>
+                        <option value="0" data-i18n="salon.poll_duration_unlimited">Sans limite</option>
+                    </select>
+                </label>
+                <div class="salon-field">
+                    <span data-i18n="salon.poll_options">Options de réponse</span>
+                    <div id="salon-poll-options-list" class="salon-poll-options-form"></div>
+                    <button type="button" class="salon-poll-add-option-btn" id="salon-poll-add-option">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="salon.poll_add_option">Ajouter une option</span>
+                    </button>
+                </div>
+                <div class="salon-modal-actions">
+                    <button type="button" class="salon-modal-btn cancel" id="salon-poll-cancel" data-i18n="salon.create_cancel">Annuler</button>
+                    <button type="submit" class="salon-modal-btn submit" id="salon-poll-submit" data-i18n="salon.poll_submit">Publier le sondage</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal modification message -->
+    <div class="salon-modal-overlay salon-modal-overlay--action" id="salon-edit-modal" aria-hidden="true">
+        <div class="salon-modal salon-modal--action salon-modal--edit" role="dialog" aria-labelledby="salon-edit-modal-title">
+            <div class="salon-action-modal-accent"></div>
+            <div class="salon-action-modal-icon salon-action-modal-icon--edit">
+                <i class="fas fa-pen"></i>
+            </div>
+            <div class="salon-modal-header salon-modal-header--action">
+                <h3 id="salon-edit-modal-title" data-i18n="salon.edit_title">Modifier le message</h3>
+                <button type="button" class="salon-modal-close" id="salon-edit-modal-close" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="salon-edit-form" class="salon-modal-body salon-modal-body--action">
+                <label class="salon-field salon-field--action">
+                    <span data-i18n="salon.edit_prompt">Votre message</span>
+                    <textarea id="salon-edit-text" rows="5" maxlength="2000" required placeholder="Écrivez votre message…"></textarea>
+                    <span class="salon-edit-char-count" id="salon-edit-char-count">0 / 2000</span>
+                </label>
+                <p class="salon-modal-error" id="salon-edit-error" style="display:none;"></p>
+                <div class="salon-modal-actions salon-modal-actions--action">
+                    <button type="button" class="salon-modal-btn cancel" id="salon-edit-cancel" data-i18n="salon.create_cancel">Annuler</button>
+                    <button type="submit" class="salon-modal-btn submit" id="salon-edit-submit">
+                        <i class="fas fa-check" aria-hidden="true"></i>
+                        <span data-i18n="salon.edit_save">Enregistrer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal suppression message -->
+    <div class="salon-modal-overlay salon-modal-overlay--action" id="salon-delete-modal" aria-hidden="true">
+        <div class="salon-modal salon-modal--action salon-modal--danger" role="dialog" aria-labelledby="salon-delete-modal-title">
+            <div class="salon-action-modal-accent salon-action-modal-accent--danger"></div>
+            <div class="salon-action-modal-icon salon-action-modal-icon--danger">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <div class="salon-modal-header salon-modal-header--action">
+                <h3 id="salon-delete-modal-title" data-i18n="salon.delete_title">Supprimer le message</h3>
+                <button type="button" class="salon-modal-close" id="salon-delete-modal-close" aria-label="Fermer">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="salon-modal-body salon-modal-body--confirm">
+                <p class="salon-confirm-text" data-i18n="salon.delete_confirm">Supprimer ce message ?</p>
+                <div class="salon-delete-preview" id="salon-delete-preview" aria-hidden="true">
+                    <i class="fas fa-quote-left salon-delete-preview-icon" aria-hidden="true"></i>
+                    <p class="salon-delete-preview-text" id="salon-delete-preview-text"></p>
+                </div>
+                <p class="salon-confirm-sub" data-i18n="salon.delete_warning">Cette action est irréversible.</p>
+                <div class="salon-modal-actions salon-modal-actions--action">
+                    <button type="button" class="salon-modal-btn cancel" id="salon-delete-cancel" data-i18n="salon.create_cancel">Annuler</button>
+                    <button type="button" class="salon-modal-btn danger" id="salon-delete-confirm">
+                        <i class="fas fa-trash-alt" aria-hidden="true"></i>
+                        <span data-i18n="salon.delete">Supprimer</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <div class="footer-copyright-text">
+                <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
+                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                    <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
+                        <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
+                        <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
+                        <rect x="11" y="7.33" width="21" height="7.34" fill="#FFFFFF"/>
+                        <rect x="11" y="14.67" width="21" height="7.33" fill="#149954"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="footer-social-links">
+                <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-discord"></i>
+                </a>
+                <a href="https://instagram.com/mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket data-i18n-title="help.title">
+                    <i class="fas fa-circle-question"></i>
+                </a>
+            </div>
+            <div class="footer-authors">
+                Made by <a href="user-profile.html?pseudo=matazziz" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/session.js"></script>
+    <script src="/js/minorContentFilter.js"></script>
+    <script src="/js/search.js?v=20260607"></script>
+    <script src="/js/hamburger-menu.js"></script>
+    <script src="/js/help-ticket.js"></script>
+    <script src="/js/messaging.js" type="module"></script>
+    <script src="/js/auth.js?v=6febe22" type="module"></script>
+    <script type="module" src="/js/community-lounge.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchType = document.getElementById('searchType');
+            const searchInput = document.getElementById('searchInput');
+            if (!searchType || !searchInput) return;
+
+            function t(key) {
+                return window.localization ? window.localization.get(key) : key;
+            }
+
+            const placeholders = {
+                anime: 'search.placeholder.anime',
+                manga: 'search.placeholder.manga',
+                movie: 'search.placeholder.movie',
+                user: 'search.placeholder.user'
+            };
+
+            function updatePlaceholder() {
+                const key = placeholders[searchType.value] || placeholders.manga;
+                searchInput.placeholder = t(key);
+            }
+
+            searchType.addEventListener('change', updatePlaceholder);
+            updatePlaceholder();
+
+            if (window.localization && typeof window.localization.apply === 'function') {
+                window.localization.apply();
+            }
+        });
+    </script>
+</body>
+</html>

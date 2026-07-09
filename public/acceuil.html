@@ -10,6 +10,10 @@
             }
         })();
     </script>
+    <script>
+        // Désactivation temporaire de la boutique (menu + page) pour le développement.
+        try { sessionStorage.setItem('mw_boutique_disabled', '1'); } catch (e) {}
+    </script>
     <title>MangaWatch - Accueil</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style id="mw-header-avatar-guest-hide">

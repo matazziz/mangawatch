@@ -9,6 +9,11 @@
     <meta name="description" content="MangaWatch : decouvrez, suivez et classez vos mangas, animes et films. Notes, top 10, collection et profils communautaires.">
     <meta name="robots" content="index,follow,max-image-preview:large">
     <link rel="canonical" href="https://mangawatch.fr/pages/acceuil.html">
+    <script>
+        // Désactivation temporaire de la boutique (menu + page) pour le développement.
+        // Utilise sessionStorage pour ne pas casser les visites suivantes si on réactive.
+        try { sessionStorage.setItem('mw_boutique_disabled', '1'); } catch (e) {}
+    </script>
     <meta property="og:title" content="MangaWatch - Accueil">
     <meta property="og:description" content="Decouvrez, suivez et classez vos mangas, animes et films sur MangaWatch.">
     <meta property="og:url" content="https://mangawatch.fr/pages/acceuil.html">
@@ -388,7 +393,7 @@
                 <i class="fas fa-tv"></i>
                 <span data-i18n="nav.manga_anime">Manga Anime</span>
             </a>
-            <a href="boutique.html">
+            <a href="boutique.html" hidden aria-hidden="true">
                 <i class="fas fa-store"></i>
                 <span data-i18n="nav.shop">Boutique</span>
             </a>
@@ -441,15 +446,6 @@
                     <p class="feature-description">Organisez et suivez vos animes et mangas préférés dans votre collection personnelle.</p>
                 </div>
             </div>
-        </section>
-
-        <!-- Recommandations personnalisées -->
-        <section class="section personalized-recs-section" id="personalizedRecsSection" aria-labelledby="personalizedRecsTitle">
-            <h2 class="section-title" id="personalizedRecsTitle" data-i18n="home.personalized_recs_title">Recommandations personnalisées</h2>
-            <p class="personalized-recs-intro" id="personalizedRecsIntro" data-i18n="home.personalized_recs_intro">
-                Répondez à quelques questions pour découvrir des animes et mangas faits pour vous.
-            </p>
-            <div class="personalized-recs-container" id="personalizedRecsContainer" aria-live="polite"></div>
         </section>
 
         <!-- Auteur de la semaine -->

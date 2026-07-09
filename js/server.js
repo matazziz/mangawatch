@@ -14,7 +14,8 @@ if (isDev) {
         path.join(rootDir, 'pages'),
         path.join(rootDir, 'css'),
         path.join(rootDir, 'js'),
-        path.join(rootDir, 'images')
+        path.join(rootDir, 'images'),
+        path.join(rootDir, 'public')
     ]);
     app.use(connectLiveReload());
 }

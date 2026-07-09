@@ -19,7 +19,52 @@ service cloud.firestore {
     function isSiteAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        request.auth.token.email == 'mangawatch.off@gmail.com'
+        request.auth.token.email == 'mangawatch.off@gmail.com' ||
+        request.auth.token.email == 'mathieubroyer190508@gmail.com'
+      );
+    }
+
+    function isCommunityModerator() {
+      return isSiteAdmin();
+    }
+
+    function authEmail() {
+      return request.auth.token.email;
+    }
+
+    function emailsMatch(a, b) {
+      return a is string && b is string && a.lower() == b.lower();
+    }
+
+    function isCommunityMessageOwner(userEmail) {
+      return isAuthenticated() && emailsMatch(userEmail, authEmail());
+    }
+
+    function isValidPollDurationFields() {
+      return (
+        !('duration_minutes' in request.resource.data) ||
+        (request.resource.data.duration_minutes is int &&
+         request.resource.data.duration_minutes >= 0 &&
+         request.resource.data.duration_minutes <= 10080)
+      ) && (
+        !('closes_at' in request.resource.data) ||
+        request.resource.data.closes_at == null ||
+        (request.resource.data.closes_at is timestamp &&
+         request.resource.data.closes_at > request.time &&
+         request.resource.data.closes_at <= request.time + duration.value(7, 'd'))
+      );
+    }
+
+    function communityPollData(channel, messageId) {
+      return get(/databases/$(database)/documents/community_chat/$(channel)/messages/$(messageId)).data;
+    }
+
+    function isCommunityPollOpen(channel, messageId) {
+      let poll = communityPollData(channel, messageId);
+      return poll.type == 'poll' && (
+        !('closes_at' in poll) ||
+        poll.closes_at == null ||
+        request.time < poll.closes_at
       );
     }
     
@@ -131,14 +176,25 @@ service cloud.firestore {
     // Notes de profil utilisateur
     match /profile_rating_votes/{voteId} {
       allow read: if true;
-      allow create, update: if isAuthenticated() &&
-        request.resource.data.voter_email == request.auth.token.email;
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.voter_email == request.auth.token.email ||
+        (isSiteAdmin() && request.resource.data.admin_vote == true)
+      );
       allow delete: if false;
     }
 
     match /profile_rating_stats/{profileId} {
       allow read: if true;
-      allow create, update: if isAuthenticated();
+      allow create, update: if isAuthenticated() || (
+        request.resource.data.admin_adjusted == true &&
+        request.resource.data.profile_email == profileId &&
+        request.resource.data.count is int &&
+        request.resource.data.count >= 0 &&
+        request.resource.data.sum is number &&
+        request.resource.data.average is number &&
+        request.resource.data.average >= 0 &&
+        request.resource.data.average <= 10
+      );
       allow delete: if false;
     }
 
@@ -178,6 +234,87 @@ service cloud.firestore {
         resource.data.user_email == request.auth.token.email
       );
       allow delete: if isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // Salon communautaire — messages par canal
+    match /community_chat/{channel}/messages/{messageId} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+        emailsMatch(request.resource.data.user_email, authEmail()) && (
+          (
+            (!('type' in request.resource.data) || request.resource.data.type == 'message') &&
+            request.resource.data.text is string &&
+            request.resource.data.text.size() > 0 &&
+            request.resource.data.text.size() <= 2000
+          ) ||
+          (
+            request.resource.data.type == 'poll' &&
+            request.resource.data.question is string &&
+            request.resource.data.question.size() >= 3 &&
+            request.resource.data.question.size() <= 300 &&
+            request.resource.data.options is list &&
+            request.resource.data.options.size() >= 2 &&
+            request.resource.data.options.size() <= 6 &&
+            isValidPollDurationFields()
+          )
+        );
+      allow update: if isAuthenticated() && (
+        isCommunityModerator() ||
+        (resource.data.type != 'poll' &&
+         isCommunityMessageOwner(resource.data.user_email) &&
+         emailsMatch(request.resource.data.user_email, resource.data.user_email) &&
+         request.resource.data.text is string &&
+         request.resource.data.text.size() > 0 &&
+         request.resource.data.text.size() <= 2000 &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'updated_at', 'edited']))
+      );
+      allow delete: if isAuthenticated() && (
+        isCommunityMessageOwner(resource.data.user_email) ||
+        isCommunityModerator()
+      );
+
+      match /poll_votes/{voterId} {
+        allow read: if true;
+        allow create, update: if isAuthenticated() &&
+          voterId == request.auth.uid &&
+          isCommunityPollOpen(channel, messageId) &&
+          request.resource.data.option_index is int &&
+          request.resource.data.option_index >= 0 &&
+          request.resource.data.option_index <= 5 &&
+          emailsMatch(request.resource.data.voter_email, authEmail());
+        allow delete: if isAuthenticated() && (
+          voterId == request.auth.uid ||
+          isCommunityModerator() ||
+          isCommunityMessageOwner(
+            get(/databases/$(database)/documents/community_chat/$(channel)/messages/$(messageId)).data.user_email
+          )
+        );
+      }
+    }
+
+    // Salons créés par les utilisateurs (métadonnées)
+    match /community_channels/{channelId} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+        channelId != 'general' &&
+        request.resource.data.slug == channelId &&
+        emailsMatch(request.resource.data.created_by, authEmail()) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() >= 2 &&
+        request.resource.data.name.size() <= 60 &&
+        request.resource.data.builtin == false;
+      allow update: if false;
+      allow delete: if isAuthenticated() && (
+        isCommunityModerator() ||
+        emailsMatch(resource.data.created_by, authEmail())
+      );
+    }
+
+    // Présence salon (en ligne)
+    match /community_presence/{userId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated() && emailsMatch(userId, authEmail());
+      allow delete: if isAuthenticated() && emailsMatch(userId, authEmail());
     }
   }
 }

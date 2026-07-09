@@ -15,6 +15,23 @@
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/messaging.css">
     <link rel="stylesheet" href="/css/boutique.css?v=12">
+    <style>
+        .boutique-disabled {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #a8a8a8;
+        }
+        .boutique-disabled h1 {
+            font-size: 1.7rem;
+            margin: 0 0 0.6rem;
+            color: #d6d6d6;
+        }
+        .boutique-disabled p {
+            max-width: 720px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+    </style>
     <script>
         (function() {
             try {
@@ -88,7 +105,13 @@
         </nav>
     </div>
 
-    <main class="boutique-main">
+    <!-- Boutique désactivée temporairement -->
+    <div class="boutique-disabled" role="status" aria-live="polite">
+        <h1>Boutique temporairement indisponible</h1>
+        <p>Nous travaillons sur cette partie du site. Revenez plus tard pour retrouver l’accès aux boutiques partenaires.</p>
+    </div>
+
+    <main class="boutique-main" style="display:none;">
         <header class="boutique-hero">
             <p class="boutique-hero-eyebrow">Espace partenaires</p>
             <h1 class="boutique-hero-title">Boutique</h1>
@@ -249,6 +272,6 @@
     <script src="../js/hamburger-menu.js"></script>
     <script src="/js/help-ticket.js"></script>
     <script src="/js/messaging.js" type="module"></script>
-    <script src="/js/boutique.js?v=11"></script>
+    <!-- Boutique désactivée temporairement : boutique.js non chargé -->
 </body>
 </html>
