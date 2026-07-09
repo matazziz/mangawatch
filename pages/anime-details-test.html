@@ -1,0 +1,260 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3925599546532899" crossorigin="anonymous"></script>
+    <title>Test — Page détails (sans API) - MangaWatch</title>
+    <meta name="robots" content="noindex,nofollow">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/footer-unified.css">
+    <link rel="stylesheet" href="/css/details-pages-clean.css?v=2.13">
+    <script src="/js/mw-api-config.js?v=3"></script>
+    <script src="/js/localization.js"></script>
+    <style>
+        .test-mode-banner {
+            background: linear-gradient(90deg, #ff6b35, #f7931e);
+            color: #111;
+            text-align: center;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        .test-mode-banner a { color: #111; text-decoration: underline; }
+        .test-type-switch {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+        .test-type-switch a {
+            padding: 6px 14px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.12);
+            color: var(--light);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+        .test-type-switch a.active {
+            background: #00b894;
+            color: #fff;
+        }
+    </style>
+</head>
+<body class="body-bg" data-page="anime-details-test">
+    <div class="test-mode-banner">
+        Mode test — données fictives, pas d'appel API.
+        <a href="anime-details.html?id=16498&type=anime">Page détails réelle</a>
+    </div>
+
+    <header class="main-header">
+        <a href="acceuil.html" class="logo-link">
+            <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
+            <span>MangaWatch</span>
+        </a>
+        <nav class="nav-links">
+            <a href="acceuil.html">Accueil</a>
+            <a href="manga-database.html" class="active">Mangas & Anime</a>
+            <a href="list.html">Collection</a>
+            <a href="profil.html">Profil</a>
+        </nav>
+        <div class="header-right">
+            <a href="profil.html" class="avatar-link">
+                <img id="user-avatar" src="" alt="Avatar" class="user-avatar" onerror="this.src=''">
+            </a>
+        </div>
+    </header>
+
+    <div class="details-container">
+        <div class="container">
+            <a href="manga-database.html" class="back-button">
+                <i class="fas fa-arrow-left"></i> Retour au catalogue
+            </a>
+
+            <div class="test-type-switch">
+                <span style="color:var(--light-gray);align-self:center;">Type de test :</span>
+                <a href="?type=anime" id="link-anime">Anime</a>
+                <a href="?type=manga" id="link-manga">Manga</a>
+            </div>
+
+            <div id="anime-details"></div>
+        </div>
+    </div>
+
+    <div id="detailsStatusModal" class="status-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 data-i18n="collection.status_modal.title">Choisir un statut</h3>
+                <button type="button" class="close-modal" aria-label="Fermer">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="status-options">
+                    <div class="status-option" data-status="watching">
+                        <i class="fas fa-play-circle"></i>
+                        <span data-i18n="collection.status.watching">En cours</span>
+                    </div>
+                    <div class="status-option" data-status="completed">
+                        <i class="fas fa-check-circle"></i>
+                        <span data-i18n="collection.status.completed">Terminé</span>
+                    </div>
+                    <div class="status-option" data-status="on-hold">
+                        <i class="fas fa-pause-circle"></i>
+                        <span data-i18n="collection.status.on_hold">En pause</span>
+                    </div>
+                    <div class="status-option" data-status="dropped">
+                        <i class="fas fa-times-circle"></i>
+                        <span data-i18n="collection.status.dropped">Abandonné</span>
+                    </div>
+                    <div class="status-option" data-status="plan-to-watch">
+                        <i class="fas fa-eye"></i>
+                        <span data-i18n="collection.status.plan_to_watch">À voir</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/details-collection-status.js?v=3"></script>
+    <script>
+        const MOCK_ANIME = {
+            mal_id: 99901,
+            title: 'Shingeki no Kyojin (Test)',
+            title_japanese: '進撃の巨人',
+            title_english: 'Attack on Titan',
+            type: 'TV',
+            score: 8.9,
+            year: 2013,
+            episodes: 25,
+            duration: '24 min per ep',
+            season: 'spring',
+            synopsis: 'Page de test sans API. Utilisez le bouton « Mon statut » pour ajouter ou modifier le statut dans votre collection locale.',
+            genres: [
+                { name: 'Action' },
+                { name: 'Drama' },
+                { name: 'Fantasy' }
+            ],
+            images: {
+                jpg: {
+                    large_image_url: 'https://cdn.myanimelist.net/images/anime/10/47347l.jpg'
+                }
+            },
+            aired: { from: '2013-04-07T00:00:00+00:00', to: '2013-09-29T00:00:00+00:00' },
+            studios: [{ name: 'Wit Studio' }],
+            members: 2500000,
+            favorites: 120000,
+            popularity: 1,
+            rank: 5
+        };
+
+        const MOCK_MANGA = {
+            mal_id: 99902,
+            title: 'Berserk (Test)',
+            title_japanese: 'ベルセルク',
+            title_english: 'Berserk',
+            type: 'Manga',
+            score: 9.5,
+            year: 1989,
+            volumes: 41,
+            chapters: 380,
+            synopsis: 'Données manga fictives pour tester le changement de statut sans dépendre de l\'API Jikan.',
+            genres: [
+                { name: 'Action' },
+                { name: 'Adventure' },
+                { name: 'Horror' }
+            ],
+            images: {
+                jpg: {
+                    large_image_url: 'https://cdn.myanimelist.net/images/manga/1/157897l.jpg'
+                }
+            },
+            published: { from: '1989-08-25T00:00:00+00:00' },
+            members: 900000,
+            favorites: 85000,
+            popularity: 12,
+            rank: 2
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const contentType = urlParams.get('type') === 'manga' ? 'manga' : 'anime';
+        const content = contentType === 'manga' ? MOCK_MANGA : MOCK_ANIME;
+
+        function formatDate(dateString) {
+            if (!dateString) return 'Inconnue';
+            return new Date(dateString).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function renderTestDetails() {
+            document.getElementById('link-anime').classList.toggle('active', contentType === 'anime');
+            document.getElementById('link-manga').classList.toggle('active', contentType === 'manga');
+
+            const imageUrl = content.images.jpg.large_image_url;
+            const genresHTML = content.genres.map(g => `<span class="genre-tag">${g.name}</span>`).join('');
+            const isManga = contentType === 'manga';
+
+            document.getElementById('anime-details').innerHTML = `
+                <div class="details-header">
+                    <div class="details-poster">
+                        <img src="${imageUrl}" alt="${content.title}">
+                    </div>
+                    <div class="details-info">
+                        <h1 class="details-title">${content.title}</h1>
+                        <div class="details-meta">
+                            <div class="details-score"><i class="fas fa-star"></i> <span>${content.score}/10</span></div>
+                            <div class="details-type">${isManga ? 'Manga' : 'Anime'}</div>
+                            <div class="details-year">${content.year}</div>
+                        </div>
+                        <div class="user-rating-section">
+                            <h3 class="rating-title">Votre note :</h3>
+                            <div class="rating-stars" style="opacity:0.35;pointer-events:none;font-size:1.6rem;">
+                                ${'★'.repeat(Math.round(content.score))}${'☆'.repeat(10 - Math.round(content.score))}
+                            </div>
+                            <div class="rating-text" style="font-size:0.8rem;opacity:0.5;">Notation désactivée en mode test</div>
+                            <div class="details-collection-section" id="details-collection-section"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="synopsis-section">
+                    <h2 class="synopsis-title">Synopsis</h2>
+                    <p class="synopsis-text">${content.synopsis}</p>
+                </div>
+                <div class="genres-section">
+                    <h2 class="genres-title">Genres</h2>
+                    <div class="genres-list">${genresHTML}</div>
+                </div>
+                <div class="additional-info">
+                    <h2>Informations générales</h2>
+                    <ul>
+                        <li><span class="label">Titre original :</span> <span class="value">${content.title_japanese}</span></li>
+                        <li><span class="label">Type :</span> <span class="value">${content.type}</span></li>
+                        ${isManga
+                            ? `<li><span class="label">Volumes :</span> <span class="value">${content.volumes}</span></li>
+                               <li><span class="label">Chapitres :</span> <span class="value">${content.chapters}</span></li>`
+                            : `<li><span class="label">Épisodes :</span> <span class="value">${content.episodes}</span></li>
+                               <li><span class="label">Durée :</span> <span class="value">${content.duration}</span></li>`}
+                        <li><span class="label">Membres :</span> <span class="value">${content.members.toLocaleString()}</span></li>
+                        <li><span class="label">Rang :</span> <span class="value">#${content.rank}</span></li>
+                    </ul>
+                </div>
+            `;
+
+            if (window.DetailsCollectionStatus) {
+                DetailsCollectionStatus.renderSection(content, contentType);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.localization) window.localization.init();
+            renderTestDetails();
+        });
+    </script>
+
+    <footer class="footer-unified">
+        <div class="footer-container">
+            <div class="footer-copyright-text">
+                <span class="footer-copyright">&copy;</span>2025 MangaWatch — page test
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

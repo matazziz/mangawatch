@@ -51,7 +51,7 @@
     }
 
     function loadAdsenseScript(clientId) {
-        if (document.querySelector('script[data-mw-adsense]')) {
+        if (document.querySelector('script[data-mw-adsense], script[src*="adsbygoogle.js"]')) {
             return Promise.resolve();
         }
         return new Promise(function(resolve, reject) {
