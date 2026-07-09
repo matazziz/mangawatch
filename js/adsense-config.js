@@ -1,31 +1,57 @@
 /**
  * Configuration Google AdSense — MangaWatch
  *
- * 1. Créez un compte sur https://www.google.com/adsense/
- * 2. Récupérez votre ID éditeur (format ca-pub-XXXXXXXXXXXXXXXX)
- * 3. Collez-le ci-dessous et mettez enabled: true
- * 4. Mettez à jour ads.txt à la racine du site avec le même ID (pub-XXXXXXXX)
+ * Emplacements manuels uniquement (entre les sections).
+ * Dans AdSense : désactivez « Encarts » / in-article des annonces auto
+ * pour éviter les pubs sous chaque paragraphe.
  */
 window.MW_ADSENSE = {
     enabled: true,
     clientId: 'ca-pub-3925599546532899',
 
-    /** Emplacements optionnels créés dans le tableau de bord AdSense */
     slots: {
         horizontal: '',
-        catalog: '',
+        home: '',
         details: ''
     },
 
-    /** Bannière responsive avant le footer sur les pages publiques */
-    autoInsertFooter: true,
+    /** Pas de bandeau générique avant le footer */
+    autoInsertFooter: false,
 
-    /** Pages sans publicité */
+    /** Pages sans aucune publicité */
     excludePaths: [
         '/admin.html',
         '/pages/admin.html',
         '/reset-password.html',
         '/pages/reset-password.html',
-        '/public/reset-password.html'
-    ]
+        '/public/reset-password.html',
+        '/manga-database.html',
+        '/pages/manga-database.html',
+        '/public/manga-database.html',
+        '/list.html',
+        '/pages/list.html',
+        '/public/list.html',
+        '/user-profile.html',
+        '/pages/user-profile.html',
+        '/public/user-profile.html',
+        '/salon.html',
+        '/pages/salon.html',
+        '/profil.html',
+        '/pages/profil.html',
+        '/public/profil.html'
+    ],
+
+    pages: {
+        home: {
+            match: /acceuil\.html$/i,
+            container: 'main.main-container',
+            sections: 'section.hero-section, section.section'
+        },
+        details: {
+            match: /anime-details\.html$/i,
+            container: '.details-container',
+            sections: '.details-header, .synopsis-section, .genres-section, .additional-info, .related-seasons-section',
+            watchDelayMs: 12000
+        }
+    }
 };

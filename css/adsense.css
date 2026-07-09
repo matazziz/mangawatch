@@ -1,9 +1,14 @@
 .mw-ad-wrap {
     width: min(728px, calc(100% - 2rem));
     max-width: 100%;
-    margin: 1.25rem auto 0.75rem;
+    margin: 1.5rem auto;
     padding: 0;
     box-sizing: border-box;
+}
+
+.mw-ad-wrap--between {
+    margin: 2rem auto;
+    clear: both;
 }
 
 .mw-ad-wrap--catalog {

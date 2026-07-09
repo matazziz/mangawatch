@@ -1,5 +1,5 @@
 /**
- * Chargement Google AdSense (auto + emplacements data-mw-ad).
+ * AdSense MangaWatch — emplacements manuels entre sections.
  */
 (function initMwAdsense() {
     function getConfig() {
@@ -13,14 +13,7 @@
     function isExcluded() {
         const path = getPath();
         const cfg = getConfig();
-        const defaults = [
-            '/admin.html',
-            '/pages/admin.html',
-            '/reset-password.html',
-            '/pages/reset-password.html',
-            '/public/reset-password.html'
-        ];
-        const list = Array.isArray(cfg.excludePaths) ? cfg.excludePaths : defaults;
+        const list = Array.isArray(cfg.excludePaths) ? cfg.excludePaths : [];
         return list.some(function(p) {
             return path === p || path.endsWith(p);
         });
@@ -35,12 +28,25 @@
         return true;
     }
 
+    function getActivePageRule() {
+        const path = getPath();
+        const pages = getConfig().pages || {};
+        const keys = Object.keys(pages);
+        for (let i = 0; i < keys.length; i++) {
+            const rule = pages[keys[i]];
+            if (rule && rule.match && rule.match.test(path)) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
     function injectStyles() {
         if (document.getElementById('mw-adsense-css')) return;
         const link = document.createElement('link');
         link.id = 'mw-adsense-css';
         link.rel = 'stylesheet';
-        link.href = '/css/adsense.css?v=1';
+        link.href = '/css/adsense.css?v=2';
         document.head.appendChild(link);
     }
 
@@ -90,9 +96,9 @@
         pushAd(ins);
     }
 
-    function createAdWrap(slotKey, extraClass) {
+    function createAdWrap(slotKey) {
         const wrap = document.createElement('aside');
-        wrap.className = 'mw-ad-wrap' + (extraClass ? ' ' + extraClass : '');
+        wrap.className = 'mw-ad-wrap mw-ad-wrap--between';
         wrap.setAttribute('data-mw-ad', slotKey);
         wrap.setAttribute('aria-label', 'Publicité');
 
@@ -108,51 +114,91 @@
         return wrap;
     }
 
-    function insertBeforeFooter(slotKey) {
-        if (document.querySelector('.mw-ad-wrap[data-mw-ad="' + slotKey + '"]')) return;
-        const footer = document.querySelector('.footer-unified');
-        if (!footer || !footer.parentNode) return;
-        const wrap = createAdWrap(slotKey, 'mw-ad-wrap--footer');
-        footer.parentNode.insertBefore(wrap, footer);
-        renderInto(wrap.querySelector('.mw-ad-slot'), slotKey);
+    function hasAdAfter(element) {
+        const next = element && element.nextElementSibling;
+        return !!(next && next.classList && next.classList.contains('mw-ad-wrap--between'));
     }
 
-    function insertCatalogAd() {
-        const path = getPath();
-        if (!/\/manga-database\.html$/i.test(path)) return;
-        if (document.querySelector('.mw-ad-wrap--catalog')) return;
+    function insertAdsBetweenSections(rule, slotKey) {
+        if (!rule || !rule.container || !rule.sections) return 0;
 
-        const anchor = document.querySelector('.catalogue-container') ||
-            document.querySelector('#catalogue-grid') ||
-            document.querySelector('.manga-grid') ||
-            document.querySelector('main');
+        const container = document.querySelector(rule.container);
+        if (!container) return 0;
 
-        if (!anchor || !anchor.parentNode) return;
+        const sections = container.querySelectorAll(rule.sections);
+        if (!sections || sections.length < 2) return 0;
 
-        const wrap = createAdWrap('catalog', 'mw-ad-wrap--catalog');
-        anchor.parentNode.insertBefore(wrap, anchor);
-        renderInto(wrap.querySelector('.mw-ad-slot'), 'catalog');
+        let inserted = 0;
+        for (let i = 0; i < sections.length - 1; i++) {
+            const section = sections[i];
+            if (!section.parentNode || hasAdAfter(section)) continue;
+
+            const wrap = createAdWrap(slotKey);
+            section.insertAdjacentElement('afterend', wrap);
+            renderInto(wrap.querySelector('.mw-ad-slot'), slotKey);
+            inserted += 1;
+        }
+        return inserted;
     }
 
     function renderExistingSlots() {
         document.querySelectorAll('[data-mw-ad]').forEach(function(el) {
+            if (el.classList.contains('mw-ad-wrap--between')) return;
             const slotKey = el.getAttribute('data-mw-ad') || 'horizontal';
             const target = el.querySelector('.mw-ad-slot') || el;
             renderInto(target, slotKey);
         });
     }
 
+    function watchDetailsPage(rule, slotKey) {
+        const container = document.querySelector(rule.container);
+        if (!container) return;
+
+        let lastCount = 0;
+        const maxMs = Number(rule.watchDelayMs) || 12000;
+        const started = Date.now();
+
+        function tick() {
+            const count = insertAdsBetweenSections(rule, slotKey);
+            if (count > 0) lastCount += count;
+
+            const blocks = container.querySelectorAll(rule.sections);
+            const expectedGaps = Math.max(0, blocks.length - 1);
+            const currentAds = container.querySelectorAll('.mw-ad-wrap--between').length;
+
+            if (currentAds >= expectedGaps || Date.now() - started > maxMs) {
+                return;
+            }
+            setTimeout(tick, 450);
+        }
+
+        tick();
+
+        if (typeof MutationObserver !== 'undefined') {
+            const observer = new MutationObserver(function() {
+                insertAdsBetweenSections(rule, slotKey);
+            });
+            observer.observe(container, { childList: true, subtree: true });
+            setTimeout(function() { observer.disconnect(); }, maxMs);
+        }
+    }
+
     function run() {
         if (isExcluded() || !isEnabled()) return;
 
         const cfg = getConfig();
+        const rule = getActivePageRule();
+        if (!rule) return;
+
+        const slotKey = getPath().match(/anime-details/i) ? 'details' : 'home';
         injectStyles();
 
         loadAdsenseScript(cfg.clientId).then(function() {
-            if (cfg.autoInsertFooter !== false) {
-                insertBeforeFooter('horizontal');
+            if (slotKey === 'details') {
+                watchDetailsPage(rule, slotKey);
+            } else {
+                insertAdsBetweenSections(rule, slotKey);
             }
-            insertCatalogAd();
             renderExistingSlots();
         }).catch(function(err) {
             console.warn('[AdSense] Chargement impossible:', err);
