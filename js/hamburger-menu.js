@@ -236,3 +236,18 @@ document.addEventListener('DOMContentLoaded', function() {
     script.async = false;
     document.head.appendChild(script);
 })();
+
+(function bootstrapMwAdsense() {
+    if (window.__mwAdsenseBootstrap) return;
+    window.__mwAdsenseBootstrap = true;
+
+    var configScript = document.createElement('script');
+    configScript.src = '/js/adsense-config.js?v=1';
+    configScript.onload = function() {
+        var adsScript = document.createElement('script');
+        adsScript.src = '/js/adsense.js?v=1';
+        adsScript.defer = true;
+        document.body.appendChild(adsScript);
+    };
+    document.body.appendChild(configScript);
+})();

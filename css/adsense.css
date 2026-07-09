@@ -1,0 +1,44 @@
+.mw-ad-wrap {
+    width: min(728px, calc(100% - 2rem));
+    max-width: 100%;
+    margin: 1.25rem auto 0.75rem;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.mw-ad-wrap--catalog {
+    margin: 0.75rem auto 1rem;
+}
+
+.mw-ad-label {
+    display: block;
+    text-align: center;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.38);
+    margin-bottom: 0.35rem;
+}
+
+.mw-ad-slot {
+    min-height: 90px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.12);
+}
+
+.mw-ad-slot .adsbygoogle {
+    display: block;
+    min-height: 90px;
+}
+
+@media (max-width: 768px) {
+    .mw-ad-wrap {
+        width: calc(100% - 1.25rem);
+        margin-top: 0.85rem;
+    }
+
+    .mw-ad-slot {
+        min-height: 72px;
+    }
+}
