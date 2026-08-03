@@ -924,12 +924,15 @@
                 .map(normalizeVoteContent)
                 .filter(Boolean);
             currentDayContent = Object.assign({}, dayPayload, { content: voteOptions });
+            currentVotes = {};
             voteOptions.forEach(function (content) {
-                if (!currentVotes.hasOwnProperty(content.id)) currentVotes[content.id] = 0;
+                currentVotes[content.id] = 0;
             });
             if (dayPayload.votes) {
+                const todayIds = new Set(voteOptions.map(function (c) { return String(c.id); }));
                 Object.keys(dayPayload.votes).forEach(function (id) {
-                    currentVotes[parseInt(id, 10)] = dayPayload.votes[id] || 0;
+                    if (!todayIds.has(String(parseInt(id, 10)))) return;
+                    currentVotes[parseInt(id, 10)] = Number(dayPayload.votes[id]) || 0;
                 });
             }
             if (window.MWDailyVote) window.MWDailyVote.writeLocalDayContent(dayPayload);
@@ -946,9 +949,11 @@
             window.__mangawatchDailyVoteWatch = DV.watchSharedDay(dayKey, function (data) {
                 if (!data || !data.votes) return;
                 let changed = false;
+                const todayIds = new Set((voteOptions || []).map(function (c) { return String(c.id); }));
                 Object.keys(data.votes).forEach(function (id) {
+                    if (!todayIds.has(String(parseInt(id, 10)))) return;
                     const n = parseInt(id, 10);
-                    const v = data.votes[id] || 0;
+                    const v = Number(data.votes[id]) || 0;
                     if ((currentVotes[n] || 0) < v) {
                         currentVotes[n] = v;
                         changed = true;
@@ -961,11 +966,38 @@
             });
         }
 
+        // Ne garder que les votes des 3 options du jour (évite d'anciens IDs qui faussent les %)
+        function getTodayVotesMap() {
+            const votes = {};
+            (voteOptions || []).forEach(function (content) {
+                votes[content.id] = Number(currentVotes[content.id]) || 0;
+            });
+            return votes;
+        }
+
+        function getTodayTotalVotes() {
+            return (voteOptions || []).reduce(function (sum, content) {
+                return sum + (Number(currentVotes[content.id]) || 0);
+            }, 0);
+        }
+
+        function pruneCurrentVotesToToday() {
+            currentVotes = getTodayVotesMap();
+            return currentVotes;
+        }
+
+        function persistDailyVotesLocal() {
+            pruneCurrentVotesToToday();
+            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+        }
+
         async function persistDailyVotesToCloud() {
             const DV = window.MWDailyVote;
             if (!DV || !currentDayContent) return;
             const dayKey = currentDayContent.dayKey || DV.getDayKey(currentDayContent.date || new Date().toDateString());
-            await DV.saveSharedDay(dayKey, Object.assign({}, currentDayContent, { votes: currentVotes }));
+            const votes = getTodayVotesMap();
+            await DV.saveSharedDay(dayKey, Object.assign({}, currentDayContent, { votes: votes }));
         }
 
         // Charger les options de vote depuis l'API
@@ -1358,17 +1390,17 @@
         // Charger les votes sauvegardés depuis le localStorage
         function loadSavedVotes() {
             const savedVotes = localStorage.getItem('dailyVotes');
+            const todayIds = new Set((voteOptions || []).map(function (c) { return String(c.id); }));
             if (savedVotes) {
                 const saved = JSON.parse(savedVotes);
-                // Charger tous les votes sauvegardés (y compris les faux votes)
+                // Charger uniquement les votes des options du jour
                 Object.keys(saved).forEach(id => {
-                    const contentId = parseInt(id);
-                    // Initialiser si nécessaire et charger la valeur
-                    if (!currentVotes.hasOwnProperty(contentId)) {
-                        currentVotes[contentId] = 0;
-                    }
-                    currentVotes[contentId] = saved[id] || 0;
+                    if (!todayIds.has(String(parseInt(id, 10)))) return;
+                    const contentId = parseInt(id, 10);
+                    currentVotes[contentId] = Number(saved[id]) || 0;
                 });
+                pruneCurrentVotesToToday();
+                localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
                 console.log('✅ Votes chargés depuis localStorage:', currentVotes);
             }
             
@@ -1518,10 +1550,9 @@
             currentVotes[contentId]++;
             userHasVoted = true;
             
-            // Sauvegarder les votes dans localStorage
-            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
+            // Sauvegarder les votes dans localStorage (options du jour uniquement)
             localStorage.setItem('lastVoteDate', new Date().toDateString());
-            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            persistDailyVotesLocal();
             persistDailyVotesToCloud();
             
             // Mettre à jour l'affichage
@@ -1554,7 +1585,7 @@
 
         // Afficher les résultats avec barres de progression
         function showVoteResults() {
-            const totalVotes = Object.values(currentVotes).reduce((sum, votes) => sum + votes, 0);
+            const totalVotes = getTodayTotalVotes();
             
             if (totalVotes === 0) return;
             
@@ -1564,8 +1595,8 @@
             resultsChart.innerHTML = '';
             
             voteOptions.forEach(content => {
-                const percentage = totalVotes > 0 ? Math.round((currentVotes[content.id] / totalVotes) * 100) : 0;
-                const voteCount = currentVotes[content.id] || 0;
+                const voteCount = Number(currentVotes[content.id]) || 0;
+                const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
                 // Garder une petite visibilité visuelle pour les options ayant au moins 1 vote
                 const visibleBarWidth = voteCount > 0 ? Math.max(percentage, 6) : 0;
                 
@@ -1607,15 +1638,17 @@
             if (lastFakeVotesDate === today) {
                 console.log('Faux votes déjà générés aujourd\'hui, chargement des votes sauvegardés...');
                 
-                // Charger les votes sauvegardés pour s'assurer qu'ils sont dans currentVotes
+                // Charger uniquement les votes des options du jour
                 const savedVotes = localStorage.getItem('dailyVotes');
+                const todayIds = new Set((voteOptions || []).map(function (c) { return String(c.id); }));
                 if (savedVotes) {
                     const saved = JSON.parse(savedVotes);
-                    // Charger tous les votes sauvegardés dans currentVotes
                     Object.keys(saved).forEach(id => {
-                        const contentId = parseInt(id);
-                        currentVotes[contentId] = saved[id] || 0;
+                        if (!todayIds.has(String(parseInt(id, 10)))) return;
+                        const contentId = parseInt(id, 10);
+                        currentVotes[contentId] = Number(saved[id]) || 0;
                     });
+                    pruneCurrentVotesToToday();
                     console.log('✅ Votes sauvegardés chargés:', currentVotes);
                 }
                 
@@ -1631,7 +1664,8 @@
             const totalFakeVotes = 20;
             const voteOptionsCount = voteOptions.length;
             
-            // Initialiser currentVotes pour chaque contenu si ce n'est pas déjà fait
+            // Initialiser currentVotes pour chaque contenu du jour uniquement
+            pruneCurrentVotesToToday();
             voteOptions.forEach(content => {
                 if (!currentVotes.hasOwnProperty(content.id)) {
                     currentVotes[content.id] = 0;
@@ -1644,8 +1678,7 @@
             }
             
             localStorage.setItem(fakeVotesKey, today);
-            localStorage.setItem('dailyVotes', JSON.stringify(currentVotes));
-            localStorage.setItem('lastVoteUpdate', Date.now().toString());
+            persistDailyVotesLocal();
             
             // Masquer les statistiques si l'utilisateur n'a pas encore voté
             if (!userHasVoted) {
@@ -2196,10 +2229,11 @@
             }
         })();
     </script>
+    <script src="../js/mw-api-config.js?v=4-anilist-queue"></script>
     <script src="../js/minorContentFilter.js"></script>
     <script src="../js/search.js?v=20260607"></script>
     <script src="../js/catalogue.js" type="module"></script>
-    <script src="../js/acceuil.js" type="module"></script>
+    <script src="../js/acceuil.js?v=20260803-author-covers" type="module"></script>
     <script src="../js/hamburger-menu.js"></script>
     <!-- Système de messagerie -->
     <script src="../js/messaging.js" type="module"></script>

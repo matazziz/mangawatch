@@ -4,6 +4,7 @@ const path = require('path');
 const app = express();
 const rootDir = path.join(__dirname, '..');
 const jikanProxyHandler = require(path.join(rootDir, 'netlify', 'functions', 'jikan-proxy'));
+const anilistProxyHandler = require(path.join(rootDir, 'netlify', 'functions', 'anilist-proxy'));
 const isDev = process.env.NODE_ENV !== 'production';
 
 if (isDev) {
@@ -75,6 +76,27 @@ app.get('/.netlify/functions/jikan-proxy', async (req, res) => {
         res.status(502).json({
             error: 'Proxy request failed',
             message: error?.message || 'Unknown error'
+        });
+    }
+});
+
+// Proxy AniList (même route qu'en production Netlify)
+app.post('/.netlify/functions/anilist-proxy', express.json(), async (req, res) => {
+    try {
+        const result = await anilistProxyHandler.handler({
+            httpMethod: 'POST',
+            body: JSON.stringify(req.body || {})
+        });
+        if (result.headers) {
+            Object.entries(result.headers).forEach(([key, value]) => {
+                res.setHeader(key, value);
+            });
+        }
+        res.status(result.statusCode).send(result.body);
+    } catch (error) {
+        console.error('Erreur proxy AniList:', error);
+        res.status(502).json({
+            errors: [{ message: error?.message || 'AniList proxy failed' }]
         });
     }
 });

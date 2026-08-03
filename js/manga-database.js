@@ -1,6 +1,6 @@
 // Configuration
 const ANILIST_API_URL = 'https://graphql.anilist.co';
-const ITEMS_PER_PAGE = 25; // Limite maximale qui fonctionne avec l'API Jikan
+const ITEMS_PER_PAGE = 25; // Taille de page catalogue
 const MW_DEBUG_ENABLED = new URLSearchParams(window.location.search).get('debug') === '1' ||
     localStorage.getItem('mw_debug') === '1';
 
@@ -1032,6 +1032,38 @@ async function fetchContentList() {
                 }
             }, 200);
         } else {
+            // Au retour depuis une fiche détail, AniList peut etre en rate-limit :
+            // on retente puis on utilise le snapshot local si disponible.
+            mwDebug('fetchContentList:empty-response-retry', {
+                endpoint,
+                params: params.toString()
+            });
+            await new Promise((resolve) => setTimeout(resolve, 2200));
+            const retryResponse = await fetchContentFromAPI(endpoint, params);
+            if (retryResponse && Array.isArray(retryResponse.data)) {
+                clearCatalogueApiErrors();
+                if (retryResponse.pagination) {
+                    totalPages = retryResponse.pagination.last_visible_page;
+                    currentPage = retryResponse.pagination.current_page;
+                    hasNextPage = !!retryResponse.pagination.has_next_page;
+                    updatePagination();
+                }
+                displayContentList(retryResponse.data);
+                return;
+            }
+
+            const snapshot = window.MWDetailCache?.getCatalogueSnapshot?.();
+            if (snapshot?.items?.length) {
+                clearCatalogueApiErrors();
+                console.warn('Catalogue: utilisation du snapshot local apres echec API');
+                totalPages = 1;
+                currentPage = 1;
+                hasNextPage = false;
+                updatePagination();
+                displayContentList(snapshot.items);
+                return;
+            }
+
             mwDebug('fetchContentList:empty-response', {
                 endpoint,
                 params: params.toString()
@@ -1088,7 +1120,8 @@ function mapAniListFormat(mediaType, format) {
 
 function convertAniListMediaToLegacy(media, mediaType) {
     return {
-        mal_id: media.id,
+        mal_id: media.idMal || media.id,
+        anilist_id: media.id,
         title: media.title?.english || media.title?.romaji || media.title?.native || 'Sans titre',
         synopsis: media.description || 'Synopsis indisponible.',
         score: media.averageScore ? (media.averageScore / 10) : null,
@@ -1123,11 +1156,118 @@ function convertAniListMediaToLegacy(media, mediaType) {
 
 function mapOrderByToAniList(orderBy, sort, mediaType) {
     const isAsc = (sort || '').toLowerCase() === 'asc';
+    if (orderBy === 'relevance') return ['SEARCH_MATCH'];
     if (orderBy === 'title') return [isAsc ? 'TITLE_ROMAJI' : 'TITLE_ROMAJI_DESC'];
-    if (orderBy === 'popularity') return ['POPULARITY_DESC'];
+    if (orderBy === 'popularity' || orderBy === 'favorites') return ['POPULARITY_DESC'];
     if (orderBy === 'start_date') return ['START_DATE_DESC'];
     if (orderBy === 'score') return ['SCORE_DESC'];
     return mediaType === 'anime' ? ['POPULARITY_DESC'] : ['SCORE_DESC'];
+}
+
+function normalizeSearchText(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function levenshteinDistance(a, b) {
+    const s = normalizeSearchText(a);
+    const t = normalizeSearchText(b);
+    if (!s) return t.length;
+    if (!t) return s.length;
+    const rows = s.length + 1;
+    const cols = t.length + 1;
+    const matrix = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    for (let i = 0; i < rows; i++) matrix[i][0] = i;
+    for (let j = 0; j < cols; j++) matrix[0][j] = j;
+    for (let i = 1; i < rows; i++) {
+        for (let j = 1; j < cols; j++) {
+            const cost = s[i - 1] === t[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost
+            );
+        }
+    }
+    return matrix[s.length][t.length];
+}
+
+function scoreTitleRelevance(query, item) {
+    const q = normalizeSearchText(query);
+    if (!q) return 0;
+    const titles = [
+        item?.title,
+        item?.title_english,
+        item?.title_japanese,
+        item?.title_romaji
+    ].filter(Boolean).map(normalizeSearchText);
+
+    let best = 0;
+    for (const title of titles) {
+        if (!title) continue;
+        if (title === q) best = Math.max(best, 1000);
+        else if (title.startsWith(q)) best = Math.max(best, 850);
+        else if (title.includes(q)) best = Math.max(best, 700);
+        else {
+            const distance = levenshteinDistance(q, title.slice(0, Math.max(q.length + 2, 12)));
+            const maxLen = Math.max(q.length, Math.min(title.length, q.length + 2));
+            const similarity = maxLen ? 1 - (distance / maxLen) : 0;
+            if (similarity >= 0.55) {
+                best = Math.max(best, Math.round(similarity * 600));
+            }
+        }
+    }
+    return best;
+}
+
+function buildTypoSearchFallbacks(query) {
+    const q = String(query || '').trim();
+    if (q.length < 4) return [];
+
+    const variants = new Set();
+    variants.add(q.slice(0, -1));
+
+    for (let i = 0; i < q.length; i++) {
+        variants.add(q.slice(0, i) + q.slice(i + 1));
+    }
+
+    for (let i = 0; i < q.length - 1; i++) {
+        const chars = q.split('');
+        const tmp = chars[i];
+        chars[i] = chars[i + 1];
+        chars[i + 1] = tmp;
+        variants.add(chars.join(''));
+    }
+
+    // Variante sans espaces / tirets (ex. "onepiece")
+    variants.add(q.replace(/[\s-_]+/g, ''));
+
+    return [...variants]
+        .map((v) => v.trim())
+        .filter((v) => v.length >= 3 && normalizeSearchText(v) !== normalizeSearchText(q))
+        .slice(0, 5);
+}
+
+function rankItemsBySearchRelevance(items, query, options = {}) {
+    const keepUnmatched = options.keepUnmatched === true;
+    if (!query || !Array.isArray(items) || items.length === 0) return items || [];
+    return [...items]
+        .map((item, index) => ({
+            item,
+            index,
+            relevance: scoreTitleRelevance(query, item)
+        }))
+        .filter((row) => keepUnmatched || row.relevance > 0)
+        .sort((a, b) => {
+            if (b.relevance !== a.relevance) return b.relevance - a.relevance;
+            return a.index - b.index;
+        })
+        .map((row) => row.item);
 }
 
 function mapStatusToAniList(status) {
@@ -1320,57 +1460,251 @@ async function fetchContentFromAPI(endpoint, params) {
     const page = parseInt(params.get('page') || '1', 10);
     const perPage = parseInt(params.get('limit') || ITEMS_PER_PAGE.toString(), 10);
 
-    const jikanUrl = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
-    jikanUrl.searchParams.set('action', 'list');
-    jikanUrl.searchParams.set('mediaType', mediaType);
-    jikanUrl.searchParams.set('page', String(page));
-    jikanUrl.searchParams.set('limit', String(perPage));
+    const search = String(params.get('q') || '').trim() || null;
+    // En recherche, la pertinence AniList (SEARCH_MATCH) doit etre le defaut.
+    const orderBy = params.get('order_by') || (search ? 'relevance' : 'score');
+    const sort = params.get('sort') || 'desc';
+    const minScoreValue = Number(params.get('min_score') || '0');
+    const minAverageScore = Number.isFinite(minScoreValue) && minScoreValue > 0
+        ? Math.round(minScoreValue * 10)
+        : null;
+    const genre = mapGenreToAniList(params.get('genres'));
+    const status = mapStatusToAniList(params.get('status'));
+    const format = mapTypeToAniListFormat(selectedType, mediaType);
+    const gqlMediaType = mediaType === 'anime' ? 'ANIME' : 'MANGA';
+    const sortValues = mapOrderByToAniList(orderBy, sort, mediaType);
+    const useRelevanceSort = !!search && (orderBy === 'relevance' || !params.get('order_by'));
 
-    // Propager les filtres existants (recherche, type, tri, score, genres...)
-    params.forEach((value, key) => {
-        if (['page', 'limit'].includes(key)) return;
-        if (value === '' || value === null || value === undefined) return;
-        jikanUrl.searchParams.set(key, String(value));
-    });
+    const runAniListQuery = async (searchTerm) => {
+        const variables = {
+            page: searchTerm && searchTerm !== search ? 1 : page,
+            perPage,
+            type: gqlMediaType,
+            sort: useRelevanceSort ? ['SEARCH_MATCH'] : sortValues
+        };
+        const varDefs = [
+            '$page: Int',
+            '$perPage: Int',
+            '$type: MediaType',
+            '$sort: [MediaSort]'
+        ];
+        const mediaArgs = [
+            'type: $type',
+            'sort: $sort',
+            'isAdult: false'
+        ];
 
-    mwDebug('JIKAN:request', {
-        endpoint,
-        mediaType,
-        selectedType,
-        url: jikanUrl.toString()
-    });
+        if (searchTerm) {
+            variables.search = searchTerm;
+            varDefs.push('$search: String');
+            mediaArgs.push('search: $search');
+        }
+        if (genre) {
+            variables.genre = genre;
+            varDefs.push('$genre: String');
+            mediaArgs.push('genre: $genre');
+        }
+        if (status) {
+            variables.status = status;
+            varDefs.push('$status: MediaStatus');
+            mediaArgs.push('status: $status');
+        }
+        if (format) {
+            variables.format = format;
+            varDefs.push('$format: MediaFormat');
+            mediaArgs.push('format: $format');
+        }
+        if (minAverageScore != null) {
+            variables.averageScoreGreater = minAverageScore;
+            varDefs.push('$averageScoreGreater: Int');
+            mediaArgs.push('averageScore_greater: $averageScoreGreater');
+        }
 
-    try {
-        const response = await fetch(jikanUrl.toString(), {
-            headers: { Accept: 'application/json' }
+        const query = `
+            query (${varDefs.join(', ')}) {
+                Page(page: $page, perPage: $perPage) {
+                    pageInfo {
+                        currentPage
+                        lastPage
+                        hasNextPage
+                        perPage
+                        total
+                    }
+                    media(${mediaArgs.join(', ')}) {
+                        id
+                        idMal
+                        title { romaji english native }
+                        description(asHtml: false)
+                        averageScore
+                        popularity
+                        status
+                        format
+                        countryOfOrigin
+                        episodes
+                        duration
+                        chapters
+                        volumes
+                        startDate { year }
+                        genres
+                        coverImage { extraLarge large medium }
+                    }
+                }
+            }`;
+
+        mwDebug('ANILIST:request', {
+            endpoint,
+            mediaType,
+            selectedType,
+            searchTerm,
+            sort: variables.sort
         });
 
+        const response = await (window.MW_API_CONFIG?.enqueueAniList
+            ? window.MW_API_CONFIG.enqueueAniList(() => fetch('/.netlify/functions/anilist-proxy', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query, variables })
+            }))
+            : fetch('/.netlify/functions/anilist-proxy', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query, variables })
+            }));
+
+        if (response.status === 429 || response.status === 502 || response.status === 503 || response.status === 504) {
+            const retryAfter = Number(response.headers.get('Retry-After') || 2);
+            const err = new Error(`AniList HTTP ${response.status}`);
+            err.status = response.status;
+            err.retryAfter = retryAfter;
+            throw err;
+        }
+
         if (!response.ok) {
-            mwDebug('JIKAN:http-error', { status: response.status, statusText: response.statusText });
-            return null;
+            mwDebug('ANILIST:http-error', { status: response.status, statusText: response.statusText });
+            return { error: 'http', status: response.status, data: [] };
         }
 
         const payload = await response.json();
-        const rawItems = Array.isArray(payload?.data) ? payload.data : [];
+        if (Array.isArray(payload?.errors) && payload.errors.length > 0) {
+            const first = payload.errors[0];
+            const isRateLimit = first?.status === 429 || /too many requests/i.test(String(first?.message || ''));
+            mwDebug('ANILIST:graphql-error', payload.errors);
+            if (isRateLimit) {
+                const err = new Error(first.message || 'Too Many Requests');
+                err.status = 429;
+                throw err;
+            }
+            return { error: 'graphql', data: [] };
+        }
+
+        const rawItems = Array.isArray(payload?.data?.Page?.media)
+            ? payload.data.Page.media.map(item => convertAniListMediaToLegacy(item, mediaType))
+            : [];
         const filteredData = applySelectedTypePostFilter(rawItems, selectedType, mediaType);
-        const pagination = payload?.pagination || {
+        const pageInfo = payload?.data?.Page?.pageInfo || null;
+        const pagination = pageInfo ? {
+            last_visible_page: pageInfo.lastPage || page,
+            current_page: pageInfo.currentPage || page,
+            has_next_page: !!pageInfo.hasNextPage
+        } : {
             last_visible_page: page,
             current_page: page,
             has_next_page: false
         };
 
-        mwDebug('JIKAN:result', {
-            rawCount: rawItems.length,
-            filteredCount: filteredData.length,
-            pagination
+        return { data: filteredData, pagination, rawCount: rawItems.length };
+    };
+
+    const runAniListQueryWithRetry = async (searchTerm) => {
+        let lastError = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                return await runAniListQuery(searchTerm);
+            } catch (error) {
+                lastError = error;
+                const status = error?.status;
+                if (status === 429 || status === 502 || status === 503 || status === 504) {
+                    const waitMs = Math.max(1600, (error.retryAfter || 2) * 1000) + attempt * 900;
+                    mwDebug('ANILIST:retry', { attempt: attempt + 1, status, waitMs });
+                    await new Promise((resolve) => setTimeout(resolve, waitMs));
+                    continue;
+                }
+                throw error;
+            }
+        }
+        mwDebug('ANILIST:retry-exhausted', { message: lastError?.message || String(lastError) });
+        return { error: 'rate_limit', data: null };
+    };
+
+    try {
+        let result = await runAniListQueryWithRetry(search);
+
+        // Tolérance fautes de frappe : uniquement si la requête a réussi mais sans résultat.
+        // Ne pas lancer de variantes si on est en rate-limit (sinon on empire le problème).
+        if (
+            search &&
+            result &&
+            !result.error &&
+            Array.isArray(result.data) &&
+            result.data.length === 0
+        ) {
+            const fallbacks = buildTypoSearchFallbacks(search);
+            mwDebug('ANILIST:typo-fallback', { search, fallbacks });
+
+            const merged = new Map();
+            for (const fallback of fallbacks) {
+                const fallbackResult = await runAniListQueryWithRetry(fallback);
+                if (!fallbackResult?.data?.length) continue;
+                fallbackResult.data.forEach((item) => {
+                    const key = String(item.mal_id || item.anilist_id || item.title || '');
+                    if (!key || merged.has(key)) return;
+                    merged.set(key, item);
+                });
+                if (merged.size >= perPage) break;
+            }
+
+            const ranked = rankItemsBySearchRelevance([...merged.values()], search).slice(0, perPage);
+            if (ranked.length > 0) {
+                result = {
+                    data: ranked,
+                    pagination: {
+                        last_visible_page: 1,
+                        current_page: 1,
+                        has_next_page: false
+                    }
+                };
+            }
+        } else if (search && useRelevanceSort && result?.data?.length) {
+            // Garde tous les resultats AniList, mais remonte les titres les plus proches.
+            const ranked = rankItemsBySearchRelevance(result.data, search, { keepUnmatched: true });
+            if (ranked.length > 0) {
+                result = {
+                    ...result,
+                    data: ranked
+                };
+            }
+        }
+
+        if (!result || result.error || !Array.isArray(result.data)) return null;
+
+        mwDebug('ANILIST:result', {
+            rawCount: result.rawCount || result.data.length,
+            filteredCount: result.data.length,
+            pagination: result.pagination
         });
 
         return {
-            data: filteredData,
-            pagination
+            data: result.data,
+            pagination: result.pagination
         };
     } catch (error) {
-        mwDebug('JIKAN:request-failed', { message: error?.message || String(error) });
+        mwDebug('ANILIST:request-failed', { message: error?.message || String(error) });
         return null;
     }
 }
@@ -1676,6 +2010,18 @@ function mapJikanDetailToDisplayContent(apiPayload, collectionItem) {
 async function fetchJikanDetailByMalId(malId, mediaKind) {
     const id = extractMalId({ id: malId, mal_id: malId });
     if (!id) return null;
+
+    const titleHint = findCollectionItemByMalId(id)?.title || '';
+    if (window.MWDetailCache?.fetchAniListByMalId) {
+        try {
+            const aniContent = await window.MWDetailCache.fetchAniListByMalId(id, titleHint, mediaKind);
+            if (aniContent?.mal_id) {
+                return { data: aniContent };
+            }
+        } catch (aniError) {
+            console.warn('AniList indisponible pour enrichissement, repli Jikan:', aniError);
+        }
+    }
 
     const requestDetail = async (kind) => {
         const url = new URL('/.netlify/functions/jikan-proxy', window.location.origin);

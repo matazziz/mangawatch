@@ -1,8 +1,7 @@
 // Service pour gérer les auteurs et leurs œuvres
 export class AuteurService {
     constructor() {
-        this.apiBaseUrl = 'https://api.jikan.moe/v4';
-        this.jikanProxyPath = '/.netlify/functions/jikan-proxy';
+        this.anilistProxyPath = '/.netlify/functions/anilist-proxy';
         this.auteurs = [
             {
                 nom: "Naoki Urasawa",
@@ -266,35 +265,67 @@ export class AuteurService {
         if (!url || typeof url !== 'string') return false;
         if (!url.startsWith('http')) return false;
         if (url.includes('placeholder') || url.includes('via.placeholder')) return false;
+        // Les covers Wikipedia du JSON cassent souvent
+        if (url.includes('upload.wikimedia.org')) return false;
         return true;
+    }
+
+    async anilistSearchManga(mangaTitle, perPage = 8) {
+        const query = `
+            query ($search: String, $perPage: Int) {
+                Page(perPage: $perPage) {
+                    media(search: $search, type: MANGA, sort: SEARCH_MATCH, isAdult: false) {
+                        idMal
+                        title { romaji english native }
+                        coverImage { extraLarge large medium }
+                    }
+                }
+            }`;
+
+        const doFetch = () => fetch(this.anilistProxyPath, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query,
+                variables: { search: mangaTitle, perPage }
+            })
+        });
+
+        const response = await (window.MW_API_CONFIG?.enqueueAniList
+            ? window.MW_API_CONFIG.enqueueAniList(doFetch)
+            : doFetch());
+
+        if (!response.ok) return [];
+        const payload = await response.json();
+        if (payload.errors?.length) return [];
+        return payload?.data?.Page?.media || [];
+    }
+
+    pickBestMangaMatch(list, mangaTitle) {
+        if (!Array.isArray(list) || !list.length) return null;
+        const q = String(mangaTitle || '').toLowerCase().trim();
+        return list.find((m) => {
+            const titles = [
+                m.title?.romaji,
+                m.title?.english,
+                m.title?.native
+            ].filter(Boolean).map((t) => String(t).toLowerCase());
+            return titles.some((t) => t === q || t.includes(q) || q.includes(t));
+        }) || list[0];
     }
 
     async fetchMangaImages(mangaTitle) {
         try {
-            const proxyUrl = new URL(this.jikanProxyPath, window.location.origin);
-            proxyUrl.searchParams.set('action', 'list');
-            proxyUrl.searchParams.set('mediaType', 'manga');
-            proxyUrl.searchParams.set('q', mangaTitle);
-            proxyUrl.searchParams.set('limit', '5');
-            proxyUrl.searchParams.set('sfw', 'true');
-
-            const fetchFn = window.MW_API_CONFIG?.fetchWithRetry || fetch;
-            const response = await fetchFn(proxyUrl.toString(), { headers: { Accept: 'application/json' } });
-            if (!response.ok) return null;
-
-            const data = await response.json();
-            if (data.data && data.data.length > 0) {
-                const q = mangaTitle.toLowerCase().trim();
-                const manga = data.data.find(function (m) {
-                    const t = (m.title || '').toLowerCase();
-                    const te = (m.title_english || '').toLowerCase();
-                    return t === q || te === q || t.includes(q) || q.includes(t);
-                }) || data.data[0];
-                return manga.images?.jpg?.large_image_url ||
-                       manga.images?.jpg?.image_url ||
-                       manga.images?.webp?.large_image_url ||
-                       manga.images?.webp?.image_url;
-            }
+            const list = await this.anilistSearchManga(mangaTitle, 8);
+            const manga = this.pickBestMangaMatch(list, mangaTitle);
+            const imageUrl = manga?.coverImage?.extraLarge
+                || manga?.coverImage?.large
+                || manga?.coverImage?.medium
+                || null;
+            if (imageUrl && imageUrl.startsWith('http')) return imageUrl;
         } catch (error) {
             console.error('Erreur lors de la récupération des images:', error);
         }
@@ -478,9 +509,8 @@ export class AuteurService {
                 oeuvreImage.style.display = 'block';
             }
 
-            const realImage = this.isUsableCoverUrl(oeuvre.image)
-                ? oeuvre.image
-                : await this.fetchMangaImages(oeuvre.titre);
+            const realImage = await this.fetchMangaImages(oeuvre.titre)
+                || (this.isUsableCoverUrl(oeuvre.image) ? oeuvre.image : null);
             if (realImage) {
                 oeuvreImage.src = realImage;
                 
@@ -734,15 +764,12 @@ export class AuteurService {
 
 
 
-    // Rechercher l'ID MAL d'un manga par son titre via l'API
+    // Rechercher l'ID MAL d'un manga par son titre via AniList
     async searchMangaIdByTitle(title) {
         try {
-            const response = await fetch(`${this.apiBaseUrl}/manga?q=${encodeURIComponent(title)}&limit=1`);
-            const data = await response.json();
-            
-            if (data.data && data.data.length > 0) {
-                return data.data[0].mal_id;
-            }
+            const list = await this.anilistSearchManga(title, 5);
+            const manga = this.pickBestMangaMatch(list, title);
+            return manga?.idMal || null;
         } catch (error) {
             console.error('Erreur lors de la recherche du manga:', error);
         }

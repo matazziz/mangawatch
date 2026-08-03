@@ -146,16 +146,23 @@
         const franchiseA = detectFranchiseKey(titleA);
         const franchiseB = detectFranchiseKey(titleB);
         if (franchiseA && franchiseA === franchiseB) return true;
-        const minLen = 8;
-        if (baseA.length >= minLen && baseB.length >= minLen &&
-            (baseA.startsWith(baseB) || baseB.startsWith(baseA))) {
+
+        const fullA = normalizeTitle(titleA);
+        const fullB = normalizeTitle(titleB);
+        if (fullA && fullB && (fullA.includes(baseB) || fullB.includes(baseA))) {
             return true;
         }
-        const wordsA = baseA.split(' ').filter((w) => w.length > 3);
-        const wordsB = baseB.split(' ').filter((w) => w.length > 3);
+
+        const minLen = 6;
+        if (baseA.length >= minLen && baseB.length >= minLen &&
+            (baseA.startsWith(baseB) || baseB.startsWith(baseA) || baseA.includes(baseB) || baseB.includes(baseA))) {
+            return true;
+        }
+        const wordsA = baseA.split(' ').filter((w) => w.length > 2);
+        const wordsB = baseB.split(' ').filter((w) => w.length > 2);
         if (wordsA.length >= 2 && wordsB.length >= 2) {
             const shared = wordsA.filter((w) => wordsB.includes(w));
-            if (shared.length >= 2) return true;
+            if (shared.length >= Math.min(2, Math.min(wordsA.length, wordsB.length))) return true;
         }
         return false;
     }
@@ -376,25 +383,87 @@
 
     function assignInferredSeasonNumbers(items, contentType, referenceTitle, currentId) {
         const ct = (contentType || '').toLowerCase();
-        if (ct !== 'anime' && ct !== 'film') return;
-        if (detectFranchiseKey(referenceTitle)) return;
+        if (ct !== 'anime' && ct !== 'film' && ct !== 'manga' && ct !== 'manhwa' && ct !== 'manhua') return;
+
         const mainEntries = items.filter((item) => {
-            if (currentId && String(item.mal_id) === String(currentId)) return false;
             if (isNonMainSeasonEntry(item.title, item)) return false;
-            if (extractSeasonPartNumber(item.title, contentType) != null) return false;
             if (inferExtraFromTitle(item.title)) return false;
             const rel = normalizeRelationType(item.relationType || '');
-            return !STRICT_SERIES_FILTER_TYPES.has(rel);
+            if (STRICT_SERIES_FILTER_TYPES.has(rel)) return false;
+            // Si le titre porte deja un numero explicite, on le conserve.
+            if (extractSeasonPartNumber(item.title, contentType) != null) return false;
+            return true;
         });
-        mainEntries.sort((a, b) => {
-            const ya = parseInt(a.year, 10) || 9999;
-            const yb = parseInt(b.year, 10) || 9999;
-            if (ya !== yb) return ya - yb;
-            return String(a.title || '').localeCompare(String(b.title || ''), 'fr');
-        });
+
+        mainEntries.sort((a, b) => compareBySeriesOrder(a, b, contentType));
         mainEntries.forEach((item, index) => {
             item._inferredSeason = index + 1;
         });
+    }
+
+    function getChronologicalTimestamp(item) {
+        if (item?.airedFrom) {
+            const t = new Date(item.airedFrom).getTime();
+            if (!Number.isNaN(t) && t > 0) return t;
+        }
+        const year = parseInt(item?.year, 10);
+        if (!Number.isFinite(year) || year <= 0) return Number.MAX_SAFE_INTEGER;
+        const month = Number(item?.startMonth);
+        const day = Number(item?.startDay);
+        const m = Number.isFinite(month) && month >= 1 && month <= 12 ? month : 1;
+        const d = Number.isFinite(day) && day >= 1 && day <= 31 ? day : 1;
+        return Date.UTC(year, m - 1, d);
+    }
+
+    function getPlacementTier(item) {
+        const rel = normalizeRelationType(item?.relationType || '');
+        // Alternatives a gauche du carrousel
+        if (
+            rel === 'alternative' ||
+            rel === 'alternative-version' ||
+            rel === 'alternative version'
+        ) {
+            return 0;
+        }
+        // Side stories / spin-offs / extras a droite
+        if (isNonMainSeasonEntry(item?.title, item) || STRICT_SERIES_FILTER_TYPES.has(rel)) {
+            return 2;
+        }
+        // Timeline principale au centre
+        return 1;
+    }
+
+    function compareBySeriesOrder(a, b, contentType) {
+        const tierA = getPlacementTier(a);
+        const tierB = getPlacementTier(b);
+        if (tierA !== tierB) return tierA - tierB;
+
+        const tsA = getChronologicalTimestamp(a);
+        const tsB = getChronologicalTimestamp(b);
+        if (tsA !== tsB) return tsA - tsB;
+
+        const explicitA = extractSeasonPartNumber(a?.title, contentType);
+        const explicitB = extractSeasonPartNumber(b?.title, contentType);
+        if (explicitA != null && explicitB != null && explicitA !== explicitB) {
+            return (explicitA === 99 ? 98 : explicitA) - (explicitB === 99 ? 98 : explicitB);
+        }
+
+        return String(a?.title || '').localeCompare(String(b?.title || ''), 'fr');
+    }
+
+    function getCanonicalSortIndex(item, contentType) {
+        // Conserve une valeur pour compat, mais le tri principal est chronologique.
+        if (isNonMainSeasonEntry(item.title, item)) {
+            return 900 + getRelationSortTier(item);
+        }
+        const num = item?._inferredSeason ?? extractSeasonPartNumber(item.title, contentType);
+        if (num != null) return num === 99 ? 98 : num;
+        return 400 + getRelationSortTier(item);
+    }
+
+    function sortRelatedItems(items, contentType) {
+        const ct = contentType || 'anime';
+        return items.slice().sort((a, b) => compareBySeriesOrder(a, b, ct));
     }
 
     function getSeasonLabel(title, contentType, item, labelCounts) {
@@ -664,7 +733,7 @@
     function mergeBriefStatsIntoItem(item, brief) {
         if (!brief) return false;
         let changed = false;
-        const fields = ['volumes', 'chapters', 'episodes', 'year', 'airedFrom', 'airedTo', 'status', 'score'];
+        const fields = ['volumes', 'chapters', 'episodes', 'year', 'startMonth', 'startDay', 'airedFrom', 'airedTo', 'status', 'score'];
         for (const field of fields) {
             const next = brief[field];
             if ((item[field] == null || item[field] === '') && next != null && next !== '') {
@@ -681,42 +750,29 @@
         return `${t.slice(0, max - 1)}…`;
     }
 
-    function getCanonicalSortIndex(item, contentType) {
-        if (isNonMainSeasonEntry(item.title, item)) {
-            return 900 + getRelationSortTier(item);
+    function mergeRelatedEntry(relatedMap, key, item) {
+        const prev = relatedMap.get(String(key));
+        if (!prev) {
+            relatedMap.set(String(key), item);
+            return;
         }
-        const num = extractSeasonPartNumber(item.title, contentType);
-        if (num != null) return num === 99 ? 98 : num;
-
-        const t = item.title || '';
-        const seasonM = t.match(/(\d+)(?:st|nd|rd|th)\s+season|(?:season|saison)\s*(\d+)/i);
-        const partM = t.match(/\bpart(?:ie)?\s*(\d+)/i);
-        if (seasonM && partM) {
-            const s = parseInt(seasonM[1] || seasonM[2], 10);
-            const p = parseInt(partM[1], 10);
-            return s * 10 + p * 0.1;
-        }
-
-        if (item._inferredSeason != null) return item._inferredSeason;
-        return 400 + getRelationSortTier(item);
-    }
-
-    function sortRelatedItems(items, contentType) {
-        const ct = contentType || 'anime';
-        return items.slice().sort((a, b) => {
-            const idxA = getCanonicalSortIndex(a, ct);
-            const idxB = getCanonicalSortIndex(b, ct);
-            if (idxA !== idxB) return idxA - idxB;
-
-            const yearA = parseInt(a.year, 10) || 0;
-            const yearB = parseInt(b.year, 10) || 0;
-            if (yearA > 0 && yearB > 0 && yearA !== yearB) return yearA - yearB;
-
-            const dateA = a.airedFrom ? new Date(a.airedFrom).getTime() : 0;
-            const dateB = b.airedFrom ? new Date(b.airedFrom).getTime() : 0;
-            if (dateA && dateB && dateA !== dateB) return dateA - dateB;
-
-            return String(a.title || '').localeCompare(String(b.title || ''), 'fr');
+        relatedMap.set(String(key), {
+            ...prev,
+            ...item,
+            title: item.title || prev.title,
+            image: item.image || prev.image,
+            year: item.year || prev.year,
+            startMonth: item.startMonth || prev.startMonth,
+            startDay: item.startDay || prev.startDay,
+            airedFrom: item.airedFrom || prev.airedFrom,
+            airedTo: item.airedTo || prev.airedTo,
+            relationType: item.relationType || prev.relationType,
+            episodes: item.episodes ?? prev.episodes,
+            chapters: item.chapters ?? prev.chapters,
+            volumes: item.volumes ?? prev.volumes,
+            score: item.score ?? prev.score,
+            synopsis: item.synopsis || prev.synopsis,
+            status: item.status || prev.status
         });
     }
 
@@ -918,6 +974,37 @@
         const cached = readCache(cacheKey);
         if (cached) return cached;
 
+        // Priorité AniList (images + métadonnées stables)
+        if (global.MWDetailCache?.fetchAniListByMalId) {
+            try {
+                const ani = await global.MWDetailCache.fetchAniListByMalId(id, '', mediaType);
+                if (ani?.mal_id) {
+                    const brief = {
+                        mal_id: ani.mal_id,
+                        title: ani.title || ani.title_english || '',
+                        synopsis: ani.synopsis || null,
+                        score: ani.score != null ? ani.score : null,
+                        genres: ani.genres || [],
+                        type: ani.type || null,
+                        status: ani.status || null,
+                        image: ani.images?.jpg?.large_image_url || ani.images?.jpg?.image_url || '',
+                        year: ani.year || ani.aired?.prop?.from?.year || ani.published?.prop?.from?.year || '',
+                        startMonth: ani.startMonth || null,
+                        startDay: ani.startDay || null,
+                        airedFrom: ani.airedFrom || ani.aired?.from || ani.published?.from || null,
+                        airedTo: ani.aired?.to || ani.published?.to || null,
+                        episodes: ani.episodes || null,
+                        chapters: ani.chapters || null,
+                        volumes: ani.volumes || null
+                    };
+                    writeCache(cacheKey, brief);
+                    return brief;
+                }
+            } catch (aniErr) {
+                console.warn('[details-related-seasons] AniList brief:', id, aniErr?.message || aniErr);
+            }
+        }
+
         const proxyUrl = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
         proxyUrl.searchParams.set('action', 'detail');
         proxyUrl.searchParams.set('mediaType', mediaType);
@@ -945,8 +1032,10 @@
                 type: item.type || null,
                 status: item.status || null,
                 image: item.images?.jpg?.large_image_url || item.images?.jpg?.image_url || '',
-                year: year || '',
-                airedFrom: item.aired?.from || item.published?.from || null,
+                        year: year || '',
+                        startMonth: null,
+                        startDay: null,
+                        airedFrom: item.aired?.from || item.published?.from || null,
                 airedTo: item.aired?.to || item.published?.to || null,
                 episodes: item.episodes || null,
                 chapters: item.chapters || null,
@@ -988,29 +1077,56 @@
 
     async function expandRelationsGraphBfs(relatedMap, mediaType, referenceTitle) {
         const visited = new Set();
-        const maxNodes = 52;
-        const maxHops = 6;
+        const maxNodes = 48;
+        const maxHops = 5;
 
         for (let hop = 0; hop < maxHops && relatedMap.size < maxNodes; hop += 1) {
             const pending = Array.from(relatedMap.keys()).filter((id) => !visited.has(String(id)));
             if (!pending.length) break;
 
-            const batch = pending.slice(0, hop === 0 ? 6 : 10);
+            // Lots raisonnables + throttle AniList (enqueue) pour couvrir plus de saisons/volumes.
+            const batch = pending.slice(0, hop === 0 ? 5 : 6);
             batch.forEach((id) => visited.add(String(id)));
 
-            await Promise.all(batch.map(async (id) => {
+            for (const id of batch) {
+                let expandedViaAniList = false;
                 try {
-                    const payload = await fetchRelations(mediaType, id);
-                    const fromJikan = collectRelatedFromRelationsPayload(
-                        payload, mediaType, referenceTitle
-                    );
-                    fromJikan.forEach((v, k) => relatedMap.set(k, v));
-                } catch (e) {
-                    console.warn('[details-related-seasons] expand relations:', id, e?.message || e);
+                    if (global.MWDetailCache?.fetchAniListByMalId) {
+                        const known = relatedMap.get(String(id));
+                        await global.MWDetailCache.fetchAniListByMalId(
+                            id,
+                            known?.title || referenceTitle,
+                            mediaType
+                        );
+                        const edges = global.MWDetailCache.getAniListRelations?.(id);
+                        if (edges?.length && global.MWDetailCache.anilistEdgesToRelatedItems) {
+                            const fromAni = global.MWDetailCache.anilistEdgesToRelatedItems(
+                                edges, mediaType, referenceTitle, areSameSeries
+                            );
+                            fromAni.forEach((v, k) => mergeRelatedEntry(relatedMap, k, v));
+                            expandedViaAniList = fromAni.size > 0;
+                        }
+                    }
+                } catch (aniErr) {
+                    console.warn('[details-related-seasons] expand AniList:', id, aniErr?.message || aniErr);
                 }
-            }));
 
-            if (hop > 0) await delay(180);
+                if (!expandedViaAniList) {
+                    try {
+                        const payload = await fetchRelations(mediaType, id);
+                        const fromJikan = collectRelatedFromRelationsPayload(
+                            payload, mediaType, referenceTitle
+                        );
+                        fromJikan.forEach((v, k) => mergeRelatedEntry(relatedMap, k, v));
+                    } catch (e) {
+                        console.warn('[details-related-seasons] expand relations:', id, e?.message || e);
+                    }
+                }
+
+                await delay(180);
+            }
+
+            if (hop > 0) await delay(200);
         }
     }
 
@@ -1277,7 +1393,9 @@
             title: referenceTitle,
             image: content.images?.jpg?.large_image_url || content.images?.jpg?.image_url || '',
             year: content.year || content.aired?.prop?.from?.year || content.published?.prop?.from?.year || '',
-            airedFrom: content.aired?.from || content.published?.from || null,
+            startMonth: content.startMonth || content.aired?.prop?.from?.month || null,
+            startDay: content.startDay || content.aired?.prop?.from?.day || null,
+            airedFrom: content.airedFrom || content.aired?.from || content.published?.from || null,
             episodes: content.episodes || null,
             chapters: content.chapters || null,
             volumes: content.volumes || null
@@ -1301,7 +1419,7 @@
                 const fromAni = global.MWDetailCache.anilistEdgesToRelatedItems(
                     aniEdges, mediaType, referenceTitle, areSameSeries
                 );
-                fromAni.forEach((v, k) => relatedMap.set(k, v));
+                fromAni.forEach((v, k) => mergeRelatedEntry(relatedMap, k, v));
             }
         })();
 
@@ -1311,7 +1429,7 @@
                 const fromJikan = collectRelatedFromRelationsPayload(
                     relationsPayload, mediaType, referenceTitle
                 );
-                fromJikan.forEach((v, k) => relatedMap.set(k, v));
+                fromJikan.forEach((v, k) => mergeRelatedEntry(relatedMap, k, v));
             } catch (err) {
                 console.warn('[details-related-seasons] Jikan relations:', err?.message || err);
             }
@@ -1319,6 +1437,31 @@
 
         await Promise.all([aniPromise, jikanPromise]);
         relatedMap.set(String(currentId), currentEntry);
+
+        // Completer la licence via recherche AniList sur le titre de base
+        // (souvent plus complet que les seules relations directes).
+        try {
+            const baseCandidates = [
+                extractBaseTitle(referenceTitle, ct),
+                extractBaseTitle(content?.title_english || '', ct),
+                extractBaseTitle(content?.title_japanese || '', ct)
+            ].map((v) => String(v || '').trim()).filter((v) => v.length >= 3);
+
+            const uniqueBases = [...new Set(baseCandidates)];
+            for (const baseTitle of uniqueBases) {
+                if (!global.MWDetailCache?.searchFranchiseCluster) break;
+                const cluster = await global.MWDetailCache.searchFranchiseCluster(
+                    baseTitle,
+                    mediaType,
+                    referenceTitle,
+                    areSameSeries
+                );
+                cluster.forEach((v, k) => mergeRelatedEntry(relatedMap, k, v));
+            }
+        } catch (clusterErr) {
+            console.warn('[details-related-seasons] franchise cluster:', clusterErr?.message || clusterErr);
+        }
+
         await expandRelationsGraphBfs(relatedMap, mediaType, referenceTitle);
         mergeSeriesCacheIntoMap(relatedMap, seriesCacheKey);
         if (relatedMap.size < 2) {

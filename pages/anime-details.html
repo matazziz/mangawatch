@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -57,8 +57,8 @@
             }
         })();
     </script>
-    <script src="/js/mw-api-config.js?v=3"></script>
-    <script src="/js/mw-detail-cache.js?v=4"></script>
+    <script src="/js/mw-api-config.js?v=4-anilist-queue"></script>
+    <script src="/js/mw-detail-cache.js?v=8-chrono"></script>
     <script src="/js/localization.js"></script>
     <script src="/js/search.js"></script>
     <style>
@@ -355,7 +355,7 @@
                     (contentType === 'manga' ? 'manga' : 'anime');
                 const proxyUrl = `/.netlify/functions/jikan-proxy?action=detail&mediaType=${mediaType}&id=${encodeURIComponent(contentId)}`;
                 const directUrl = `https://api.jikan.moe/v4/${mediaType}/${encodeURIComponent(contentId)}`;
-                console.log('🌐 Appel API:', proxyUrl);
+                console.log('🌐 Chargement détails pour:', contentId, mediaType);
                 const startedAt = performance.now();
                 mwDebug('anime-details:request', { proxyUrl, directUrl });
 
@@ -386,6 +386,13 @@
                 }
 
                 const fetchDetailPayload = async () => {
+                    if (window.MWDetailCache?.fetchAniListByMalId) {
+                        const fromAniList = await window.MWDetailCache.fetchAniListByMalId(contentId, prefetch?.data?.title || '', mediaType);
+                        if (fromAniList) {
+                            return { data: fromAniList };
+                        }
+                    }
+
                     const doFetch = async () => {
                         const fetcher = window.MW_API_CONFIG?.fetchWithRetry?.bind(window.MW_API_CONFIG) || fetch;
                         let proxyResponse;
@@ -439,11 +446,11 @@
                         const content = applyDetailData(data, 'jikan', {
                             refresh: !!window.__mwDetailDisplayed
                         });
-                        console.log('✅ Données contenu reçues (Jikan):', content);
+                        console.log('✅ Données contenu reçues:', content);
                         resolve(content);
                     })
                     .catch(async (error) => {
-                        console.warn('Jikan indisponible, repli cache/AniList:', error?.message || error);
+                        console.warn('AniList/Jikan indisponible, repli cache:', error?.message || error);
                         try {
                             const fallback = await fetchFallbackDetail();
                             if (fallback) {
@@ -466,7 +473,7 @@
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <p data-i18n="load_error">Une erreur est survenue lors du chargement des détails du ${contentType}.</p>
                                 <p>${error.message}</p>
-                                <p style="font-size:0.9rem;opacity:0.85;">Ouvrez ce manga depuis le catalogue pendant que l'API Jikan est limitée.</p>
+                                <p style="font-size:0.9rem;opacity:0.85;">Rechargez la page ou revenez au catalogue si les details AniList sont temporairement indisponibles.</p>
                                 <a href="manga-database.html" class="cta-button" onclick="returnToCatalogue(event)" data-i18n="back_to_catalogue">Retour au catalogue</a>
                             </div>
                         `;
@@ -2212,7 +2219,7 @@
     <script src="/js/details-collection-status.js?v=4"></script>
     <script src="../js/hamburger-menu.js"></script>
     <!-- Charger profile-anime-cards.js pour le nettoyage du top 10 lors de la suppression de notes -->
-    <script src="/js/details-related-seasons.js?v=3.2"></script>
+    <script src="/js/details-related-seasons.js?v=3.7-alt-left"></script>
     <script src="/js/profile-anime-cards.js?v=2.0"></script>
     <!-- Charger les modules Firebase à la fin pour ne pas bloquer le chargement -->
     <script type="module">

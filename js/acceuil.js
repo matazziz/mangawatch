@@ -2050,22 +2050,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const mangaTitle = image?.dataset?.mangaTitle;
                     
                     if (mangaTitle && image && placeholder) {
-                        const staticImage = image.dataset.staticImage;
-                        const hasStaticCover = !!(staticImage && staticImage.startsWith('http'));
-                        if (hasStaticCover) {
-                            image.src = staticImage;
-                            image.style.display = 'block';
-                            placeholder.style.display = 'none';
-                        }
-
-                        if (!hasStaticCover) {
-                        // Vérifier d'abord le cache pour l'URL de l'image
-                        const cacheKey = `manga_image_${mangaTitle.toLowerCase().trim()}`;
+                        // Les covers Wikipedia du JSON sont souvent cassées :
+                        // on charge toujours les vraies images via AniList.
+                        const cacheKey = `manga_image_anilist_${mangaTitle.toLowerCase().trim()}`;
                         const cachedImageUrl = localStorage.getItem(cacheKey);
-                        
+
+                        image.style.display = 'none';
+                        placeholder.style.display = 'flex';
+
                         if (cachedImageUrl) {
-                            // Utiliser l'image en cache
-                            console.log(`✅ Image trouvée en cache pour ${mangaTitle}`);
                             const img = new Image();
                             img.onload = function() {
                                 image.src = cachedImageUrl;
@@ -2073,83 +2066,66 @@ document.addEventListener('DOMContentLoaded', async function() {
                                 placeholder.style.display = 'none';
                             };
                             img.onerror = function() {
-                                // Si l'image en cache ne fonctionne plus, la retirer du cache et chercher une nouvelle
-                                console.warn(`Image en cache invalide pour ${mangaTitle}, recherche d'une nouvelle...`);
                                 localStorage.removeItem(cacheKey);
                                 loadImageFromAPI();
                             };
                             img.src = cachedImageUrl;
                         } else {
-                            // Pas de cache, charger depuis l'API
                             loadImageFromAPI();
                         }
-                        
-                        // Fonction pour charger l'image depuis l'API
+
                         async function loadImageFromAPI() {
-                            // Afficher le placeholder par défaut
                             image.style.display = 'none';
                             placeholder.style.display = 'flex';
-                            
+
                             try {
                                 const realImage = await Promise.race([
                                     fetchMangaImage(mangaTitle),
-                                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 12000))
                                 ]);
-                                
-                            if (realImage) {
-                                    // Mettre en cache l'URL de l'image
+
+                                if (realImage) {
                                     localStorage.setItem(cacheKey, realImage);
                                     localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
-                                    console.log(`✅ Image trouvée et mise en cache pour ${mangaTitle}`);
-                                    
-                                    // Vérifier que l'image se charge correctement avant de l'afficher
+
                                     const img = new Image();
                                     let imageLoaded = false;
-                                    
-                                    // Timeout pour le chargement de l'image (5 secondes)
                                     const imageTimeout = setTimeout(() => {
                                         if (!imageLoaded) {
-                                            console.warn(`Timeout de chargement de l'image pour ${mangaTitle}`);
                                             image.style.display = 'none';
                                             placeholder.style.display = 'flex';
                                         }
-                                    }, 5000);
-                                    
+                                    }, 8000);
+
                                     img.onload = function() {
                                         imageLoaded = true;
                                         clearTimeout(imageTimeout);
-                                image.src = realImage;
+                                        image.src = realImage;
                                         image.style.display = 'block';
                                         placeholder.style.display = 'none';
                                     };
-                                    
+
                                     img.onerror = function() {
                                         imageLoaded = true;
                                         clearTimeout(imageTimeout);
-                                        console.warn(`Image invalide pour ${mangaTitle}: ${realImage}`);
-                                        // Retirer du cache si l'image ne fonctionne pas
                                         localStorage.removeItem(cacheKey);
                                         localStorage.removeItem(`${cacheKey}_timestamp`);
                                         image.style.display = 'none';
-                                    placeholder.style.display = 'flex';
-                                };
-                                    
+                                        placeholder.style.display = 'flex';
+                                    };
+
                                     img.src = realImage;
-                            } else {
-                                    // Si pas d'image trouvée, garder le placeholder
+                                } else {
+                                    image.style.display = 'none';
+                                    placeholder.style.display = 'flex';
+                                }
+                            } catch (error) {
+                                console.warn(`Erreur image auteur semaine (${mangaTitle}):`, error.message || error);
                                 image.style.display = 'none';
                                 placeholder.style.display = 'flex';
                             }
-                        } catch (error) {
-                                console.warn(`Erreur lors du chargement de l'image pour ${mangaTitle}:`, error.message || error);
-                                // Garder le placeholder visible
-                            image.style.display = 'none';
-                            placeholder.style.display = 'flex';
-                        }
-                        }
                         }
                     } else if (placeholder) {
-                        // Si pas de titre, afficher quand même le placeholder
                         if (image) image.style.display = 'none';
                         placeholder.style.display = 'flex';
                     }
@@ -2260,76 +2236,75 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Exposer la fonction globalement
     window.loadAuthorOfWeek = loadAuthorOfWeek;
 
-        // Fonction pour récupérer l'image d'un manga depuis l'API Jikan
+        // Fonction pour récupérer l'image d'un manga depuis AniList
         async function fetchMangaImage(mangaTitle) {
         try {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000);
-            
-            const proxyUrl = new URL('/.netlify/functions/jikan-proxy', window.location.origin);
-            proxyUrl.searchParams.set('action', 'list');
-            proxyUrl.searchParams.set('mediaType', 'manga');
-            proxyUrl.searchParams.set('q', mangaTitle);
-            proxyUrl.searchParams.set('limit', '5');
-            proxyUrl.searchParams.set('sfw', 'true');
-            
-            const fetchFn = window.MW_API_CONFIG?.fetchWithRetry || fetch;
-            const response = await fetchFn(proxyUrl.toString(), {
-                method: 'GET',
-                headers: { Accept: 'application/json' },
-                signal: controller.signal
+            const query = `
+                query ($search: String) {
+                    Page(perPage: 8) {
+                        media(search: $search, type: MANGA, sort: SEARCH_MATCH, isAdult: false) {
+                            idMal
+                            title { romaji english native }
+                            coverImage { extraLarge large medium }
+                        }
+                    }
+                }`;
+
+            const doFetch = () => fetch('/.netlify/functions/anilist-proxy', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query,
+                    variables: { search: mangaTitle }
+                })
             });
-            
-            clearTimeout(timeoutId);
-            
-            // Vérifier si la réponse est OK
+
+            const response = await (window.MW_API_CONFIG?.enqueueAniList
+                ? window.MW_API_CONFIG.enqueueAniList(doFetch)
+                : doFetch());
+
             if (!response.ok) {
-                if (response.status === 429) {
-                    console.warn(`Rate limit atteint pour ${mangaTitle}, utilisation du placeholder`);
-                } else {
-                    console.warn(`API Jikan retourne une erreur ${response.status} pour ${mangaTitle}`);
-                }
+                console.warn(`AniList image HTTP ${response.status} pour ${mangaTitle}`);
                 return null;
             }
-            
-            const data = await response.json();
-            
-            if (data.data && data.data.length > 0) {
-                const q = mangaTitle.toLowerCase().trim();
-                const manga = data.data.find(function (m) {
-                    const t = (m.title || '').toLowerCase();
-                    const te = (m.title_english || '').toLowerCase();
-                    return t === q || te === q || t.includes(q) || q.includes(t);
-                }) || data.data[0];
-                const imageUrl = manga.images?.jpg?.large_image_url || 
-                       manga.images?.jpg?.image_url || 
-                       manga.images?.webp?.large_image_url || 
-                       manga.images?.webp?.image_url;
-                
-                // Vérifier que l'URL n'est pas vide et n'est pas une image par défaut
-                if (imageUrl && 
-                    imageUrl !== 'https://cdn.myanimelist.net/img/sp/icon/apple-touch-icon-32.png' &&
-                    imageUrl !== 'https://cdn.myanimelist.net/images/questionmark_50.gif' &&
-                    !imageUrl.includes('questionmark') &&
-                    imageUrl.startsWith('http')) {
-                    return imageUrl;
-                } else {
-                    console.warn(`Aucune image valide disponible pour ${mangaTitle}`);
-                }
-            } else {
-                console.warn(`Aucun résultat trouvé pour ${mangaTitle}`);
+
+            const payload = await response.json();
+            if (payload.errors?.length) {
+                console.warn(`AniList image error pour ${mangaTitle}:`, payload.errors[0]?.message);
+                return null;
             }
+
+            const list = payload?.data?.Page?.media || [];
+            if (!list.length) {
+                console.warn(`Aucun résultat AniList pour ${mangaTitle}`);
+                return null;
+            }
+
+            const q = mangaTitle.toLowerCase().trim();
+            const manga = list.find((m) => {
+                const titles = [
+                    m.title?.romaji,
+                    m.title?.english,
+                    m.title?.native
+                ].filter(Boolean).map((t) => String(t).toLowerCase());
+                return titles.some((t) => t === q || t.includes(q) || q.includes(t));
+            }) || list[0];
+
+            const imageUrl = manga.coverImage?.extraLarge
+                || manga.coverImage?.large
+                || manga.coverImage?.medium
+                || null;
+
+            if (imageUrl && imageUrl.startsWith('http')) {
+                return imageUrl;
+            }
+
+            console.warn(`Aucune image valide AniList pour ${mangaTitle}`);
         } catch (error) {
-            // Ne pas logger les erreurs de timeout ou d'abort comme des erreurs critiques
-            if (error.name === 'AbortError' || error.message === 'Timeout') {
-                console.warn(`Timeout lors de la récupération de l'image pour ${mangaTitle}`);
-            } else if (error.message?.includes('429') || error.message?.includes('rate limit')) {
-                console.warn(`Rate limit atteint pour ${mangaTitle}, utilisation du placeholder`);
-            } else {
-                console.warn(`Erreur lors de la récupération de l'image pour ${mangaTitle}:`, error.message || error);
-            }
+            console.warn(`Erreur image AniList pour ${mangaTitle}:`, error.message || error);
         }
         return null;
     }
@@ -2337,40 +2312,52 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Fonction pour rechercher l'ID d'un manga par son titre (avec cache)
     async function searchMangaIdByTitle(mangaTitle) {
         try {
-            // Pas de délai pour cette requête car c'est une action utilisateur directe
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000); // Timeout de 6 secondes
-            
-            const response = await fetch(`https://api.jikan.moe/v4/manga?q=${encodeURIComponent(mangaTitle)}&limit=1`, {
-                method: 'GET',
+            const query = `
+                query ($search: String) {
+                    Page(perPage: 5) {
+                        media(search: $search, type: MANGA, sort: SEARCH_MATCH, isAdult: false) {
+                            idMal
+                            title { romaji english native }
+                        }
+                    }
+                }`;
+
+            const doFetch = () => fetch('/.netlify/functions/anilist-proxy', {
+                method: 'POST',
                 headers: {
-                    'Accept': 'application/json'
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                signal: controller.signal
+                body: JSON.stringify({
+                    query,
+                    variables: { search: mangaTitle }
+                })
             });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                if (response.status === 429) {
-                    console.warn(`Rate limit atteint pour la recherche de ${mangaTitle}`);
-                }
-                return null;
-            }
-            
-            const data = await response.json();
-            
-            if (data.data && data.data.length > 0) {
-                return data.data[0].mal_id;
-            }
+
+            const response = await (window.MW_API_CONFIG?.enqueueAniList
+                ? window.MW_API_CONFIG.enqueueAniList(doFetch)
+                : doFetch());
+
+            if (!response.ok) return null;
+            const payload = await response.json();
+            if (payload.errors?.length) return null;
+
+            const list = payload?.data?.Page?.media || [];
+            const q = mangaTitle.toLowerCase().trim();
+            const manga = list.find((m) => {
+                const titles = [
+                    m.title?.romaji,
+                    m.title?.english,
+                    m.title?.native
+                ].filter(Boolean).map((t) => String(t).toLowerCase());
+                return titles.some((t) => t === q || t.includes(q) || q.includes(t));
+            }) || list[0];
+
+            return manga?.idMal || null;
         } catch (error) {
-            if (error.name === 'AbortError') {
-                console.warn(`Timeout lors de la recherche de ${mangaTitle}`);
-            } else {
-            console.error('Erreur lors de la recherche du manga:', error);
-            }
+            console.warn(`Erreur recherche ID AniList pour ${mangaTitle}:`, error.message || error);
+            return null;
         }
-        return null;
     }
     
     // Fonction pour nettoyer le cache des IDs et images de manga (appeler périodiquement)

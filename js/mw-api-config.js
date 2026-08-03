@@ -1,14 +1,22 @@
 /**
- * Configuration temporaire API — passer mangaOnly à false quand l'API anime est rétablie.
+ * Configuration API centralisee.
  */
 (function (global) {
     'use strict';
 
     let jikanChain = Promise.resolve();
+    let anilistChain = Promise.resolve();
+    let lastAniListAt = 0;
+    // AniList est souvent limite a ~30 req/min : espacer les appels.
+    const ANILIST_MIN_INTERVAL_MS = 2100;
+
+    function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
     global.MW_API_CONFIG = {
         /** true = tous les appels Jikan passent par /manga/ uniquement */
-        mangaOnly: true,
+        mangaOnly: false,
 
         isMangaOnly() {
             return !!this.mangaOnly;
@@ -28,10 +36,22 @@
             return 'anime';
         },
 
-        /** Un seul appel Jikan à la fois (évite les 504 par surcharge) */
+        /** Un seul appel Jikan a la fois (evite les 504 par surcharge) */
         enqueueJikan(fn) {
             const run = jikanChain.then(() => fn());
             jikanChain = run.catch(() => {});
+            return run;
+        },
+
+        /** File d'attente AniList avec espacement anti rate-limit */
+        enqueueAniList(fn) {
+            const run = anilistChain.then(async () => {
+                const wait = Math.max(0, ANILIST_MIN_INTERVAL_MS - (Date.now() - lastAniListAt));
+                if (wait > 0) await delay(wait);
+                lastAniListAt = Date.now();
+                return fn();
+            });
+            anilistChain = run.catch(() => {});
             return run;
         },
 
@@ -52,7 +72,7 @@
                     if (attempt === maxRetries - 1) throw error;
                 }
             }
-            throw new Error('fetchWithRetry: échec après plusieurs tentatives');
+            throw new Error('fetchWithRetry: echec apres plusieurs tentatives');
         }
     };
 })(typeof window !== 'undefined' ? window : global);
