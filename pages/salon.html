@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -6,9 +6,9 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3925599546532899" crossorigin="anonymous"></script>
     <link rel="icon" type="image/png" href="/images/porte-torii.png" sizes="32x32">
     <meta name="robots" content="noindex,nofollow">
-    <title>Forum communautaire — MangaWatch</title>
+    <title>Forum communautaire � MangaWatch</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="../css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/messaging.css">
     <link rel="stylesheet" href="/css/community-lounge.css">
@@ -94,7 +94,7 @@
             <div class="salon-drawer-footer">
                 <button type="button" class="salon-drawer-create-btn" id="salon-create-channel-btn-drawer">
                     <i class="fas fa-plus"></i>
-                    <span data-i18n="salon.create_title">Créer un salon</span>
+                    <span data-i18n="salon.create_title">Cr�er un salon</span>
                 </button>
             </div>
         </aside>
@@ -102,12 +102,12 @@
         <aside class="salon-members" id="salon-members">
             <div class="salon-members-header">
                 <div class="salon-members-header-top">
-                    <h3><span data-i18n="salon.members">Membres</span> — <span id="salon-member-count">0</span></h3>
+                    <h3><span data-i18n="salon.members">Membres</span> � <span id="salon-member-count">0</span></h3>
                     <button type="button" class="salon-drawer-close" id="salon-members-close" aria-label="Fermer">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <input type="search" class="salon-members-search" id="salon-members-search" placeholder="Rechercher…" data-i18n-placeholder="salon.search_members">
+                <input type="search" class="salon-members-search" id="salon-members-search" placeholder="Rechercher�" data-i18n-placeholder="salon.search_members">
             </div>
             <div class="salon-members-list" id="salon-members-list">
                 <div class="salon-loading"><i class="fas fa-spinner fa-spin"></i></div>
@@ -117,7 +117,7 @@
         <div class="salon-layout">
             <aside class="salon-channels salon-channels-desktop" aria-label="Salons">
                 <div class="salon-channels-scroll" id="salon-channels-list"></div>
-                <button type="button" class="salon-channel-btn salon-channel-add" id="salon-create-channel-btn" title="Créer un salon">
+                <button type="button" class="salon-channel-btn salon-channel-add" id="salon-create-channel-btn" title="Cr�er un salon">
                     <i class="fas fa-plus"></i>
                 </button>
             </aside>
@@ -126,7 +126,7 @@
                 <header class="salon-chat-header">
                     <button type="button" class="salon-channel-picker" id="salon-channel-picker" aria-label="Choisir un salon">
                         <i class="fas fa-hashtag salon-channel-picker-icon"></i>
-                        <span class="salon-channel-picker-title" id="salon-channel-title">général</span>
+                        <span class="salon-channel-picker-title" id="salon-channel-title">g�n�ral</span>
                         <i class="fas fa-chevron-down salon-channel-picker-chevron" aria-hidden="true"></i>
                     </button>
                     <span id="salon-channel-desc">Discussions libres</span>
@@ -150,11 +150,11 @@
                 <div class="salon-compose" id="salon-compose">
                     <div id="salon-mention-suggest" class="salon-mention-suggest" style="display:none;"></div>
                     <div class="salon-compose-row">
-                        <button type="button" class="salon-compose-tool-btn" id="salon-create-poll-btn" title="Créer un sondage" data-i18n-title="salon.poll_btn" aria-label="Créer un sondage">
+                        <button type="button" class="salon-compose-tool-btn" id="salon-create-poll-btn" title="Cr�er un sondage" data-i18n-title="salon.poll_btn" aria-label="Cr�er un sondage">
                             <i class="fas fa-chart-bar"></i>
                         </button>
                         <div class="salon-compose-inner">
-                            <textarea id="salon-message-input" rows="1" placeholder="Envoyer un message dans #général" data-i18n-placeholder="salon.placeholder"></textarea>
+                            <textarea id="salon-message-input" rows="1" placeholder="Envoyer un message dans #g�n�ral" data-i18n-placeholder="salon.placeholder"></textarea>
                             <button type="button" class="salon-send-btn" id="salon-send-btn" aria-label="Envoyer">
                                 <i class="fas fa-paper-plane"></i>
                             </button>
@@ -165,11 +165,11 @@
         </div>
     </div>
 
-    <!-- Modal création de salon -->
+    <!-- Modal cr�ation de salon -->
     <div class="salon-modal-overlay" id="salon-create-modal" aria-hidden="true">
         <div class="salon-modal" role="dialog" aria-labelledby="salon-create-modal-title">
             <div class="salon-modal-header">
-                <h3 id="salon-create-modal-title" data-i18n="salon.create_title">Créer un salon</h3>
+                <h3 id="salon-create-modal-title" data-i18n="salon.create_title">Cr�er un salon</h3>
                 <button type="button" class="salon-modal-close" id="salon-create-modal-close" aria-label="Fermer">
                     <i class="fas fa-times"></i>
                 </button>
@@ -177,7 +177,7 @@
             <form id="salon-create-form" class="salon-modal-body">
                 <label class="salon-field">
                     <span data-i18n="salon.create_name">Nom du salon</span>
-                    <input type="text" id="salon-create-name" maxlength="60" required placeholder="Ex : One Piece, Recos manga…" data-i18n-placeholder="salon.create_name_ph">
+                    <input type="text" id="salon-create-name" maxlength="60" required placeholder="Ex : One Piece, Recos manga�" data-i18n-placeholder="salon.create_name_ph">
                 </label>
                 <label class="salon-field">
                     <span data-i18n="salon.create_desc">Description (optionnel)</span>
@@ -185,22 +185,22 @@
                 </label>
                 <label class="salon-field">
                     <span data-i18n="salon.create_message">Premier message (obligatoire)</span>
-                    <textarea id="salon-create-message" rows="4" maxlength="2000" required placeholder="Présentez le salon ou lancez la discussion…" data-i18n-placeholder="salon.create_message_ph"></textarea>
+                    <textarea id="salon-create-message" rows="4" maxlength="2000" required placeholder="Pr�sentez le salon ou lancez la discussion�" data-i18n-placeholder="salon.create_message_ph"></textarea>
                 </label>
-                <p class="salon-modal-hint" data-i18n="salon.create_hint">Votre salon apparaîtra dans la barre latérale une fois créé.</p>
+                <p class="salon-modal-hint" data-i18n="salon.create_hint">Votre salon appara�tra dans la barre lat�rale une fois cr��.</p>
                 <div class="salon-modal-actions">
                     <button type="button" class="salon-modal-btn cancel" id="salon-create-cancel" data-i18n="salon.create_cancel">Annuler</button>
-                    <button type="submit" class="salon-modal-btn submit" id="salon-create-submit" data-i18n="salon.create_submit">Créer le salon</button>
+                    <button type="submit" class="salon-modal-btn submit" id="salon-create-submit" data-i18n="salon.create_submit">Cr�er le salon</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal création de sondage -->
+    <!-- Modal cr�ation de sondage -->
     <div class="salon-modal-overlay" id="salon-poll-modal" aria-hidden="true">
         <div class="salon-modal salon-modal--poll" role="dialog" aria-labelledby="salon-poll-modal-title">
             <div class="salon-modal-header">
-                <h3 id="salon-poll-modal-title" data-i18n="salon.poll_title">Créer un sondage</h3>
+                <h3 id="salon-poll-modal-title" data-i18n="salon.poll_title">Cr�er un sondage</h3>
                 <button type="button" class="salon-modal-close" id="salon-poll-modal-close" aria-label="Fermer">
                     <i class="fas fa-times"></i>
                 </button>
@@ -208,10 +208,10 @@
             <form id="salon-poll-form" class="salon-modal-body">
                 <label class="salon-field">
                     <span data-i18n="salon.poll_question">Question</span>
-                    <input type="text" id="salon-poll-question" maxlength="300" required placeholder="Ex : Quel est votre anime préféré ?" data-i18n-placeholder="salon.poll_question_ph">
+                    <input type="text" id="salon-poll-question" maxlength="300" required placeholder="Ex : Quel est votre anime pr�f�r� ?" data-i18n-placeholder="salon.poll_question_ph">
                 </label>
                 <label class="salon-field">
-                    <span data-i18n="salon.poll_duration">Durée du sondage</span>
+                    <span data-i18n="salon.poll_duration">Dur�e du sondage</span>
                     <select id="salon-poll-duration" class="salon-poll-duration-select" required>
                         <option value="60" data-i18n="salon.poll_duration_1h">1 heure</option>
                         <option value="360" data-i18n="salon.poll_duration_6h">6 heures</option>
@@ -222,7 +222,7 @@
                     </select>
                 </label>
                 <div class="salon-field">
-                    <span data-i18n="salon.poll_options">Options de réponse</span>
+                    <span data-i18n="salon.poll_options">Options de r�ponse</span>
                     <div id="salon-poll-options-list" class="salon-poll-options-form"></div>
                     <button type="button" class="salon-poll-add-option-btn" id="salon-poll-add-option">
                         <i class="fas fa-plus"></i>
@@ -253,7 +253,7 @@
             <form id="salon-edit-form" class="salon-modal-body salon-modal-body--action">
                 <label class="salon-field salon-field--action">
                     <span data-i18n="salon.edit_prompt">Votre message</span>
-                    <textarea id="salon-edit-text" rows="5" maxlength="2000" required placeholder="Écrivez votre message…"></textarea>
+                    <textarea id="salon-edit-text" rows="5" maxlength="2000" required placeholder="�crivez votre message�"></textarea>
                     <span class="salon-edit-char-count" id="salon-edit-char-count">0 / 2000</span>
                 </label>
                 <p class="salon-modal-error" id="salon-edit-error" style="display:none;"></p>
@@ -287,7 +287,7 @@
                     <i class="fas fa-quote-left salon-delete-preview-icon" aria-hidden="true"></i>
                     <p class="salon-delete-preview-text" id="salon-delete-preview-text"></p>
                 </div>
-                <p class="salon-confirm-sub" data-i18n="salon.delete_warning">Cette action est irréversible.</p>
+                <p class="salon-confirm-sub" data-i18n="salon.delete_warning">Cette action est irr�versible.</p>
                 <div class="salon-modal-actions salon-modal-actions--action">
                     <button type="button" class="salon-modal-btn cancel" id="salon-delete-cancel" data-i18n="salon.create_cancel">Annuler</button>
                     <button type="button" class="salon-modal-btn danger" id="salon-delete-confirm">
@@ -303,8 +303,8 @@
         <div class="footer-container">
             <div class="footer-copyright-text">
                 <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
-                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
-                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                <span data-i18n="footer.all_rights_reserved">Tous droits r�serv�s</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - M�decins Sans Fronti�res" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
                     <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
                         <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
                         <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
@@ -323,7 +323,7 @@
                 <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
                     <i class="fab fa-tiktok"></i>
                 </a>
-                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket data-i18n-title="help.title">
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un probl�me" data-help-ticket data-i18n-title="help.title">
                     <i class="fas fa-circle-question"></i>
                 </a>
             </div>

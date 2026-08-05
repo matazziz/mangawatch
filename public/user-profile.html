@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Times+New+Roman:wght@400;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/profile.css?v=2.2">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/anime-card.css?v=2.37">
@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/css/list.css?v=20260618-filters">
     <link rel="stylesheet" href="/css/profile-rating.css?v=8">
     <script src="/js/localization.js"></script>
-    <!-- Import Firebase Service pour charger la bannière (image/vidéo) sur le profil public -->
+    <!-- Import Firebase Service pour charger la banni�re (image/vid�o) sur le profil public -->
     <script type="module">
         import { bannerService, profileSettingsService, syncRemoteProfileMedia, userReportService } from '/js/firebase-service.js?v=6febe27';
         import { initProfileRatingUI, requestProfileRatingInit } from '/js/profile-rating-ui.js?v=7';
@@ -191,7 +191,7 @@
             align-items: flex-start;
         }
         
-        /* Badge du continent dans la bannière */
+        /* Badge du continent dans la banni�re */
         .profile-continent-badge {
             display: inline-flex;
             align-items: center;
@@ -223,7 +223,7 @@
             opacity: 0.9;
         }
         
-        /* Barre sous la bannière : description + signaler */
+        /* Barre sous la banni�re : description + signaler */
         .profile-subbanner {
             display: none;
             align-items: center;
@@ -276,7 +276,7 @@
             }
         }
 
-        /* Description du profil (legacy — sous-barre) */
+        /* Description du profil (legacy � sous-barre) */
         .profile-description-wrapper {
             position: static;
             width: auto;
@@ -361,7 +361,7 @@
             line-height: 1;
         }
         
-        /* Badge certifié - même couleur que la barre de recherche (vert du site) */
+        /* Badge certifi� - m�me couleur que la barre de recherche (vert du site) */
         .verified-badge {
             display: inline-flex;
             align-items: center;
@@ -397,7 +397,7 @@
             z-index: 1;
         }
         
-        /* Système d'abonnements */
+        /* Syst�me d'abonnements */
         .profile-follow-section {
             position: relative;
             z-index: 4;
@@ -575,7 +575,7 @@
         }
         
         .report-modal-header h3::before {
-            content: '🚩';
+            content: '??';
             font-size: 1.5rem;
         }
         
@@ -829,7 +829,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Popup modal pour les abonnés/abonnements */
+        /* Popup modal pour les abonn�s/abonnements */
         .follow-modal-overlay {
             position: fixed;
             top: 0;
@@ -1123,7 +1123,7 @@
             color: #ff6b6b;
         }
 
-        /* Collection publique : cartes via list.css (identique à list.html) */
+        /* Collection publique : cartes via list.css (identique � list.html) */
 
         body .footer-unified {
             margin-bottom: 1rem;
@@ -1142,7 +1142,7 @@
     </style>
 </head>
 <body>
-  <!-- En-tête unifié -->
+  <!-- En-t�te unifi� -->
   <header class="main-header">
     <a href="acceuil.html" class="logo-link">
       <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
@@ -1162,11 +1162,11 @@
           <i class="fas fa-search"></i>
         </button>
       </form>
-      <!-- Résultats de recherche -->
+      <!-- R�sultats de recherche -->
       <div id="search-results" class="search-results-dropdown"></div>
     </div>
     
-    <!-- Navigation desktop (visible sur grand écran) -->
+    <!-- Navigation desktop (visible sur grand �cran) -->
     <nav class="nav-links">
         <a href="acceuil.html">Accueil</a>
         <a href="manga-database.html">Mangas & Anime</a>
@@ -1174,7 +1174,7 @@
         <a href="profil.html">Profil</a>
     </nav>
     
-    <!-- Conteneur pour les éléments de droite -->
+    <!-- Conteneur pour les �l�ments de droite -->
     <div class="header-right">
       <!-- Bouton hamburger pour mobile -->
       <button class="hamburger-btn" aria-label="Menu">
@@ -1215,14 +1215,14 @@
     <main class="profile-container">
         <div id="profile-content">
             <div class="profile-header">
-                <!-- Bannière en arrière-plan -->
-                <img id="banner-image" class="profile-header-banner" alt="Bannière du profil" loading="eager">
+                <!-- Banni�re en arri�re-plan -->
+                <img id="banner-image" class="profile-header-banner" alt="Banni�re du profil" loading="eager">
                 <video id="banner-video" class="profile-header-banner" autoplay loop playsinline preload="metadata" muted></video>
                 <div class="profile-header-banner-overlay"></div>
 
                 <div class="profile-rating-banner-badge" id="profile-rating-banner-badge" style="display: none;" aria-label="Note du profil">
                     <i class="fas fa-star" aria-hidden="true"></i>
-                    <strong id="profile-rating-average">—</strong><span class="profile-rating-max">/10</span>
+                    <strong id="profile-rating-average">�</strong><span class="profile-rating-max">/10</span>
                 </div>
                 
                 <!-- Contenu du header (avatar et pseudo) -->
@@ -1232,22 +1232,22 @@
                     </div>
                     <div class="profile-info">
                         <h1 id="user-name">
-                            <span id="user-name-text">…</span>
-                            <span id="verified-badge" class="verified-badge" style="display: none;" title="Compte certifié">
+                            <span id="user-name-text">�</span>
+                            <span id="verified-badge" class="verified-badge" style="display: none;" title="Compte certifi�">
                                 <i class="fas fa-check"></i>
                             </span>
                         </h1>
                         <div class="profile-continent-badge" id="profile-continent-badge">
                             <i class="fas fa-globe"></i>
-                            <span id="profile-continent-text">Non renseigné</span>
+                            <span id="profile-continent-text">Non renseign�</span>
                         </div>
                     </div>
-                    <!-- Système d'abonnements à droite -->
+                    <!-- Syst�me d'abonnements � droite -->
                     <div class="profile-follow-section" id="profile-follow-section">
                         <div class="profile-follow-stats" id="profile-follow-stats">
                             <div class="follow-stat-item" id="followers-stat">
                                 <span class="follow-stat-number" id="followers-count">0</span>
-                                <span class="follow-stat-label">Abonnés</span>
+                                <span class="follow-stat-label">Abonn�s</span>
                             </div>
                             <div class="follow-stat-item" id="following-stat">
                                 <span class="follow-stat-number" id="following-count">0</span>
@@ -1277,11 +1277,11 @@
                 </div>
             </div>
             
-            <!-- Popup pour afficher les abonnés/abonnements -->
+            <!-- Popup pour afficher les abonn�s/abonnements -->
             <div class="follow-modal-overlay" id="follow-modal-overlay"></div>
             <div class="follow-modal" id="follow-modal">
                 <div class="follow-modal-header">
-                    <h3 id="follow-modal-title">Abonnés</h3>
+                    <h3 id="follow-modal-title">Abonn�s</h3>
                     <button class="follow-modal-close" id="follow-modal-close">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1312,7 +1312,7 @@
                         </button>
                         <button class="status-filter" data-status="completed">
                             <i class="fas fa-check-circle"></i>
-                            <span>Terminé</span>
+                            <span>Termin�</span>
                         </button>
                         <button class="status-filter" data-status="on-hold">
                             <i class="fas fa-pause"></i>
@@ -1320,15 +1320,15 @@
                         </button>
                         <button class="status-filter" data-status="dropped">
                             <i class="fas fa-times-circle"></i>
-                            <span>Abandonné</span>
+                            <span>Abandonn�</span>
                         </button>
                         <button class="status-filter" data-status="plan-to-watch">
                             <i class="fas fa-eye"></i>
-                            <span>À voir</span>
+                            <span>� voir</span>
                         </button>
                     </div>
 
-                    <!-- Filtres par type d'œuvre -->
+                    <!-- Filtres par type d'�uvre -->
                     <div class="type-filters">
                         <button class="type-filter active" data-type="all">
                             <i class="fas fa-th-large"></i>
@@ -1377,7 +1377,7 @@
                             </div>
                             <div class="stat-info">
                                 <span class="stat-number" id="completed-count">0</span>
-                                <span class="stat-label">Terminé</span>
+                                <span class="stat-label">Termin�</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -1395,7 +1395,7 @@
                             </div>
                             <div class="stat-info">
                                 <span class="stat-number" id="dropped-count">0</span>
-                                <span class="stat-label">Abandonné</span>
+                                <span class="stat-label">Abandonn�</span>
                             </div>
                         </div>
                         <div class="stat-card">
@@ -1404,7 +1404,7 @@
                             </div>
                             <div class="stat-info">
                                 <span class="stat-number" id="plan-to-watch-count">0</span>
-                                <span class="stat-label">À voir</span>
+                                <span class="stat-label">� voir</span>
                             </div>
                         </div>
                     </div>
@@ -1415,9 +1415,9 @@
 
                         <div id="collection-pagination-container" class="pagination-container" style="display: none;">
                             <div class="pagination collection-pagination">
-                                <button id="collection-prev-page" type="button" class="pagination-btn" disabled aria-label="Page précédente">
+                                <button id="collection-prev-page" type="button" class="pagination-btn" disabled aria-label="Page pr�c�dente">
                                     <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                                    <span class="pagination-btn-label">Précédent</span>
+                                    <span class="pagination-btn-label">Pr�c�dent</span>
                                 </button>
                                 <div class="page-numbers" id="collection-page-numbers"></div>
                                 <button id="collection-next-page" type="button" class="pagination-btn" aria-label="Page suivante">
@@ -1432,16 +1432,16 @@
                             <div class="empty-icon">
                                 <i class="fas fa-heart-broken"></i>
                             </div>
-                            <h3>Aucun élément dans cette collection</h3>
-                            <p>Commencez à ajouter des animes et mangas à votre collection !</p>
+                            <h3>Aucun �l�ment dans cette collection</h3>
+                            <p>Commencez � ajouter des animes et mangas � votre collection !</p>
                         </div>
                     </div>
                     </div>
                 </div>
 
-                <!-- Section Avis (Anime & Manga : affichée par défaut) -->
+                <!-- Section Avis (Anime & Manga : affich�e par d�faut) -->
                 <div class="profile-section active" id="reviews-section">
-                    <!-- Garder uniquement le séparateur et les boutons de tri -->
+                    <!-- Garder uniquement le s�parateur et les boutons de tri -->
                     <div style="width:100%;height:12px;background:#23262f;margin:2.5rem 0 2.5rem 0;border-radius:6px;"></div>
                     <div style="width:100%;display:flex;justify-content:center;">
                         <div style="background:transparent;border-radius:14px;box-shadow:none;display:flex;flex-direction:row;align-items:center;justify-content:center;min-width:320px;max-width:600px;padding:2.2rem 1.2rem 2rem 1.2rem;gap:1.5rem;">
@@ -1449,16 +1449,16 @@
                     </div>
                 </div>
 
-                <!-- Section Tier List - Masquée temporairement -->
+                <!-- Section Tier List - Masqu�e temporairement -->
                 <div class="profile-section" id="tierlist-section" style="display: none;">
-                    <!-- Section désactivée -->
+                    <!-- Section d�sactiv�e -->
                 </div>
             </div>
         </div>
         <div id="error-message" class="error-message" style="display: none;">
             <h2>Utilisateur introuvable</h2>
             <p>L'utilisateur que vous recherchez n'existe pas.</p>
-            <a href="acceuil.html" style="color: #00b894; text-decoration: underline;">Retour à l'accueil</a>
+            <a href="acceuil.html" style="color: #00b894; text-decoration: underline;">Retour � l'accueil</a>
         </div>
     </main>
 
@@ -1470,9 +1470,9 @@
     <script src="/js/hamburger-menu.js"></script>
     <script src="/js/messaging.js" type="module"></script>
     <script>
-        // Gestion de l'en-tête unifié
+        // Gestion de l'en-t�te unifi�
         document.addEventListener('DOMContentLoaded', function() {
-            // Gestion du sélecteur de recherche
+            // Gestion du s�lecteur de recherche
             const searchType = document.getElementById('searchType');
             const searchInput = document.getElementById('searchInput');
             
@@ -1494,7 +1494,7 @@
                 searchInput.placeholder = placeholders[searchType.value] || 'Rechercher...';
             }
             
-            // Avatar header : masqué si non connecté ou sans image
+            // Avatar header : masqu� si non connect� ou sans image
             if (typeof refreshHeaderAvatar === 'function') {
                 refreshHeaderAvatar();
             } else {
@@ -1530,19 +1530,19 @@
         });
     </script>
     
-    <!-- Footer unifié MangaWatch -->
+    <!-- Footer unifi� MangaWatch -->
     <footer class="footer-unified">
         <div class="footer-container">
-            <!-- Copyright à gauche -->
+            <!-- Copyright � gauche -->
             <div class="footer-copyright-text">
                 <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
-                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
-                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières">
+                <span data-i18n="footer.all_rights_reserved">Tous droits r�serv�s</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - M�decins Sans Fronti�res">
                     <img src="/images/Flag_of_Palestine.png" alt="Drapeau Palestine - Faire un don MSF" class="palestine-flag">
                 </a>
             </div>
             
-            <!-- Réseaux sociaux au centre -->
+            <!-- R�seaux sociaux au centre -->
             <div class="footer-social-links">
                 <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
                     <i class="fab fa-discord"></i>
@@ -1555,7 +1555,7 @@
                 </a>
             </div>
             
-            <!-- Pseudos à droite -->
+            <!-- Pseudos � droite -->
             <div class="footer-authors">
                 Made by <a href="user-profile.html?pseudo=matazziz" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
             </div>
@@ -1583,15 +1583,15 @@
                 <div class="report-reasons">
                     <label class="report-reason-item">
                         <input type="radio" name="report-reason" value="harassment">
-                        <span data-i18n="profile.report.reason.harassment">Harcèlement ou comportement toxique</span>
+                        <span data-i18n="profile.report.reason.harassment">Harc�lement ou comportement toxique</span>
                     </label>
                     <label class="report-reason-item">
                         <input type="radio" name="report-reason" value="spam">
-                        <span data-i18n="profile.report.reason.spam">Spam ou publicité non sollicitée</span>
+                        <span data-i18n="profile.report.reason.spam">Spam ou publicit� non sollicit�e</span>
                     </label>
                     <label class="report-reason-item">
                         <input type="radio" name="report-reason" value="inappropriate">
-                        <span data-i18n="profile.report.reason.inappropriate">Contenu offensant ou inapproprié</span>
+                        <span data-i18n="profile.report.reason.inappropriate">Contenu offensant ou inappropri�</span>
                     </label>
                     <label class="report-reason-item">
                         <input type="radio" name="report-reason" value="fake">
@@ -1603,8 +1603,8 @@
                     </label>
                 </div>
                 <div class="report-comment" id="report-comment" style="display: none; margin-top: 15px;">
-                    <label data-i18n="profile.report.comment.label">Détails (optionnel)</label>
-                    <textarea id="report-comment-text" placeholder="Décrivez le problème..." rows="4" style="
+                    <label data-i18n="profile.report.comment.label">D�tails (optionnel)</label>
+                    <textarea id="report-comment-text" placeholder="D�crivez le probl�me..." rows="4" style="
                         width: 100%;
                         padding: 10px;
                         background: rgba(255, 255, 255, 0.1);

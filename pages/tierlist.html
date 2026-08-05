@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3925599546532899" crossorigin="anonymous"></script>
-    <title>Créateur de Tier List - MangaWatch</title>
+    <title>Cr�ateur de Tier List - MangaWatch</title>
     <meta name="description" content="Classez vos mangas et animes en tier list sur MangaWatch. Creez et partagez vos niveaux personnalises S, A, B...">
     <meta name="robots" content="index,follow,max-image-preview:large">
     <link rel="canonical" href="https://mangawatch.fr/pages/tierlist.html">
@@ -14,17 +14,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Garamond:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <!-- Icônes -->
+    <!-- Ic�nes -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Styles -->
-    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="../css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/tierlist.css">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <script src="/js/localization.js"></script>
 </head>
 <body>
-    <!-- En-tête unifié -->
+    <!-- En-t�te unifi� -->
     <header class="main-header">
         <a href="acceuil.html" class="logo-link">
             <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
@@ -38,7 +38,7 @@
             </button>
         </form>
         
-        <!-- Navigation desktop (visible sur grand écran) -->
+        <!-- Navigation desktop (visible sur grand �cran) -->
         <nav class="nav-links">
             <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
             <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
@@ -90,8 +90,8 @@
 
     <main class="tierlist-container">
         <div class="tierlist-header">
-            <h1 class="tierlist-title" data-i18n="tierlist.title">Créateur de Tier List</h1>
-            <p class="tierlist-subtitle" data-i18n="tierlist.subtitle">Classez vos mangas préférés par ordre de préférence</p>
+            <h1 class="tierlist-title" data-i18n="tierlist.title">Cr�ateur de Tier List</h1>
+            <p class="tierlist-subtitle" data-i18n="tierlist.subtitle">Classez vos mangas pr�f�r�s par ordre de pr�f�rence</p>
             
             <div class="tierlist-actions">
                 <button id="addImagesBtn" class="btn btn-primary">
@@ -104,7 +104,7 @@
                     <i class="fas fa-share-alt"></i> <span data-i18n="tierlist.share">Partager</span>
                 </button>
                 <button id="resetTierListBtn" class="btn btn-danger">
-                    <i class="fas fa-trash"></i> Réinitialiser
+                    <i class="fas fa-trash"></i> R�initialiser
                 </button>
             </div>
         </div>
@@ -115,7 +115,7 @@
             <div class="tier-row tier-s">
                 <div class="tier-label">S</div>
                 <div class="tier-content" data-tier="s">
-                    <!-- Les éléments du tier S seront ajoutés ici dynamiquement -->
+                    <!-- Les �l�ments du tier S seront ajout�s ici dynamiquement -->
                 </div>
             </div>
             
@@ -123,7 +123,7 @@
             <div class="tier-row tier-a">
                 <div class="tier-label">A</div>
                 <div class="tier-content" data-tier="a">
-                    <!-- Les éléments du tier A seront ajoutés ici dynamiquement -->
+                    <!-- Les �l�ments du tier A seront ajout�s ici dynamiquement -->
                 </div>
             </div>
             
@@ -131,7 +131,7 @@
             <div class="tier-row tier-b">
                 <div class="tier-label">B</div>
                 <div class="tier-content" data-tier="b">
-                    <!-- Les éléments du tier B seront ajoutés ici dynamiquement -->
+                    <!-- Les �l�ments du tier B seront ajout�s ici dynamiquement -->
                 </div>
             </div>
             
@@ -139,7 +139,7 @@
             <div class="tier-row tier-c">
                 <div class="tier-label">C</div>
                 <div class="tier-content" data-tier="c">
-                    <!-- Les éléments du tier C seront ajoutés ici dynamiquement -->
+                    <!-- Les �l�ments du tier C seront ajout�s ici dynamiquement -->
                 </div>
             </div>
             
@@ -147,15 +147,15 @@
             <div class="tier-row tier-d">
                 <div class="tier-label">D</div>
                 <div class="tier-content" data-tier="d">
-                    <!-- Les éléments du tier D seront ajoutés ici dynamiquement -->
+                    <!-- Les �l�ments du tier D seront ajout�s ici dynamiquement -->
                 </div>
             </div>
         </div>
         
-        <!-- Zone non classée -->
+        <!-- Zone non class�e -->
         <div class="unranked-container">
             <h3 class="unranked-title">
-                <i class="fas fa-layer-group"></i> Non classé
+                <i class="fas fa-layer-group"></i> Non class�
             </h3>
             <div class="unranked-items" id="unrankedItems">
                 <p class="empty-message">Glissez des images ici ou cliquez sur "Ajouter des images"</p>
@@ -172,9 +172,9 @@
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="imageUpload">Télécharger des images</label>
+                    <label for="imageUpload">T�l�charger des images</label>
                     <input type="file" id="imageUpload" class="form-control" accept="image/*" multiple>
-                    <p class="form-hint">Sélectionnez une ou plusieurs images à ajouter à votre tier list.</p>
+                    <p class="form-hint">S�lectionnez une ou plusieurs images � ajouter � votre tier list.</p>
                 </div>
                 
                 <div class="form-group">
@@ -188,16 +188,16 @@
                 </div>
                 
                 <div id="searchResults" class="search-results">
-                    <h4>Résultats de la recherche</h4>
+                    <h4>R�sultats de la recherche</h4>
                     <div id="searchResultsGrid" class="search-results-grid">
-                        <!-- Les résultats de la recherche seront ajoutés ici dynamiquement -->
+                        <!-- Les r�sultats de la recherche seront ajout�s ici dynamiquement -->
                     </div>
                 </div>
                 
                 <div id="selectedImagesPreview" class="selected-images-preview">
-                    <h4>Images sélectionnées</h4>
+                    <h4>Images s�lectionn�es</h4>
                     <div id="selectedImagesGrid" class="selected-images-grid">
-                        <!-- Les images sélectionnées seront affichées ici dynamiquement -->
+                        <!-- Les images s�lectionn�es seront affich�es ici dynamiquement -->
                     </div>
                 </div>
             </div>
@@ -219,7 +219,7 @@
             }
         });
         
-        // Gérer la soumission du formulaire de recherche
+        // G�rer la soumission du formulaire de recherche
         document.getElementById('searchForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const query = document.getElementById('searchInput').value.trim();
@@ -230,16 +230,16 @@
         });
     </script>
     
-    <!-- Footer unifié MangaWatch -->
+    <!-- Footer unifi� MangaWatch -->
     <footer class="footer-unified">
         <div class="footer-container">
-            <!-- Copyright à gauche -->
+            <!-- Copyright � gauche -->
             <div class="footer-copyright-text">
                 <span class="footer-copyright" data-i18n="footer.copyright">&copy;</span>2025
-                <span data-i18n="footer.all_rights_reserved">Tous droits réservés</span> &bull; <span class="footer-brand">MangaWatch</span>
-                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
+                <span data-i18n="footer.all_rights_reserved">Tous droits r�serv�s</span> &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - M�decins Sans Fronti�res" class="palestine-flag-link" style="margin-left: 15px; display: inline-block;">
                     <svg width="32" height="22" viewBox="0 0 32 22" class="palestine-flag" style="border-radius: 3px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4); transition: transform 0.2s ease; cursor: pointer;">
-                        <!-- Triangle rouge à gauche -->
+                        <!-- Triangle rouge � gauche -->
                         <polygon points="0,0 0,22 11,11" fill="#E4312b"/>
                         <!-- Bande noire en haut -->
                         <rect x="11" y="0" width="21" height="7.33" fill="#000000"/>
@@ -251,7 +251,7 @@
                 </a>
             </div>
             
-            <!-- Réseaux sociaux au centre -->
+            <!-- R�seaux sociaux au centre -->
             <div class="footer-social-links">
                 <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
                     <i class="fab fa-discord"></i>
@@ -262,10 +262,10 @@
                 <a href="https://tiktok.com/@mangawatchofficial" target="_blank" rel="noopener" class="footer-social-icon">
                     <i class="fab fa-tiktok"></i>
                 </a>
-                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un problème" data-help-ticket><i class="fas fa-circle-question"></i></a>
+                <a href="#help-ticket" class="footer-social-icon footer-help-link" title="Aide - Signaler un probl�me" data-help-ticket><i class="fas fa-circle-question"></i></a>
             </div>
             
-            <!-- Pseudos à droite -->
+            <!-- Pseudos � droite -->
             <div class="footer-authors">
                 Made by <a href="user-profile.html?pseudo=matazziz" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
             </div>

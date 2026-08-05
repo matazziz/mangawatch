@@ -10,15 +10,30 @@ const isDev = process.env.NODE_ENV !== 'production';
 if (isDev) {
     const livereload = require('livereload');
     const connectLiveReload = require('connect-livereload');
-    const liveReloadServer = livereload.createServer();
-    liveReloadServer.watch([
-        path.join(rootDir, 'pages'),
-        path.join(rootDir, 'css'),
-        path.join(rootDir, 'js'),
-        path.join(rootDir, 'images'),
-        path.join(rootDir, 'public')
-    ]);
-    app.use(connectLiveReload());
+    const liveReloadPort = 35730;
+    try {
+        const liveReloadServer = livereload.createServer({ port: liveReloadPort });
+        liveReloadServer.watch([
+            path.join(rootDir, 'pages'),
+            path.join(rootDir, 'css'),
+            path.join(rootDir, 'js'),
+            path.join(rootDir, 'images'),
+            path.join(rootDir, 'public')
+        ]);
+        app.use(connectLiveReload({ port: liveReloadPort }));
+    } catch (error) {
+        console.warn('LiveReload indisponible:', error.message);
+    }
+
+    // Éviter le cache navigateur sur CSS/JS/HTML en local
+    app.use((req, res, next) => {
+        if (/\.(css|js|html)$/i.test(req.path)) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+        }
+        next();
+    });
 }
 
 // Configuration de multer pour l'upload des fichiers

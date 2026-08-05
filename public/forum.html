@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -6,7 +6,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3925599546532899" crossorigin="anonymous"></script>
     <title>Forum Communautaire - MangaWatch</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/forum.css">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
     <script src="/js/localization.js"></script>
 </head>
 <body>
-    <!-- En-tête unifié -->
+    <!-- En-t�te unifi� -->
     <header class="main-header">
         <a href="acceuil.html" class="logo-link">
             <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
@@ -30,7 +30,7 @@
             </button>
         </form>
         
-        <!-- Navigation desktop (visible sur grand écran) -->
+        <!-- Navigation desktop (visible sur grand �cran) -->
         <nav class="nav-links">
             <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
             <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
@@ -80,11 +80,11 @@
         </nav>
     </div>
 
-    <!-- Bannière du forum -->
+    <!-- Banni�re du forum -->
     <section class="forum-header">
         <div class="container">
             <h1 data-i18n="forum.title">Forum Communautaire</h1>
-            <p data-i18n="forum.subtitle">Rejoignez la discussion, partagez vos avis et découvrez de nouvelles œuvres !</p>
+            <p data-i18n="forum.subtitle">Rejoignez la discussion, partagez vos avis et d�couvrez de nouvelles �uvres !</p>
             <button id="newTopicBtn" class="btn btn-primary">
                 <i class="fas fa-plus"></i> <span data-i18n="forum.new_topic">Nouveau sujet</span>
             </button>
@@ -95,23 +95,23 @@
     <main class="container forum-container">
         <div class="forum-sidebar">
             <div class="sidebar-widget">
-                <h3 data-i18n="forum.categories">Catégories</h3>
+                <h3 data-i18n="forum.categories">Cat�gories</h3>
                 <ul class="category-list">
                     <li class="active"><a href="#" data-i18n="forum.category.all">Tous les sujets</a></li>
-                    <li><a href="#" data-i18n="forum.category.news">Actualités</a></li>
+                    <li><a href="#" data-i18n="forum.category.news">Actualit�s</a></li>
                     <li><a href="#" data-i18n="forum.category.manga">Mangas</a></li>
                     <li><a href="#" data-i18n="forum.category.anime">Animes</a></li>
-                    <li><a href="#" data-i18n="forum.category.debate">Débats</a></li>
+                    <li><a href="#" data-i18n="forum.category.debate">D�bats</a></li>
                     <li><a href="#" data-i18n="forum.category.help">Aide</a></li>
                 </ul>
             </div>
             <div class="sidebar-widget">
-                <h3 data-i18n="forum.rules.title">Règles du forum</h3>
+                <h3 data-i18n="forum.rules.title">R�gles du forum</h3>
                 <ol class="rules-list">
                     <li data-i18n="forum.rules.respect">Soyez respectueux envers les autres membres</li>
-                    <li data-i18n="forum.rules.content">Pas de contenu inapproprié</li>
+                    <li data-i18n="forum.rules.content">Pas de contenu inappropri�</li>
                     <li data-i18n="forum.rules.copyright">Respectez le droit d'auteur</li>
-                    <li data-i18n="forum.rules.spam">Pas de spam ou de publicité</li>
+                    <li data-i18n="forum.rules.spam">Pas de spam ou de publicit�</li>
                     <li data-i18n="forum.rules.on_topic">Restez dans le sujet des discussions</li>
                 </ol>
             </div>
@@ -127,27 +127,27 @@
                 <div class="sort-options">
                     <span data-i18n="forum.sort_by">Trier par :</span>
                     <select id="sortSelect">
-                        <option value="recent" data-i18n="forum.sort.recent">Plus récent</option>
+                        <option value="recent" data-i18n="forum.sort.recent">Plus r�cent</option>
                         <option value="popular" data-i18n="forum.sort.popular">Plus populaire</option>
                         <option value="views" data-i18n="forum.sort.views">Plus de vues</option>
-                        <option value="replies" data-i18n="forum.sort.replies">Plus de réponses</option>
+                        <option value="replies" data-i18n="forum.sort.replies">Plus de r�ponses</option>
                     </select>
                 </div>
             </div>
 
             <!-- Liste des sujets -->
             <div class="topics-list" id="topicsList">
-                <!-- Les sujets seront chargés dynamiquement ici -->
+                <!-- Les sujets seront charg�s dynamiquement ici -->
                 <div class="no-topics">
                     <i class="far fa-comment-dots"></i>
-                    <p data-i18n="forum.no_topics">Aucun sujet n'a été créé pour le moment.</p>
-                    <button class="btn btn-primary" id="createFirstTopic" data-i18n="forum.create_first">Créer le premier sujet</button>
+                    <p data-i18n="forum.no_topics">Aucun sujet n'a �t� cr�� pour le moment.</p>
+                    <button class="btn btn-primary" id="createFirstTopic" data-i18n="forum.create_first">Cr�er le premier sujet</button>
                 </div>
             </div>
 
             <!-- Pagination -->
             <div class="pagination">
-                <button class="btn btn-outline" disabled><i class="fas fa-chevron-left"></i> <span data-i18n="pagination.previous">Précédent</span></button>
+                <button class="btn btn-outline" disabled><i class="fas fa-chevron-left"></i> <span data-i18n="pagination.previous">Pr�c�dent</span></button>
                 <span data-i18n="pagination.page">Page</span> 1 <span data-i18n="pagination.of">sur</span> 1</span>
                 <button class="btn btn-outline" disabled><span data-i18n="pagination.next">Suivant</span> <i class="fas fa-chevron-right"></i></button>
             </div>
@@ -155,7 +155,7 @@
     </main>
 
     <!-- Modal Nouveau Sujet -->
-    <!-- Bouton de connexion Google (caché par défaut) -->
+    <!-- Bouton de connexion Google (cach� par d�faut) -->
     <div id="google-signin" style="display: none;"></div>
     
     <div class="modal" id="newTopicModal">
@@ -171,13 +171,13 @@
                         <input type="text" id="topicTitle" required>
                     </div>
                     <div class="form-group">
-                        <label for="topicCategory" data-i18n="forum.modal.category">Catégorie</label>
+                        <label for="topicCategory" data-i18n="forum.modal.category">Cat�gorie</label>
                         <select id="topicCategory" required>
-                            <option value="" data-i18n="forum.modal.select_category">Sélectionnez une catégorie</option>
-                            <option value="news" data-i18n="forum.category.news">Actualités</option>
+                            <option value="" data-i18n="forum.modal.select_category">S�lectionnez une cat�gorie</option>
+                            <option value="news" data-i18n="forum.category.news">Actualit�s</option>
                             <option value="manga" data-i18n="forum.category.manga">Mangas</option>
                             <option value="anime" data-i18n="forum.category.anime">Animes</option>
-                            <option value="debate" data-i18n="forum.category.debate">Débats</option>
+                            <option value="debate" data-i18n="forum.category.debate">D�bats</option>
                             <option value="help" data-i18n="forum.category.help">Aide</option>
                         </select>
                     </div>
@@ -209,7 +209,7 @@
           window.forumInitialized = true;
           await initForum();
           attachEventHandlers();
-          console.log('[Forum] Initialisation terminée');
+          console.log('[Forum] Initialisation termin�e');
         }
       });
     </script>
@@ -224,9 +224,9 @@
             window.localization.init();
         });
         
-        // Gestion de la réponse Google Sign-In
+        // Gestion de la r�ponse Google Sign-In
         document.addEventListener('DOMContentLoaded', function() {
-            // Gestionnaire de réponse Google Sign-In
+            // Gestionnaire de r�ponse Google Sign-In
             function handleCredentialResponse(response) {
                 try {
                     const responsePayload = JSON.parse(atob(response.credential.split('.')[1]));
@@ -263,7 +263,7 @@
                 }
             }
             
-            // Exposer la fonction de gestion de la réponse Google
+            // Exposer la fonction de gestion de la r�ponse Google
             window.handleCredentialResponse = handleCredentialResponse;
             
             // Gestion du formulaire de recherche
@@ -282,19 +282,19 @@
     </script>
 
     <!-- Pied de page minimaliste -->
-    <!-- Footer unifié MangaWatch -->
+    <!-- Footer unifi� MangaWatch -->
     <footer class="footer-unified">
         <div class="footer-container">
-            <!-- Copyright à gauche -->
+            <!-- Copyright � gauche -->
             <div class="footer-copyright-text">
                 <span class="footer-copyright">&copy;</span>2025
-                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
-                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières">
+                Tous droits r�serv�s &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - M�decins Sans Fronti�res">
                     <img src="/images/Flag_of_Palestine.png" alt="Drapeau Palestine - Faire un don MSF" class="palestine-flag">
                 </a>
             </div>
             
-            <!-- Réseaux sociaux au centre -->
+            <!-- R�seaux sociaux au centre -->
             <div class="footer-social-links">
                 <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
                     <i class="fab fa-discord"></i>
@@ -307,7 +307,7 @@
                 </a>
             </div>
             
-            <!-- Pseudos à droite -->
+            <!-- Pseudos � droite -->
             <div class="footer-authors">
                 Made by <a href="user-profile.html?pseudo=matazziz" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
             </div>

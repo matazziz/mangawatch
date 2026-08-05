@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3925599546532899" crossorigin="anonymous"></script>
-    <title>Test — Page détails (sans API) - MangaWatch</title>
+    <title>Test � Page d�tails (sans API) - MangaWatch</title>
     <meta name="robots" content="noindex,nofollow">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="../css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/details-pages-clean.css?v=2.13">
     <script src="/js/mw-api-config.js?v=3"></script>
@@ -44,8 +44,8 @@
 </head>
 <body class="body-bg" data-page="anime-details-test">
     <div class="test-mode-banner">
-        Mode test — données fictives, pas d'appel API.
-        <a href="anime-details.html?id=16498&type=anime">Page détails réelle</a>
+        Mode test � donn�es fictives, pas d'appel API.
+        <a href="anime-details.html?id=16498&type=anime">Page d�tails r�elle</a>
     </div>
 
     <header class="main-header">
@@ -96,7 +96,7 @@
                     </div>
                     <div class="status-option" data-status="completed">
                         <i class="fas fa-check-circle"></i>
-                        <span data-i18n="collection.status.completed">Terminé</span>
+                        <span data-i18n="collection.status.completed">Termin�</span>
                     </div>
                     <div class="status-option" data-status="on-hold">
                         <i class="fas fa-pause-circle"></i>
@@ -104,11 +104,11 @@
                     </div>
                     <div class="status-option" data-status="dropped">
                         <i class="fas fa-times-circle"></i>
-                        <span data-i18n="collection.status.dropped">Abandonné</span>
+                        <span data-i18n="collection.status.dropped">Abandonn�</span>
                     </div>
                     <div class="status-option" data-status="plan-to-watch">
                         <i class="fas fa-eye"></i>
-                        <span data-i18n="collection.status.plan_to_watch">À voir</span>
+                        <span data-i18n="collection.status.plan_to_watch">� voir</span>
                     </div>
                 </div>
             </div>
@@ -120,7 +120,7 @@
         const MOCK_ANIME = {
             mal_id: 99901,
             title: 'Shingeki no Kyojin (Test)',
-            title_japanese: '進撃の巨人',
+            title_japanese: '?????',
             title_english: 'Attack on Titan',
             type: 'TV',
             score: 8.9,
@@ -128,7 +128,7 @@
             episodes: 25,
             duration: '24 min per ep',
             season: 'spring',
-            synopsis: 'Page de test sans API. Utilisez le bouton « Mon statut » pour ajouter ou modifier le statut dans votre collection locale.',
+            synopsis: 'Page de test sans API. Utilisez le bouton � Mon statut � pour ajouter ou modifier le statut dans votre collection locale.',
             genres: [
                 { name: 'Action' },
                 { name: 'Drama' },
@@ -150,14 +150,14 @@
         const MOCK_MANGA = {
             mal_id: 99902,
             title: 'Berserk (Test)',
-            title_japanese: 'ベルセルク',
+            title_japanese: '?????',
             title_english: 'Berserk',
             type: 'Manga',
             score: 9.5,
             year: 1989,
             volumes: 41,
             chapters: 380,
-            synopsis: 'Données manga fictives pour tester le changement de statut sans dépendre de l\'API Jikan.',
+            synopsis: 'Donn�es manga fictives pour tester le changement de statut sans d�pendre de l\'API Jikan.',
             genres: [
                 { name: 'Action' },
                 { name: 'Adventure' },
@@ -207,9 +207,9 @@
                         <div class="user-rating-section">
                             <h3 class="rating-title">Votre note :</h3>
                             <div class="rating-stars" style="opacity:0.35;pointer-events:none;font-size:1.6rem;">
-                                ${'★'.repeat(Math.round(content.score))}${'☆'.repeat(10 - Math.round(content.score))}
+                                ${'?'.repeat(Math.round(content.score))}${'?'.repeat(10 - Math.round(content.score))}
                             </div>
-                            <div class="rating-text" style="font-size:0.8rem;opacity:0.5;">Notation désactivée en mode test</div>
+                            <div class="rating-text" style="font-size:0.8rem;opacity:0.5;">Notation d�sactiv�e en mode test</div>
                             <div class="details-collection-section" id="details-collection-section"></div>
                         </div>
                     </div>
@@ -223,15 +223,15 @@
                     <div class="genres-list">${genresHTML}</div>
                 </div>
                 <div class="additional-info">
-                    <h2>Informations générales</h2>
+                    <h2>Informations g�n�rales</h2>
                     <ul>
                         <li><span class="label">Titre original :</span> <span class="value">${content.title_japanese}</span></li>
                         <li><span class="label">Type :</span> <span class="value">${content.type}</span></li>
                         ${isManga
                             ? `<li><span class="label">Volumes :</span> <span class="value">${content.volumes}</span></li>
                                <li><span class="label">Chapitres :</span> <span class="value">${content.chapters}</span></li>`
-                            : `<li><span class="label">Épisodes :</span> <span class="value">${content.episodes}</span></li>
-                               <li><span class="label">Durée :</span> <span class="value">${content.duration}</span></li>`}
+                            : `<li><span class="label">�pisodes :</span> <span class="value">${content.episodes}</span></li>
+                               <li><span class="label">Dur�e :</span> <span class="value">${content.duration}</span></li>`}
                         <li><span class="label">Membres :</span> <span class="value">${content.members.toLocaleString()}</span></li>
                         <li><span class="label">Rang :</span> <span class="value">#${content.rank}</span></li>
                     </ul>
@@ -252,7 +252,7 @@
     <footer class="footer-unified">
         <div class="footer-container">
             <div class="footer-copyright-text">
-                <span class="footer-copyright">&copy;</span>2025 MangaWatch — page test
+                <span class="footer-copyright">&copy;</span>2025 MangaWatch � page test
             </div>
         </div>
     </footer>

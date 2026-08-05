@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -12,9 +12,9 @@
             }
         })();
     </script>
-    <title>Administration - Gestion des badges certifiés</title>
+    <title>Administration - Gestion des badges certifi�s</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/messaging.css">
     <style>
@@ -556,7 +556,7 @@
             color: #aaa;
         }
         
-        /* Popup de confirmation personnalisé */
+        /* Popup de confirmation personnalis� */
         .custom-modal-overlay {
             position: fixed;
             top: 0;
@@ -712,7 +712,7 @@
     </style>
 </head>
 <body>
-    <!-- En-tête unifié -->
+    <!-- En-t�te unifi� -->
     <header class="main-header">
         <a href="acceuil.html" class="logo-link">
             <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
@@ -734,7 +734,7 @@
     <div class="admin-container">
         <div class="admin-header">
             <h1><i class="fas fa-shield-alt"></i> Administration</h1>
-            <p>Gestion des badges certifiés</p>
+            <p>Gestion des badges certifi�s</p>
         </div>
 
         <div class="stats">
@@ -744,7 +744,7 @@
             </div>
             <div class="stat-card">
                 <h3 id="verified-count">0</h3>
-                <p>Utilisateurs certifiés</p>
+                <p>Utilisateurs certifi�s</p>
             </div>
         </div>
 
@@ -788,8 +788,8 @@
                 <div class="form-group">
                     <label for="message-recipient-type">Type de destinataire</label>
                     <select id="message-recipient-type" class="form-control">
-                        <option value="global">🌍 Tous les utilisateurs (Message global)</option>
-                        <option value="user">👤 Utilisateur spécifique</option>
+                        <option value="global">?? Tous les utilisateurs (Message global)</option>
+                        <option value="user">?? Utilisateur sp�cifique</option>
                     </select>
                 </div>
 
@@ -804,11 +804,11 @@
                 <div class="form-group">
                     <label for="message-type">Type de message</label>
                     <select id="message-type" class="form-control">
-                        <option value="info">ℹ️ Information</option>
-                        <option value="warning">⚠️ Avertissement</option>
-                        <option value="ban">🚫 Bannissement</option>
-                        <option value="thank">❤️ Remerciement</option>
-                        <option value="global">📢 Annonce globale</option>
+                        <option value="info">?? Information</option>
+                        <option value="warning">?? Avertissement</option>
+                        <option value="ban">?? Bannissement</option>
+                        <option value="thank">?? Remerciement</option>
+                        <option value="global">?? Annonce globale</option>
                     </select>
                 </div>
 
@@ -821,21 +821,21 @@
                     <label for="message-content">Contenu</label>
                     <textarea id="message-content" class="form-control" rows="8" placeholder="Contenu du message..."></textarea>
                     <small style="color: #888; font-size: 0.85rem; margin-top: 0.5rem; display: block;">
-                        💡 Utilisez les modèles pré-remplis ci-dessous ou personnalisez votre message
+                        ?? Utilisez les mod�les pr�-remplis ci-dessous ou personnalisez votre message
                     </small>
                 </div>
 
                 <div class="form-group">
-                    <label>Modèles de messages prédéfinis</label>
+                    <label>Mod�les de messages pr�d�finis</label>
                     <div class="message-templates">
                         <button type="button" class="template-btn" data-template="warning-harassment">
-                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Harcèlement
+                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Harc�lement
                         </button>
                         <button type="button" class="template-btn" data-template="warning-spam">
                             <i class="fas fa-exclamation-triangle"></i> Avertissement - Spam
                         </button>
                         <button type="button" class="template-btn" data-template="warning-inappropriate">
-                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Contenu inapproprié
+                            <i class="fas fa-exclamation-triangle"></i> Avertissement - Contenu inappropri�
                         </button>
                         <button type="button" class="template-btn" data-template="ban">
                             <i class="fas fa-ban"></i> Bannissement
@@ -847,7 +847,7 @@
                             <i class="fas fa-heart"></i> Remerciement - Signalement (Bannissement)
                         </button>
                         <button type="button" class="template-btn" data-template="global-event">
-                            <i class="fas fa-bullhorn"></i> Annonce - Événement
+                            <i class="fas fa-bullhorn"></i> Annonce - �v�nement
                         </button>
                         <button type="button" class="template-btn" data-template="share-site">
                             <i class="fas fa-share-alt"></i> Partage du site - Certification
@@ -864,7 +864,7 @@
         </div>
     </div>
 
-    <!-- Popup de confirmation personnalisé -->
+    <!-- Popup de confirmation personnalis� -->
     <div class="custom-modal-overlay" id="confirm-modal-overlay">
         <div class="custom-modal">
             <div class="custom-modal-header">
@@ -874,9 +874,9 @@
                 <h3 class="custom-modal-title">Retirer la certification</h3>
             </div>
             <div class="custom-modal-body">
-                Êtes-vous sûr de vouloir retirer la certification de <strong id="confirm-modal-email"></strong> ?
+                �tes-vous s�r de vouloir retirer la certification de <strong id="confirm-modal-email"></strong> ?
                 <br><br>
-                Cette action retirera le badge certifié de cet utilisateur.
+                Cette action retirera le badge certifi� de cet utilisateur.
             </div>
             <div class="custom-modal-actions">
                 <button class="custom-modal-btn cancel" id="confirm-modal-cancel">
@@ -1017,12 +1017,12 @@
             return Array.from(map.values());
         }
         
-        // Récupérer les utilisateurs certifiés
+        // R�cup�rer les utilisateurs certifi�s
         function getVerifiedUsers() {
             return JSON.parse(localStorage.getItem('verified_users') || '[]');
         }
         
-        // Ajouter un utilisateur aux certifiés
+        // Ajouter un utilisateur aux certifi�s
         function verifyUser(email) {
             const verified = getVerifiedUsers();
             if (!verified.includes(email)) {
@@ -1033,7 +1033,7 @@
             return false;
         }
         
-        // Retirer un utilisateur des certifiés
+        // Retirer un utilisateur des certifi�s
         function unverifyUser(email) {
             const verified = getVerifiedUsers();
             const index = verified.indexOf(email);
@@ -1054,7 +1054,7 @@
                 usersList.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-user-slash"></i>
-                        <p>Aucun utilisateur trouvé</p>
+                        <p>Aucun utilisateur trouv�</p>
                     </div>
                 `;
                 return;
@@ -1076,7 +1076,7 @@
                         </div>
                         <div class="user-actions">
                             <span class="verified-status ${isVerified ? 'verified' : 'not-verified'}">
-                                ${isVerified ? '<i class="fas fa-check-circle"></i> Certifié' : 'Non certifié'}
+                                ${isVerified ? '<i class="fas fa-check-circle"></i> Certifi�' : 'Non certifi�'}
                             </span>
                             <button class="toggle-btn ${isVerified ? 'unverify' : 'verify'}" onclick="toggleVerification('${user.email}')">
                                 <i class="fas fa-${isVerified ? 'times' : 'check'}"></i>
@@ -1088,7 +1088,7 @@
             }).join('');
         }
         
-        // Afficher le popup de confirmation personnalisé
+        // Afficher le popup de confirmation personnalis�
         let currentModalCallback = null;
         
         function showConfirmModal(email, userName, callback) {
@@ -1096,9 +1096,9 @@
             const modalEmail = document.getElementById('confirm-modal-email');
             
             if (!overlay) {
-                console.error('Modal overlay non trouvé');
+                console.error('Modal overlay non trouv�');
                 // Fallback vers confirm si le modal n'existe pas
-                if (confirm(`Êtes-vous sûr de vouloir retirer la certification de ${email} ?`)) {
+                if (confirm(`�tes-vous s�r de vouloir retirer la certification de ${email} ?`)) {
                     callback();
                 }
                 return;
@@ -1107,7 +1107,7 @@
             // Stocker le callback
             currentModalCallback = callback;
             
-            // Mettre à jour l'email affiché
+            // Mettre � jour l'email affich�
             if (modalEmail) {
                 modalEmail.textContent = email;
             }
@@ -1127,7 +1127,7 @@
             const cancelBtn = document.getElementById('confirm-modal-cancel');
             
             if (!overlay || !confirmBtn || !cancelBtn) {
-                // Réessayer plus tard si les éléments ne sont pas encore chargés
+                // R�essayer plus tard si les �l�ments ne sont pas encore charg�s
                 setTimeout(initModalListeners, 100);
                 return;
             }
@@ -1161,7 +1161,7 @@
             });
         }
         
-        // Initialiser les listeners quand le DOM est prêt
+        // Initialiser les listeners quand le DOM est pr�t
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', initModalListeners);
         } else {
@@ -1174,7 +1174,7 @@
             const isVerified = verified.includes(email);
             
             if (isVerified) {
-                // Récupérer le nom de l'utilisateur
+                // R�cup�rer le nom de l'utilisateur
                 const allUsers = getAllUsers();
                 const user = allUsers.find(u => u.email === email);
                 const userName = user ? user.name : email;
@@ -1184,10 +1184,10 @@
                     loadUsers();
                     updateStats();
                     
-                    // Déclencher un événement pour mettre à jour le badge sur les autres pages
+                    // D�clencher un �v�nement pour mettre � jour le badge sur les autres pages
                     window.dispatchEvent(new CustomEvent('verifiedUsersUpdated', { detail: { email } }));
                     
-                    // Si on est sur la page de profil, mettre à jour le badge immédiatement
+                    // Si on est sur la page de profil, mettre � jour le badge imm�diatement
                     if (typeof window.updateUserNameDisplay === 'function') {
                         const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
                         if (currentUser && currentUser.email === email) {
@@ -1203,10 +1203,10 @@
                 loadUsers();
                 updateStats();
                 
-                // Déclencher un événement pour mettre à jour le badge sur les autres pages
+                // D�clencher un �v�nement pour mettre � jour le badge sur les autres pages
                 window.dispatchEvent(new CustomEvent('verifiedUsersUpdated', { detail: { email } }));
                 
-                // Si on est sur la page de profil, mettre à jour le badge immédiatement
+                // Si on est sur la page de profil, mettre � jour le badge imm�diatement
                 if (typeof window.updateUserNameDisplay === 'function') {
                     const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
                     if (currentUser && currentUser.email === email) {
@@ -1233,7 +1233,7 @@
             );
         }
         
-        // Mettre à jour les statistiques
+        // Mettre � jour les statistiques
         function updateStats() {
             const allUsers = getAllUsers();
             const verified = getVerifiedUsers();
@@ -1249,7 +1249,7 @@
             displayUsers(filteredUsers);
         }
         
-        // Récupérer tous les signalements (cache Firestore + repli localStorage)
+        // R�cup�rer tous les signalements (cache Firestore + repli localStorage)
         let __adminReportsCache = null;
 
         function getAllReports() {
@@ -1276,7 +1276,7 @@
             displayReports();
         }
         
-        // Récupérer les utilisateurs bannis
+        // R�cup�rer les utilisateurs bannis
         function getBannedUsers() {
             return JSON.parse(localStorage.getItem('banned_users') || '[]');
         }
@@ -1293,18 +1293,18 @@
             }
         }
         
-        // Vérifier si un utilisateur est banni
+        // V�rifier si un utilisateur est banni
         function isUserBanned(email) {
             const banned = getBannedUsers();
             return banned.some(b => b.email === email);
         }
         
-        // Obtenir le texte de la raison en français
+        // Obtenir le texte de la raison en fran�ais
         function getReasonText(reason) {
             const reasons = {
-                'harassment': 'Harcèlement ou comportement toxique',
-                'spam': 'Spam ou publicité non sollicitée',
-                'inappropriate': 'Contenu offensant ou inapproprié',
+                'harassment': 'Harc�lement ou comportement toxique',
+                'spam': 'Spam ou publicit� non sollicit�e',
+                'inappropriate': 'Contenu offensant ou inappropri�',
                 'fake': 'Compte impersonnant quelqu\'un d\'autre',
                 'other': 'Autre raison'
             };
@@ -1329,7 +1329,7 @@
                 return;
             }
             
-            // Grouper les signalements par utilisateur signalé
+            // Grouper les signalements par utilisateur signal�
             const reportsByUser = {};
             reports.forEach(report => {
                 if (!reportsByUser[report.reportedUser]) {
@@ -1398,7 +1398,7 @@
                     }
                 });
                 
-                // Trier les dates pour obtenir la première et la dernière
+                // Trier les dates pour obtenir la premi�re et la derni�re
                 reportDates.sort((a, b) => a - b);
                 const firstDate = reportDates[0];
                 const lastDate = reportDates[reportDates.length - 1];
@@ -1417,7 +1417,7 @@
                     minute: '2-digit'
                 });
                 
-                // Créer l'affichage des raisons
+                // Cr�er l'affichage des raisons
                 let reasonsHtml = '';
                 Object.keys(reasonCounts).forEach(reason => {
                     const count = reasonCounts[reason];
@@ -1428,10 +1428,10 @@
                     `;
                 });
                 
-                // Créer l'affichage des rapporteurs (qui a signalé)
+                // Cr�er l'affichage des rapporteurs (qui a signal�)
                 let reportersHtml = '';
                 if (reporters.length > 0) {
-                    reportersHtml = '<div style="margin-top: 1rem;"><strong style="color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Signalé par :</strong>';
+                    reportersHtml = '<div style="margin-top: 1rem;"><strong style="color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Signal� par :</strong>';
                     reporters.forEach((reporterEmail, index) => {
                         // Obtenir les infos du rapporteur
                         const reporterProfileData = localStorage.getItem('profile_' + reporterEmail);
@@ -1472,7 +1472,7 @@
                     reportersHtml += '</div>';
                 }
                 
-                // Créer l'affichage des commentaires
+                // Cr�er l'affichage des commentaires
                 let commentsHtml = '';
                 if (allComments.length > 0) {
                     commentsHtml = '<div style="margin-top: 1rem;"><strong style="color: #aaa; font-size: 0.9rem; display: block; margin-bottom: 0.5rem;">Commentaires :</strong>';
@@ -1518,7 +1518,7 @@
                                 <strong>${userReports.length}</strong> signalement${userReports.length > 1 ? 's' : ''} de <strong>${reporters.length}</strong> personne${reporters.length > 1 ? 's' : ''}
                             </div>
                             <div class="report-meta" style="margin-top: 0.5rem;">
-                                ${userReports.length === 1 ? `Signalé le ${formattedFirstDate}` : `Du ${formattedFirstDate} au ${formattedLastDate}`}
+                                ${userReports.length === 1 ? `Signal� le ${formattedFirstDate}` : `Du ${formattedFirstDate} au ${formattedLastDate}`}
                             </div>
                         </div>
                     </div>
@@ -1541,7 +1541,7 @@
                         ` : `
                             <button class="ban-btn banned" disabled>
                                 <i class="fas fa-ban"></i>
-                                Déjà banni
+                                D�j� banni
                             </button>
                         `}
                         <button class="warn-btn" onclick="handleWarnUser('${userEmail}', '${userName.replace(/'/g, "\\'")}')">
@@ -1563,38 +1563,38 @@
             });
         }
         
-        // Gérer le bannissement
+        // G�rer le bannissement
         async function handleBanUser(email, name) {
-            if (confirm(`Voulez-vous vraiment bannir ${name} (${email}) ?\n\nCette action est irréversible.`)) {
+            if (confirm(`Voulez-vous vraiment bannir ${name} (${email}) ?\n\nCette action est irr�versible.`)) {
                 banUser(email);
                 
                 // Envoyer un message de bannissement
                 await sendBanMessage(email, name);
                 
                 displayReports();
-                alert(`${name} a été banni avec succès et un message lui a été envoyé.`);
+                alert(`${name} a �t� banni avec succ�s et un message lui a �t� envoy�.`);
             }
         }
         
-        // Gérer l'avertissement
+        // G�rer l'avertissement
         async function handleWarnUser(email, name) {
-            const defaultMessage = `Bonjour,\n\nVous avez reçu un avertissement pour comportement inapproprié signalé par d'autres utilisateurs.\n\nVeuillez respecter les règles de la communauté.\n\nCordialement, L'équipe MangaWatch`;
+            const defaultMessage = `Bonjour,\n\nVous avez re�u un avertissement pour comportement inappropri� signal� par d'autres utilisateurs.\n\nVeuillez respecter les r�gles de la communaut�.\n\nCordialement, L'�quipe MangaWatch`;
             showMessageInputModal('warning', email, name, defaultMessage, async (message) => {
                 if (message && message.trim()) {
                     await sendWarningMessage(email, name, message);
-                    alert(`Avertissement envoyé à ${name} avec succès.`);
+                    alert(`Avertissement envoy� � ${name} avec succ�s.`);
                 }
             });
         }
         
-        // Gérer le remerciement
+        // G�rer le remerciement
         async function handleThankUser(email, name) {
             const reports = getAllReports();
             const userReports = reports.filter(r => r.reportedUser === email);
             const reporters = [...new Set(userReports.map(r => r.reportedBy))];
             
             if (reporters.length === 0) {
-                alert('Aucun rapporteur trouvé pour ce signalement.');
+                alert('Aucun rapporteur trouv� pour ce signalement.');
                 return;
             }
             
@@ -1613,14 +1613,14 @@
                 return { email: reporterEmail, name: reporterName };
             });
             
-            const defaultMessage = `Bonjour,\n\nNous vous remercions chaleureusement d'avoir signalé des comportements inappropriés sur notre plateforme. Votre vigilance aide à maintenir une communauté saine et respectueuse.\n\nMerci pour votre contribution !\n\nCordialement, L'équipe MangaWatch`;
+            const defaultMessage = `Bonjour,\n\nNous vous remercions chaleureusement d'avoir signal� des comportements inappropri�s sur notre plateforme. Votre vigilance aide � maintenir une communaut� saine et respectueuse.\n\nMerci pour votre contribution !\n\nCordialement, L'�quipe MangaWatch`;
             
             // Afficher la liste des rapporteurs dans le modal
             const recipientsList = reportersInfo.map(r => `${r.name} (${r.email})`).join(', ');
             showMessageInputModal('thank', recipientsList, reportersInfo, defaultMessage, async (message) => {
                 if (message && message.trim()) {
                     await sendThankMessageToReporters(reportersInfo, message);
-                    alert(`Message de remerciement envoyé à ${reportersInfo.length} rapporteur${reportersInfo.length > 1 ? 's' : ''} avec succès.`);
+                    alert(`Message de remerciement envoy� � ${reportersInfo.length} rapporteur${reportersInfo.length > 1 ? 's' : ''} avec succ�s.`);
                 }
             });
         }
@@ -1639,7 +1639,7 @@
             if (!overlay || !modalIcon || !modalTitle || !recipientSpan || !textarea || !confirmBtn || !cancelBtn) {
                 // Fallback vers prompt si le modal n'existe pas
                 const message = prompt(type === 'warning' 
-                    ? `Envoyer un avertissement à ${nameOrReportersInfo} (${emailOrRecipientsList}):\n\nEntrez le message d'avertissement:`
+                    ? `Envoyer un avertissement � ${nameOrReportersInfo} (${emailOrRecipientsList}):\n\nEntrez le message d'avertissement:`
                     : `Remercier les rapporteurs:\n\nEntrez le message de remerciement:`, 
                     defaultMessage);
                 if (message && callback) {
@@ -1651,7 +1651,7 @@
             // Stocker le callback
             currentMessageInputCallback = callback;
             
-            // Configurer l'icône et le titre selon le type
+            // Configurer l'ic�ne et le titre selon le type
             if (type === 'warning') {
                 modalIcon.className = 'custom-modal-icon warning';
                 modalIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
@@ -1666,7 +1666,7 @@
                 recipientSpan.textContent = emailOrRecipientsList;
             }
             
-            // Remplir le textarea avec le message par défaut
+            // Remplir le textarea avec le message par d�faut
             textarea.value = defaultMessage;
             
             // Supprimer les anciens event listeners
@@ -1715,7 +1715,7 @@
             }
         });
         
-        // Gérer l'ignorance d'un signalement
+        // G�rer l'ignorance d'un signalement
         async function handleIgnoreReport(userEmail) {
             try {
                 const { userReportService } = await import('/js/firebase-service.js?v=6febe24');
@@ -1738,7 +1738,7 @@
             displayReports();
         }
         
-        // Fonctions d'envoi de messages (à utiliser avec messageService)
+        // Fonctions d'envoi de messages (� utiliser avec messageService)
         async function sendBanMessage(email, name) {
             try {
                 // Importer messageService dynamiquement
@@ -1746,8 +1746,8 @@
                 
                 await messageService.sendMessage({
                     recipientEmail: email,
-                    title: 'Votre compte a été banni',
-                    content: `Bonjour ${name},\n\nVotre compte a été banni suite à des signalements pour comportement inapproprié.\n\nCette décision est définitive.\n\nCordialement, L'équipe MangaWatch`,
+                    title: 'Votre compte a �t� banni',
+                    content: `Bonjour ${name},\n\nVotre compte a �t� banni suite � des signalements pour comportement inappropri�.\n\nCette d�cision est d�finitive.\n\nCordialement, L'�quipe MangaWatch`,
                     messageType: 'ban',
                     metadata: { reason: 'Signalements multiples' }
                 });
@@ -1776,7 +1776,7 @@
             try {
                 const { messageService } = await import('/js/messageService.js');
                 
-                // Envoyer le message à tous les rapporteurs
+                // Envoyer le message � tous les rapporteurs
                 for (const reporter of reportersInfo) {
                     await messageService.sendMessage({
                         recipientEmail: reporter.email,
@@ -1791,7 +1791,7 @@
             }
         }
         
-        // Ancienne fonction conservée pour compatibilité (ne devrait plus être utilisée)
+        // Ancienne fonction conserv�e pour compatibilit� (ne devrait plus �tre utilis�e)
         async function sendThankMessage(email, name, content) {
             await sendThankMessageToReporters([{ email, name }], content);
         }
@@ -1803,7 +1803,7 @@
             const recipientUser = document.getElementById('message-recipient-user');
             const sendBtn = document.getElementById('send-message-btn');
             
-            // Afficher/masquer la sélection d'utilisateur
+            // Afficher/masquer la s�lection d'utilisateur
             recipientType.addEventListener('change', () => {
                 if (recipientType.value === 'user') {
                     userSelectGroup.style.display = 'block';
@@ -1820,7 +1820,7 @@
                     const searchTerm = e.target.value.toLowerCase();
                     const options = recipientUser.querySelectorAll('option');
                     options.forEach(option => {
-                        if (option.value === '') return; // Garder l'option par défaut
+                        if (option.value === '') return; // Garder l'option par d�faut
                         const text = option.textContent.toLowerCase();
                         option.style.display = text.includes(searchTerm) ? 'block' : 'none';
                     });
@@ -1839,51 +1839,51 @@
                 });
             }
 
-            // Modèles de messages prédéfinis
+            // Mod�les de messages pr�d�finis
             const templates = {
                 'warning-harassment': {
                     type: 'warning',
-                    title: 'Avertissement - Comportement inapproprié',
-                    content: 'Bonjour,\n\nVous avez reçu un avertissement suite à des signalements pour comportement de harcèlement ou toxicité sur notre plateforme.\n\nNous vous rappelons que notre communauté se doit d\'être respectueuse et bienveillante envers tous les membres. Nous vous invitons à revoir votre comportement et à respecter les règles de notre communauté.\n\nEn cas de récidive, des sanctions plus sévères pourront être appliquées, pouvant aller jusqu\'au bannissement définitif de votre compte.\n\nNous comptons sur votre compréhension et votre coopération.\n\nCordialement,\nL\'équipe MangaWatch'
+                    title: 'Avertissement - Comportement inappropri�',
+                    content: 'Bonjour,\n\nVous avez re�u un avertissement suite � des signalements pour comportement de harc�lement ou toxicit� sur notre plateforme.\n\nNous vous rappelons que notre communaut� se doit d\'�tre respectueuse et bienveillante envers tous les membres. Nous vous invitons � revoir votre comportement et � respecter les r�gles de notre communaut�.\n\nEn cas de r�cidive, des sanctions plus s�v�res pourront �tre appliqu�es, pouvant aller jusqu\'au bannissement d�finitif de votre compte.\n\nNous comptons sur votre compr�hension et votre coop�ration.\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'warning-spam': {
                     type: 'warning',
                     title: 'Avertissement - Spam',
-                    content: 'Bonjour,\n\nVous avez reçu un avertissement suite à des signalements pour comportement de spam ou publicité non sollicitée sur notre plateforme.\n\nNous vous rappelons que la promotion de contenu ou services non autorisés est interdite sur MangaWatch. Merci de respecter les règles de notre communauté.\n\nEn cas de récidive, votre compte pourra être suspendu ou banni.\n\nCordialement,\nL\'équipe MangaWatch'
+                    content: 'Bonjour,\n\nVous avez re�u un avertissement suite � des signalements pour comportement de spam ou publicit� non sollicit�e sur notre plateforme.\n\nNous vous rappelons que la promotion de contenu ou services non autoris�s est interdite sur MangaWatch. Merci de respecter les r�gles de notre communaut�.\n\nEn cas de r�cidive, votre compte pourra �tre suspendu ou banni.\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'warning-inappropriate': {
                     type: 'warning',
-                    title: 'Avertissement - Contenu inapproprié',
-                    content: 'Bonjour,\n\nVous avez reçu un avertissement suite à des signalements pour publication de contenu offensant ou inapproprié sur notre plateforme.\n\nNous vous rappelons que notre communauté se doit d\'être respectueuse et appropriée pour tous les âges. Merci de veiller à ce que vos contributions respectent nos règles de contenu.\n\nEn cas de récidive, des sanctions pourront être appliquées.\n\nCordialement,\nL\'équipe MangaWatch'
+                    title: 'Avertissement - Contenu inappropri�',
+                    content: 'Bonjour,\n\nVous avez re�u un avertissement suite � des signalements pour publication de contenu offensant ou inappropri� sur notre plateforme.\n\nNous vous rappelons que notre communaut� se doit d\'�tre respectueuse et appropri�e pour tous les �ges. Merci de veiller � ce que vos contributions respectent nos r�gles de contenu.\n\nEn cas de r�cidive, des sanctions pourront �tre appliqu�es.\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'ban': {
                     type: 'ban',
-                    title: 'Votre compte a été banni',
-                    content: 'Bonjour,\n\nVotre compte a été banni définitivement suite à des violations répétées de nos règles de communauté.\n\nCette décision a été prise après examen attentif de votre comportement et des signalements reçus concernant vos actions sur la plateforme.\n\nCette sanction est définitive et irréversible.\n\nCordialement,\nL\'équipe MangaWatch'
+                    title: 'Votre compte a �t� banni',
+                    content: 'Bonjour,\n\nVotre compte a �t� banni d�finitivement suite � des violations r�p�t�es de nos r�gles de communaut�.\n\nCette d�cision a �t� prise apr�s examen attentif de votre comportement et des signalements re�us concernant vos actions sur la plateforme.\n\nCette sanction est d�finitive et irr�versible.\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'thank-report': {
                     type: 'thank',
                     title: 'Merci pour vos signalements',
-                    content: 'Bonjour,\n\nNous tenions à vous remercier chaleureusement d\'avoir signalé des comportements inappropriés sur notre plateforme.\n\nVotre vigilance et votre contribution aident grandement à maintenir une communauté saine, respectueuse et agréable pour tous nos membres. C\'est grâce à des utilisateurs comme vous que nous pouvons garantir un environnement sûr et bienveillant.\n\nVotre action a permis de prendre les mesures nécessaires. Nous vous remercions sincèrement pour votre implication dans la qualité de notre communauté.\n\nN\'hésitez pas à continuer à nous signaler tout comportement qui vous semblerait inapproprié.\n\nEncore merci !\n\nCordialement,\nL\'équipe MangaWatch'
+                    content: 'Bonjour,\n\nNous tenions � vous remercier chaleureusement d\'avoir signal� des comportements inappropri�s sur notre plateforme.\n\nVotre vigilance et votre contribution aident grandement � maintenir une communaut� saine, respectueuse et agr�able pour tous nos membres. C\'est gr�ce � des utilisateurs comme vous que nous pouvons garantir un environnement s�r et bienveillant.\n\nVotre action a permis de prendre les mesures n�cessaires. Nous vous remercions sinc�rement pour votre implication dans la qualit� de notre communaut�.\n\nN\'h�sitez pas � continuer � nous signaler tout comportement qui vous semblerait inappropri�.\n\nEncore merci !\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'thank-report-ban': {
                     type: 'thank',
                     title: 'Merci pour votre signalement - Compte banni',
-                    content: 'Bonjour,\n\nNous tenions à vous remercier chaleureusement d\'avoir signalé un utilisateur dont le comportement justifiait un bannissement sur notre plateforme.\n\nGrâce à votre vigilance et votre action, nous avons pu prendre les mesures nécessaires et bannir cet utilisateur, protégeant ainsi toute notre communauté.\n\nContinuez sur cette lancée ! Votre engagement en faveur d\'une communauté saine et respectueuse est précieux. En récompense de votre implication, vous bénéficierez d\'avantages exclusifs sur le site ainsi que sur notre serveur Discord MangaWatch.\n\nNous vous remercions sincèrement pour votre contribution à la qualité de notre communauté. N\'hésitez pas à continuer à nous signaler tout comportement inapproprié.\n\nMerci encore pour votre vigilance !\n\nCordialement,\nL\'équipe MangaWatch'
+                    content: 'Bonjour,\n\nNous tenions � vous remercier chaleureusement d\'avoir signal� un utilisateur dont le comportement justifiait un bannissement sur notre plateforme.\n\nGr�ce � votre vigilance et votre action, nous avons pu prendre les mesures n�cessaires et bannir cet utilisateur, prot�geant ainsi toute notre communaut�.\n\nContinuez sur cette lanc�e ! Votre engagement en faveur d\'une communaut� saine et respectueuse est pr�cieux. En r�compense de votre implication, vous b�n�ficierez d\'avantages exclusifs sur le site ainsi que sur notre serveur Discord MangaWatch.\n\nNous vous remercions sinc�rement pour votre contribution � la qualit� de notre communaut�. N\'h�sitez pas � continuer � nous signaler tout comportement inappropri�.\n\nMerci encore pour votre vigilance !\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'global-event': {
                     type: 'global',
                     title: 'Annonce importante',
-                    content: 'Bonjour à tous,\n\nNous avons le plaisir de vous annoncer un événement spécial sur MangaWatch !\n\nRestez connectés pour plus d\'informations dans les prochains jours.\n\nMerci de faire partie de notre communauté !\n\nCordialement,\nL\'équipe MangaWatch'
+                    content: 'Bonjour � tous,\n\nNous avons le plaisir de vous annoncer un �v�nement sp�cial sur MangaWatch !\n\nRestez connect�s pour plus d\'informations dans les prochains jours.\n\nMerci de faire partie de notre communaut� !\n\nCordialement,\nL\'�quipe MangaWatch'
                 },
                 'share-site': {
                     type: 'global',
                     title: 'Partagez MangaWatch et obtenez des avantages exclusifs !',
-                    content: 'Bonjour à tous,\n\nNous avons besoin de votre aide pour faire connaître MangaWatch ! 🚀\n\nSi vous appréciez notre plateforme et souhaitez nous soutenir, nous vous encourageons vivement à partager le site au maximum :\n\n👥 Avec votre entourage (famille, amis, collègues, etc.)\n📱 Sur vos réseaux sociaux (Facebook, Instagram, TikTok, etc.)\n💬 Sur Discord\n\n🎁 RÉCOMPENSE : Si vous partagez activement MangaWatch (avec votre entourage et/ou sur les réseaux) et que vous nous prévenez sur les réseaux sociaux ou sur notre serveur Discord, vous pourrez obtenir accès à des fonctionnalités exclusives sur le site, notamment :\n\n✨ Certification de votre compte\n✨ Badges exclusifs\n✨ Accès anticipé aux nouvelles fonctionnalités\n✨ Statut de membre privilégié\n\n📱 Comment nous prévenir ?\n- Partagez sur notre serveur Discord MangaWatch\n- Envoyez-nous un message via les réseaux sociaux\n\nVotre soutien est précieux pour faire grandir notre communauté ! Chaque partage compte et nous aide à améliorer continuellement la plateforme.\n\nMerci infiniment pour votre engagement ! 🙏\n\nCordialement,\nL\'équipe MangaWatch'
+                    content: 'Bonjour � tous,\n\nNous avons besoin de votre aide pour faire conna�tre MangaWatch ! ??\n\nSi vous appr�ciez notre plateforme et souhaitez nous soutenir, nous vous encourageons vivement � partager le site au maximum :\n\n?? Avec votre entourage (famille, amis, coll�gues, etc.)\n?? Sur vos r�seaux sociaux (Facebook, Instagram, TikTok, etc.)\n?? Sur Discord\n\n?? R�COMPENSE : Si vous partagez activement MangaWatch (avec votre entourage et/ou sur les r�seaux) et que vous nous pr�venez sur les r�seaux sociaux ou sur notre serveur Discord, vous pourrez obtenir acc�s � des fonctionnalit�s exclusives sur le site, notamment :\n\n? Certification de votre compte\n? Badges exclusifs\n? Acc�s anticip� aux nouvelles fonctionnalit�s\n? Statut de membre privil�gi�\n\n?? Comment nous pr�venir ?\n- Partagez sur notre serveur Discord MangaWatch\n- Envoyez-nous un message via les r�seaux sociaux\n\nVotre soutien est pr�cieux pour faire grandir notre communaut� ! Chaque partage compte et nous aide � am�liorer continuellement la plateforme.\n\nMerci infiniment pour votre engagement ! ??\n\nCordialement,\nL\'�quipe MangaWatch'
                 }
             };
 
-            // Gérer les clics sur les modèles
+            // G�rer les clics sur les mod�les
             document.querySelectorAll('.template-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const templateKey = btn.dataset.template;
@@ -1896,7 +1896,7 @@
                 });
             });
             
-            // Envoyer un message (utiliser onclick pour éviter les doublons)
+            // Envoyer un message (utiliser onclick pour �viter les doublons)
             let isSending = false;
             sendBtn.onclick = async () => {
                 if (isSending) return;
@@ -1913,7 +1913,7 @@
                 }
                 
                 if (recipientTypeValue === 'user' && !recipientEmail) {
-                    alert('Veuillez sélectionner un utilisateur.');
+                    alert('Veuillez s�lectionner un utilisateur.');
                     return;
                 }
                 
@@ -1951,7 +1951,7 @@
                             metadata: {}
                         });
                         
-                        // Afficher un message de succès
+                        // Afficher un message de succ�s
                         const successOverlay = document.getElementById('send-message-modal-overlay');
                         const modalBody = document.getElementById('send-message-modal-body');
                         const modalTitle = successOverlay.querySelector('.custom-modal-title');
@@ -1959,12 +1959,12 @@
                         
                         modalIcon.className = 'custom-modal-icon success';
                         modalIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                        modalTitle.textContent = 'Message envoyé avec succès !';
+                        modalTitle.textContent = 'Message envoy� avec succ�s !';
                         modalBody.innerHTML = `
                             <div style="text-align: center; padding: 1rem 0;">
                                 <p style="color: #00b894; font-size: 1.1rem; margin-bottom: 1rem;">
                                     <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
-                                    Votre message a été envoyé avec succès.
+                                    Votre message a �t� envoy� avec succ�s.
                                 </p>
                                 <p style="color: #aaa; font-size: 0.9rem;">
                                     Destinataire: <strong style="color: #00b894;">${recipientName}</strong><br>
@@ -1977,14 +1977,14 @@
                         confirmBtn.innerHTML = '<i class="fas fa-check"></i> OK';
                         confirmBtn.onclick = () => {
                             hideSendMessageModal();
-                            // Réinitialiser le formulaire
+                            // R�initialiser le formulaire
                             document.getElementById('message-title').value = '';
                             document.getElementById('message-content').value = '';
                             recipientType.value = 'global';
                             userSelectGroup.style.display = 'none';
-                            // Réinitialiser le bouton
+                            // R�initialiser le bouton
                             confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer';
-                            // Réafficher le bouton annuler
+                            // R�afficher le bouton annuler
                             document.getElementById('send-message-modal-cancel').style.display = 'flex';
                         };
                         
@@ -1995,9 +1995,9 @@
                     } catch (error) {
                         console.error('Erreur lors de l\'envoi du message:', error);
                         hideSendMessageModal();
-                        alert('Erreur lors de l\'envoi du message. Veuillez réessayer.');
+                        alert('Erreur lors de l\'envoi du message. Veuillez r�essayer.');
                     }
-                    isSending = false; // Réinitialiser le flag après l'envoi
+                    isSending = false; // R�initialiser le flag apr�s l'envoi
                 });
             };
         }
@@ -2013,7 +2013,7 @@
             const cancelBtn = document.getElementById('send-message-modal-cancel');
             const confirmBtn = document.getElementById('send-message-modal-confirm');
             
-            // Réinitialiser l'affichage
+            // R�initialiser l'affichage
             cancelBtn.style.display = 'flex';
             confirmBtn.style.display = 'flex';
             confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer';
@@ -2021,7 +2021,7 @@
             // Stocker le callback
             currentSendMessageCallback = callback;
             
-            // Configurer l'icône et le titre
+            // Configurer l'ic�ne et le titre
             modalIcon.className = 'custom-modal-icon success';
             modalIcon.innerHTML = '<i class="fas fa-paper-plane"></i>';
             modalTitle.textContent = 'Confirmer l\'envoi du message';
@@ -2042,21 +2042,21 @@
                         <span style="color: #ccc;">${messageData.title}</span>
                     </p>
                     <p>
-                        <strong style="color: #00b894;">Aperçu du contenu :</strong><br>
+                        <strong style="color: #00b894;">Aper�u du contenu :</strong><br>
                         <span style="color: #aaa; font-style: italic;">${messageData.content}</span>
                     </p>
                 </div>
                 <p style="color: #888; font-size: 0.9rem; text-align: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
-                    Êtes-vous sûr de vouloir envoyer ce message ?
+                    �tes-vous s�r de vouloir envoyer ce message ?
                 </p>
             `;
             
-            // Supprimer les anciens event listeners pour éviter les doublons
+            // Supprimer les anciens event listeners pour �viter les doublons
             const newConfirmBtn = confirmBtn.cloneNode(true);
             confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
             const finalConfirmBtn = document.getElementById('send-message-modal-confirm');
             
-            // Supprimer tous les anciens listeners en créant un nouveau bouton
+            // Supprimer tous les anciens listeners en cr�ant un nouveau bouton
             finalConfirmBtn.onclick = () => {
                 if (currentSendMessageCallback) {
                     currentSendMessageCallback();

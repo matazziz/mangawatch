@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -8,12 +8,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="/css/header-unified-new.css?v=9">
+    <link rel="stylesheet" href="/css/header-unified-new.css?v=16">
     <link rel="stylesheet" href="/css/footer-unified.css">
     <link rel="stylesheet" href="/css/list.css?v=20260604-pagination">
     <link rel="stylesheet" href="/css/messaging.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Script pour charger l'avatar immédiatement et éviter le flash -->
+    <!-- Script pour charger l'avatar imm�diatement et �viter le flash -->
     <script>
         (function() {
             try {
@@ -45,14 +45,14 @@
                     }
                 }
             } catch (e) {
-                console.error('Erreur lors du préchargement de l\'avatar:', e);
+                console.error('Erreur lors du pr�chargement de l\'avatar:', e);
             }
         })();
     </script>
     <script src="/js/localization.js"></script>
 </head>
 <body>
-    <!-- En-tête unifié -->
+    <!-- En-t�te unifi� -->
     <header class="main-header">
         <a href="acceuil.html" class="logo-link">
             <img src="/images/porte-torii.png" alt="Logo MangaWatch" class="logo-image">
@@ -72,11 +72,11 @@
                     <i class="fas fa-search"></i>
                 </button>
             </form>
-            <!-- Résultats de recherche -->
+            <!-- R�sultats de recherche -->
             <div id="search-results" class="search-results-dropdown"></div>
         </div>
         
-        <!-- Navigation desktop (visible sur grand écran) -->
+        <!-- Navigation desktop (visible sur grand �cran) -->
         <nav class="nav-links">
             <a href="acceuil.html" data-i18n="nav.home">Accueil</a>
             <a href="manga-database.html" data-i18n="nav.manga_anime">Mangas & Anime</a>
@@ -84,7 +84,7 @@
             <a href="profil.html" data-i18n="nav.profile">Profil</a>
         </nav>
         
-        <!-- Conteneur pour les éléments de droite -->
+        <!-- Conteneur pour les �l�ments de droite -->
         <div class="header-right">
             <!-- Bouton hamburger pour mobile -->
             <button class="hamburger-btn" aria-label="Menu">
@@ -129,7 +129,7 @@
                     <i class="fas fa-bookmark"></i>
                     <span data-i18n="collection.title">Ma Collection</span>
                 </h1>
-                <p class="list-subtitle" data-i18n="collection.subtitle">Gérez vos mangas et animes préférés</p>
+                <p class="list-subtitle" data-i18n="collection.subtitle">G�rez vos mangas et animes pr�f�r�s</p>
             </div>
 
             <button id="mobile-collection-filters-toggle" class="mobile-collection-filters-toggle" type="button" aria-expanded="false">
@@ -145,7 +145,7 @@
                 </button>
                 <button class="status-filter" data-status="completed">
                     <i class="fas fa-check-circle"></i>
-                    <span data-i18n="collection.filter.completed">Terminé</span>
+                    <span data-i18n="collection.filter.completed">Termin�</span>
                 </button>
                 <button class="status-filter" data-status="on-hold">
                     <i class="fas fa-pause"></i>
@@ -153,15 +153,15 @@
                 </button>
                 <button class="status-filter" data-status="dropped">
                     <i class="fas fa-times-circle"></i>
-                    <span data-i18n="collection.filter.dropped">Abandonné</span>
+                    <span data-i18n="collection.filter.dropped">Abandonn�</span>
                 </button>
                 <button class="status-filter" data-status="plan-to-watch">
                     <i class="fas fa-eye"></i>
-                    <span data-i18n="collection.filter.plan_to_watch">À voir</span>
+                    <span data-i18n="collection.filter.plan_to_watch">� voir</span>
                 </button>
             </div>
 
-            <!-- Filtres par type d'œuvre -->
+            <!-- Filtres par type d'�uvre -->
             <div class="type-filters">
                 <button class="type-filter active" data-type="all">
                     <i class="fas fa-th-large"></i>
@@ -210,7 +210,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-number" id="completed-count">0</span>
-                        <span class="stat-label" data-i18n="collection.stats.completed">Terminé</span>
+                        <span class="stat-label" data-i18n="collection.stats.completed">Termin�</span>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -228,7 +228,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-number" id="dropped-count">0</span>
-                        <span class="stat-label" data-i18n="collection.stats.dropped">Abandonné</span>
+                        <span class="stat-label" data-i18n="collection.stats.dropped">Abandonn�</span>
                     </div>
                 </div>
                 <div class="stat-card">
@@ -237,7 +237,7 @@
                     </div>
                     <div class="stat-info">
                         <span class="stat-number" id="plan-to-watch-count">0</span>
-                        <span class="stat-label" data-i18n="collection.stats.plan_to_watch">À voir</span>
+                        <span class="stat-label" data-i18n="collection.stats.plan_to_watch">� voir</span>
                     </div>
                 </div>
             </div>
@@ -245,15 +245,15 @@
             <!-- Liste des items -->
             <div class="list-content">
                 <div id="list-items" class="list-grid">
-                    <!-- Les items seront chargés ici par JavaScript -->
+                    <!-- Les items seront charg�s ici par JavaScript -->
                 </div>
 
                 <!-- Pagination -->
                 <div id="pagination-container" class="pagination-container" style="display: none;">
                     <div class="pagination collection-pagination">
-                        <button id="prev-page" type="button" class="pagination-btn" disabled aria-label="Page précédente">
+                        <button id="prev-page" type="button" class="pagination-btn" disabled aria-label="Page pr�c�dente">
                             <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                            <span class="pagination-btn-label" data-i18n="collection.pagination.previous">Précédent</span>
+                            <span class="pagination-btn-label" data-i18n="collection.pagination.previous">Pr�c�dent</span>
                         </button>
                         <div class="page-numbers" id="page-numbers"></div>
                         <button id="next-page" type="button" class="pagination-btn" aria-label="Page suivante">
@@ -269,10 +269,10 @@
                         <i class="fas fa-heart-broken"></i>
                     </div>
                     <h3 data-i18n="collection.empty.title">Votre liste est vide</h3>
-                    <p data-i18n="collection.empty.subtitle">Commencez à ajouter des mangas et animes à votre liste !</p>
+                    <p data-i18n="collection.empty.subtitle">Commencez � ajouter des mangas et animes � votre liste !</p>
                     <a href="manga-database.html" class="cta-button">
                         <i class="fas fa-search"></i>
-                        <span data-i18n="collection.empty.cta">Découvrir des mangas</span>
+                        <span data-i18n="collection.empty.cta">D�couvrir des mangas</span>
                     </a>
                 </div>
             </div>
@@ -304,8 +304,8 @@
                             <i class="fas fa-check-circle"></i>
                         </div>
                         <div class="status-info">
-                            <span class="status-name" data-i18n="collection.status.completed">Terminé</span>
-                            <span class="status-desc" data-i18n="collection.status.completed_desc">Vous avez terminé</span>
+                            <span class="status-name" data-i18n="collection.status.completed">Termin�</span>
+                            <span class="status-desc" data-i18n="collection.status.completed_desc">Vous avez termin�</span>
                         </div>
                     </button>
                     <button class="status-option" data-status="on-hold">
@@ -322,8 +322,8 @@
                             <i class="fas fa-times-circle"></i>
                         </div>
                         <div class="status-info">
-                            <span class="status-name" data-i18n="collection.status.dropped">Abandonné</span>
-                            <span class="status-desc" data-i18n="collection.status.dropped_desc">Vous avez abandonné</span>
+                            <span class="status-name" data-i18n="collection.status.dropped">Abandonn�</span>
+                            <span class="status-desc" data-i18n="collection.status.dropped_desc">Vous avez abandonn�</span>
                         </div>
                     </button>
                     <button class="status-option" data-status="plan-to-watch">
@@ -331,15 +331,15 @@
                             <i class="fas fa-eye"></i>
                         </div>
                         <div class="status-info">
-                            <span class="status-name" data-i18n="collection.status.plan_to_watch">À voir</span>
+                            <span class="status-name" data-i18n="collection.status.plan_to_watch">� voir</span>
                             <span class="status-desc" data-i18n="collection.status.plan_to_watch_desc">Vous voulez regarder</span>
                         </div>
                     </button>
                 </div>
-                <!-- Champ pour indiquer où l'utilisateur s'est arrêté (visible uniquement pour on-hold et dropped) -->
+                <!-- Champ pour indiquer o� l'utilisateur s'est arr�t� (visible uniquement pour on-hold et dropped) -->
                 <div id="stopped-at-container" class="stopped-at-container" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                     <label for="stopped-at-input" style="display: block; color: var(--light); margin-bottom: 10px; font-weight: 600;" data-i18n="collection.stopped_at.label">
-                        Où vous êtes-vous arrêté ?
+                        O� vous �tes-vous arr�t� ?
                     </label>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <input 
@@ -357,10 +357,10 @@
                                 font-size: 16px;
                             "
                         >
-                        <span id="stopped-at-label" style="color: var(--light-gray); min-width: 80px;" data-i18n="collection.stopped_at.episode">épisode</span>
+                        <span id="stopped-at-label" style="color: var(--light-gray); min-width: 80px;" data-i18n="collection.stopped_at.episode">�pisode</span>
                     </div>
                     <p style="color: var(--light-gray); font-size: 0.85rem; margin-top: 8px;" data-i18n="collection.stopped_at.hint">
-                        Indiquez le numéro d'épisode ou de chapitre où vous vous êtes arrêté
+                        Indiquez le num�ro d'�pisode ou de chapitre o� vous vous �tes arr�t�
                     </p>
                     <button id="confirm-status-btn" class="confirm-status-btn" style="
                         display: none;
@@ -380,19 +380,19 @@
         </div>
     </div>
 
-    <!-- Footer unifié MangaWatch -->
+    <!-- Footer unifi� MangaWatch -->
     <footer class="footer-unified">
         <div class="footer-container">
-            <!-- Copyright à gauche -->
+            <!-- Copyright � gauche -->
             <div class="footer-copyright-text">
                 <span class="footer-copyright">&copy;</span>2025
-                Tous droits réservés &bull; <span class="footer-brand">MangaWatch</span>
-                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - Médecins Sans Frontières">
+                Tous droits r�serv�s &bull; <span class="footer-brand">MangaWatch</span>
+                <a href="https://www.msf.fr/donner-palestine" target="_blank" rel="noopener" title="Faire un don pour la Palestine - M�decins Sans Fronti�res">
                     <img src="/images/Flag_of_Palestine.png" alt="Drapeau Palestine - Faire un don MSF" class="palestine-flag">
                 </a>
             </div>
             
-            <!-- Réseaux sociaux au centre -->
+            <!-- R�seaux sociaux au centre -->
             <div class="footer-social-links">
                 <a href="https://discord.gg/aG8fYmC9" target="_blank" rel="noopener" class="footer-social-icon">
                     <i class="fab fa-discord"></i>
@@ -405,7 +405,7 @@
                 </a>
             </div>
             
-            <!-- Pseudos à droite -->
+            <!-- Pseudos � droite -->
             <div class="footer-authors">
                 Made by <a href="user-profile.html?pseudo=matazziz" class="footer-brand" style="color:inherit;text-decoration:none;">matazziz</a>
             </div>
@@ -415,10 +415,10 @@
     <script type="module" src="/js/list.js"></script>
     <script src="/js/search.js"></script>
     <script src="/js/hamburger-menu.js"></script>
-    <!-- Système de messagerie -->
+    <!-- Syst�me de messagerie -->
     <script src="/js/messaging.js" type="module"></script>
     <script>
-        // Gestion du sélecteur de recherche
+        // Gestion du s�lecteur de recherche
         document.addEventListener('DOMContentLoaded', function() {
             const searchType = document.getElementById('searchType');
             const searchInput = document.getElementById('searchInput');
@@ -433,7 +433,7 @@
                     'user': 'Rechercher un utilisateur...'
                 };
                 
-                // Changer le placeholder selon le type sélectionné
+                // Changer le placeholder selon le type s�lectionn�
                 searchType.addEventListener('change', function() {
                     const selectedType = this.value;
                     searchInput.placeholder = placeholders[selectedType] || 'Rechercher...';
@@ -448,7 +448,7 @@
             const userAvatar = document.getElementById('user-avatar');
             
             if (user && user.email && userAvatar) {
-                // Mettre à jour l'avatar avec priorité sur l'avatar personnalisé
+                // Mettre � jour l'avatar avec priorit� sur l'avatar personnalis�
                 const avatarKey = 'avatar_' + user.email;
                 const storedAvatar = localStorage.getItem(avatarKey);
                 
@@ -471,10 +471,10 @@
                 window.localization.applyLanguage();
             }
             
-            // Test de la traduction automatique après un délai
+            // Test de la traduction automatique apr�s un d�lai
             setTimeout(() => {
                 const currentLanguage = localStorage.getItem('mangaWatchLanguage') || 'fr';
-                console.log('🔄 Test de traduction automatique de la page collection...');
+                console.log('?? Test de traduction automatique de la page collection...');
                 if (window.translateCollectionPage) {
                     window.translateCollectionPage(currentLanguage);
                 }

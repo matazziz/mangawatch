@@ -1047,6 +1047,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         height: 36px;
         padding: 4px 6px;
         box-sizing: border-box;
+        margin-left: 14px;
+        margin-right: -6px;
     }
 
     .hamburger-btn span {
@@ -1071,26 +1073,37 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         gap: 10px;
     }
     
-    /* Avatar un peu plus grand sur mobile */
-    .avatar-link.is-auth-visible {
+    /* Avatar header : anneau fin sur toutes les pages */
+    .main-header .avatar-link.is-auth-visible {
         width: 46px;
         height: 46px;
         min-width: 46px;
         min-height: 46px;
-        padding: 2px;
+        margin-left: 0.5rem;
+        border: 1.5px solid rgba(0, 168, 77, 0.92) !important;
+        padding: 0 !important;
+        background: transparent !important;
+        box-shadow: 0 0 6px rgba(0, 168, 77, 0.28) !important;
     }
     
-    .avatar-link.is-auth-visible .user-avatar {
-        width: 42px;
-        height: 42px;
+    .main-header .avatar-link.is-auth-visible:hover {
+        box-shadow: 0 0 8px rgba(0, 168, 77, 0.38) !important;
+        border-color: rgba(0, 196, 93, 0.95) !important;
+    }
+    
+    .main-header .avatar-link.is-auth-visible .user-avatar,
+    .main-header .user-avatar {
+        width: 41px;
+        height: 41px;
+        border: none !important;
     }
     
     /* Barre de recherche compacte sur mobile */
     .search-wrapper {
         flex: 1 1 0;
         min-width: 0;
-        width: min(240px, calc(100vw - 160px));
-        max-width: min(240px, calc(100vw - 160px));
+        width: min(288px, calc(100vw - 128px));
+        max-width: min(288px, calc(100vw - 128px));
     }
 
     .search-results-dropdown {
@@ -1157,8 +1170,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     .search-bar {
         border-radius: 20px;
         padding: 0;
-        min-height: 34px;
-        height: 34px;
+        min-height: 38px;
+        height: 38px;
         align-items: stretch;
         overflow: hidden;
     }
@@ -1191,7 +1204,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         min-height: 100%;
         line-height: 1.1;
         box-sizing: border-box;
-        max-height: 34px;
+        max-height: 38px;
         padding-top: 0;
         padding-bottom: 0;
         appearance: none;
@@ -1221,12 +1234,12 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         border-radius: 0 20px 20px 0;
         padding: 0 4px;
         font-size: 0.72rem;
-        min-width: 26px;
-        max-width: 26px;
+        min-width: 28px;
+        max-width: 28px;
         height: 100%;
         box-sizing: border-box;
-        max-height: 34px;
-        min-height: 34px;
+        max-height: 38px;
+        min-height: 38px;
         line-height: 1;
         display: flex;
         align-items: center;
@@ -1344,29 +1357,40 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         display: none;
     }
     
-    .avatar-link.is-auth-visible {
+    .main-header .avatar-link.is-auth-visible {
         width: 44px;
         height: 44px;
         min-width: 44px;
         min-height: 44px;
+        margin-left: 0.35rem;
+        border: 1.5px solid rgba(0, 168, 77, 0.9) !important;
+        padding: 0 !important;
+        background: transparent !important;
+        box-shadow: 0 0 5px rgba(0, 168, 77, 0.24) !important;
+    }
+
+    .main-header .avatar-link.is-auth-visible:hover {
+        box-shadow: 0 0 7px rgba(0, 168, 77, 0.34) !important;
     }
     
-    .avatar-link.is-auth-visible .user-avatar {
-        width: 40px;
-        height: 40px;
+    .main-header .avatar-link.is-auth-visible .user-avatar,
+    .main-header .user-avatar {
+        width: 39px;
+        height: 39px;
+        border: none !important;
     }
     
     .search-wrapper {
         flex: 1 1 0;
         min-width: 0;
-        width: min(200px, calc(100vw - 130px));
-        max-width: min(200px, calc(100vw - 130px));
+        width: min(244px, calc(100vw - 108px));
+        max-width: min(244px, calc(100vw - 108px));
     }
     
     .search-bar {
         border-radius: 18px;
-        min-height: 30px;
-        height: 30px;
+        min-height: 34px;
+        height: 34px;
         align-items: stretch;
         overflow: hidden;
     }
@@ -1399,7 +1423,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         min-height: 100%;
         line-height: 1.1;
         box-sizing: border-box;
-        max-height: 30px;
+        max-height: 34px;
         padding-top: 0;
         padding-bottom: 0;
         appearance: none;
@@ -1414,7 +1438,7 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     }
     
     .search-bar input {
-        font-size: 0.66rem;
+        font-size: 0.7rem;
         padding: 0 7px 0 5px;
         height: 100%;
         box-sizing: border-box;
@@ -1428,13 +1452,13 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
     .search-bar button[type="submit"] {
         border-radius: 0 18px 18px 0;
         padding: 0 3px;
-        font-size: 0.66rem;
-        min-width: 22px;
-        max-width: 22px;
+        font-size: 0.68rem;
+        min-width: 24px;
+        max-width: 24px;
         height: 100%;
         box-sizing: border-box;
-        max-height: 30px;
-        min-height: 30px;
+        max-height: 34px;
+        min-height: 34px;
         line-height: 1;
         display: flex;
         align-items: center;
@@ -1501,6 +1525,8 @@ body.lang-de .mobile-menu .nav-links a[data-i18n="nav.manga_anime"] {
         width: 44px;
         height: 40px;
         padding: 6px 8px;
+        margin-left: 16px;
+        margin-right: -8px;
     }
 
     .hamburger-btn span {

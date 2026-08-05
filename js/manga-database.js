@@ -1115,6 +1115,8 @@ function mapAniListFormat(mediaType, format) {
     }
     if (format === 'NOVEL') return 'Novel';
     if (format === 'ONE_SHOT') return 'One Shot';
+    if (format === 'MANHWA') return 'Manhwa';
+    if (format === 'MANHUA') return 'Manhua';
     return 'Manga';
 }
 
@@ -1306,6 +1308,40 @@ function mapTypeToAniListFormat(typeValue, mediaType) {
     return mediaType === 'anime' ? (animeMap[normalized] || null) : (mangaMap[normalized] || null);
 }
 
+function mapSelectedTypeToCountryOfOrigin(selectedType) {
+    const normalized = String(selectedType || '').toLowerCase();
+    if (normalized === 'manhwa') return ['KR'];
+    if (normalized === 'manhua') return ['CN', 'TW'];
+    return [];
+}
+
+function mergeAniListQueryResults(partials, perPage) {
+    const merged = new Map();
+    let pagination = null;
+    let rawCount = 0;
+
+    partials.forEach((partial) => {
+        if (!partial || partial.error || !Array.isArray(partial.data)) return;
+        rawCount += partial.rawCount || partial.data.length;
+        partial.data.forEach((item) => {
+            const key = String(item.anilist_id || item.mal_id || item.title || '');
+            if (!key || merged.has(key)) return;
+            merged.set(key, item);
+        });
+        if (!pagination && partial.pagination) pagination = partial.pagination;
+    });
+
+    return {
+        data: [...merged.values()].slice(0, perPage),
+        pagination: pagination || {
+            last_visible_page: 1,
+            current_page: 1,
+            has_next_page: false
+        },
+        rawCount
+    };
+}
+
 function mapGenreToAniList(genreValue) {
     if (!genreValue) return null;
     const g = String(genreValue).trim();
@@ -1323,6 +1359,24 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
         .toUpperCase()
         .replace(/[-\s]+/g, '_')
         .replace(/[^A-Z0-9_]/g, '');
+
+    const getCountry = (item) => String(item?.countryOfOrigin || '').toUpperCase();
+
+    const isManhwaItem = (item) => {
+        const format = getFormat(item);
+        return format === 'MANHWA' || getCountry(item) === 'KR';
+    };
+
+    const isManhuaItem = (item) => {
+        const format = getFormat(item);
+        const country = getCountry(item);
+        return format === 'MANHUA' || country === 'CN' || country === 'TW';
+    };
+
+    const isNovelItem = (item) => {
+        const format = getFormat(item);
+        return format === 'NOVEL' || format === 'LIGHT_NOVEL';
+    };
 
     if (selected === 'anime') {
         // "Anime" (séries) séparé des films.
@@ -1347,39 +1401,20 @@ function applySelectedTypePostFilter(items, selectedType, mediaType) {
     if (selected === 'music') {
         return items.filter(i => getFormat(i) === 'MUSIC');
     }
-    if (selected === 'novel') return items.filter(i => getFormat(i) === 'NOVEL');
+    if (selected === 'novel') return items.filter(isNovelItem);
     if (selected === 'doujin') return applySelectedTypePostFilter(items, 'manga', mediaType);
-    if (selected === 'manhwa') {
-        return items.filter(i => {
-            const format = getFormat(i);
-            return format === 'MANHWA' || (i.countryOfOrigin || '').toUpperCase() === 'KR';
-        });
-    }
-    if (selected === 'manhua') {
-        return items.filter(i => {
-            const format = getFormat(i);
-            return format === 'MANHUA' || (i.countryOfOrigin || '').toUpperCase() === 'CN';
-        });
-    }
-    // Manga par défaut: garder les mangas "classiques" + one-shots.
+    if (selected === 'manhwa') return items.filter(isManhwaItem);
+    if (selected === 'manhua') return items.filter(isManhuaItem);
+    // Manga par défaut: exclure manhwa/manhua/roman même si AniList les classe parfois en "MANGA".
     if (selected === 'manga') {
         return items.filter(i => {
             const format = getFormat(i);
-            if (['MANGA', 'ONE_SHOT', 'ONESHOT', ''].includes(format)) return true;
-            return ![
-                'NOVEL',
-                'LIGHT_NOVEL',
-                'MANHWA',
-                'MANHUA',
-                'DOUJINSHI',
-                'DOUJIN',
-                'TV',
-                'MOVIE',
-                'OVA',
-                'ONA',
-                'SPECIAL',
-                'MUSIC'
-            ].includes(format);
+            if (isManhwaItem(i) || isManhuaItem(i) || isNovelItem(i)) return false;
+            if (['TV', 'MOVIE', 'OVA', 'ONA', 'SPECIAL', 'MUSIC', 'DOUJINSHI', 'DOUJIN'].includes(format)) {
+                return false;
+            }
+            return ['MANGA', 'ONE_SHOT', 'ONESHOT', ''].includes(format)
+                || !['MANHWA', 'MANHUA', 'NOVEL', 'LIGHT_NOVEL'].includes(format);
         });
     }
     return items;
@@ -1475,7 +1510,8 @@ async function fetchContentFromAPI(endpoint, params) {
     const sortValues = mapOrderByToAniList(orderBy, sort, mediaType);
     const useRelevanceSort = !!search && (orderBy === 'relevance' || !params.get('order_by'));
 
-    const runAniListQuery = async (searchTerm) => {
+    const runAniListQuery = async (searchTerm, queryOptions = {}) => {
+        const countryOfOrigin = queryOptions.countryOfOrigin || null;
         const variables = {
             page: searchTerm && searchTerm !== search ? 1 : page,
             perPage,
@@ -1513,6 +1549,11 @@ async function fetchContentFromAPI(endpoint, params) {
             variables.format = format;
             varDefs.push('$format: MediaFormat');
             mediaArgs.push('format: $format');
+        }
+        if (countryOfOrigin) {
+            variables.countryOfOrigin = countryOfOrigin;
+            varDefs.push('$countryOfOrigin: CountryCode');
+            mediaArgs.push('countryOfOrigin: $countryOfOrigin');
         }
         if (minAverageScore != null) {
             variables.averageScoreGreater = minAverageScore;
@@ -1556,6 +1597,7 @@ async function fetchContentFromAPI(endpoint, params) {
             mediaType,
             selectedType,
             searchTerm,
+            countryOfOrigin,
             sort: variables.sort
         });
 
@@ -1621,11 +1663,11 @@ async function fetchContentFromAPI(endpoint, params) {
         return { data: filteredData, pagination, rawCount: rawItems.length };
     };
 
-    const runAniListQueryWithRetry = async (searchTerm) => {
+    const runAniListQueryWithRetry = async (searchTerm, queryOptions = {}) => {
         let lastError = null;
         for (let attempt = 0; attempt < 3; attempt += 1) {
             try {
-                return await runAniListQuery(searchTerm);
+                return await runAniListQuery(searchTerm, queryOptions);
             } catch (error) {
                 lastError = error;
                 const status = error?.status;
@@ -1643,7 +1685,19 @@ async function fetchContentFromAPI(endpoint, params) {
     };
 
     try {
-        let result = await runAniListQueryWithRetry(search);
+        const countryCodes = mapSelectedTypeToCountryOfOrigin(selectedType);
+        let result;
+
+        if (countryCodes.length > 1) {
+            const partials = await Promise.all(
+                countryCodes.map((countryOfOrigin) => runAniListQueryWithRetry(search, { countryOfOrigin }))
+            );
+            result = mergeAniListQueryResults(partials, perPage);
+        } else if (countryCodes.length === 1) {
+            result = await runAniListQueryWithRetry(search, { countryOfOrigin: countryCodes[0] });
+        } else {
+            result = await runAniListQueryWithRetry(search);
+        }
 
         // Tolérance fautes de frappe : uniquement si la requête a réussi mais sans résultat.
         // Ne pas lancer de variantes si on est en rate-limit (sinon on empire le problème).
@@ -1657,9 +1711,12 @@ async function fetchContentFromAPI(endpoint, params) {
             const fallbacks = buildTypoSearchFallbacks(search);
             mwDebug('ANILIST:typo-fallback', { search, fallbacks });
 
+            const typoQueryOptions = countryCodes.length === 1
+                ? { countryOfOrigin: countryCodes[0] }
+                : {};
             const merged = new Map();
             for (const fallback of fallbacks) {
-                const fallbackResult = await runAniListQueryWithRetry(fallback);
+                const fallbackResult = await runAniListQueryWithRetry(fallback, typoQueryOptions);
                 if (!fallbackResult?.data?.length) continue;
                 fallbackResult.data.forEach((item) => {
                     const key = String(item.mal_id || item.anilist_id || item.title || '');
